@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Employees from './pages/Employees';
 import Attendance from './pages/Attendance';
+import Salary from './pages/Salary';
 
 function App() {
   return (
@@ -14,6 +15,7 @@ function App() {
             <Route path="/" element={<Employees />} />
             <Route path="/employees" element={<Employees />} />
             <Route path="/attendance" element={<Attendance />} />
+            <Route path="/salary" element={<Salary />} />
           </Routes>
         </main>
       </div>

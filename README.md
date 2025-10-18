@@ -94,6 +94,8 @@ After deployment, your URLs will be:
 
 - **Employee Management**: Add, edit, delete, and view employees
 - **Attendance Tracking**: Mark daily attendance with time tracking
+- **Salary Management**: Auto payroll calculation based on attendance
+- **Payroll Generation**: Bulk salary calculation for all employees
 - **Modern UI**: Responsive design with Tailwind CSS
 - **RESTful API**: Complete backend with proper error handling
 - **Database Integration**: PostgreSQL with proper relationships
@@ -117,6 +119,15 @@ After deployment, your URLs will be:
 - `POST /api/attendance` - Mark attendance
 - `PUT /api/attendance/:id` - Update attendance
 - `DELETE /api/attendance/:id` - Delete attendance
+
+### Salary Management
+- `GET /api/salary` - Get all salary records
+- `GET /api/salary/employee/:id` - Get salary by employee
+- `POST /api/salary/calculate/:employeeId` - Calculate salary for employee
+- `POST /api/salary/generate-payroll` - Generate payroll for all employees
+- `PUT /api/salary/:id` - Update salary record
+- `POST /api/salary/:id/pay` - Mark salary as paid
+- `DELETE /api/salary/:id` - Delete salary record
 
 ## 🚀 Deployment Steps
 
