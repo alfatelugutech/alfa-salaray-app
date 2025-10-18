@@ -164,6 +164,19 @@ const Dashboard: React.FC = () => {
                 <button className="w-full bg-gray-200 text-gray-800 py-2 px-4 rounded hover:bg-gray-300">
                   Manage Leave Requests
                 </button>
+                {user?.role === 'SUPER_ADMIN' && (
+                  <>
+                    <button className="w-full bg-purple-600 text-white py-2 px-4 rounded hover:bg-purple-700">
+                      Role Management
+                    </button>
+                    <button className="w-full bg-orange-600 text-white py-2 px-4 rounded hover:bg-orange-700">
+                      Features Control
+                    </button>
+                    <button className="w-full bg-red-600 text-white py-2 px-4 rounded hover:bg-red-700">
+                      System Settings
+                    </button>
+                  </>
+                )}
               </>
             ) : (
               // Employee actions
@@ -187,6 +200,62 @@ const Dashboard: React.FC = () => {
             )}
           </div>
         </div>
+        
+        {/* Super Admin Features */}
+        {user?.role === 'SUPER_ADMIN' && (
+          <div className="mt-8">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Super Admin Features</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h3 className="font-semibold text-purple-900 mb-2">Role Management</h3>
+                <p className="text-sm text-purple-700 mb-3">Manage user roles and permissions</p>
+                <button className="w-full bg-purple-600 text-white py-2 px-4 rounded hover:bg-purple-700 text-sm">
+                  Manage Roles
+                </button>
+              </div>
+              
+              <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
+                <h3 className="font-semibold text-orange-900 mb-2">Features Control</h3>
+                <p className="text-sm text-orange-700 mb-3">Enable/disable system features</p>
+                <button className="w-full bg-orange-600 text-white py-2 px-4 rounded hover:bg-orange-700 text-sm">
+                  Control Features
+                </button>
+              </div>
+              
+              <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+                <h3 className="font-semibold text-red-900 mb-2">System Settings</h3>
+                <p className="text-sm text-red-700 mb-3">Configure system-wide settings</p>
+                <button className="w-full bg-red-600 text-white py-2 px-4 rounded hover:bg-red-700 text-sm">
+                  System Config
+                </button>
+              </div>
+              
+              <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-200">
+                <h3 className="font-semibold text-indigo-900 mb-2">User Management</h3>
+                <p className="text-sm text-indigo-700 mb-3">Manage all system users</p>
+                <button className="w-full bg-indigo-600 text-white py-2 px-4 rounded hover:bg-indigo-700 text-sm">
+                  Manage Users
+                </button>
+              </div>
+              
+              <div className="bg-teal-50 p-4 rounded-lg border border-teal-200">
+                <h3 className="font-semibold text-teal-900 mb-2">Reports & Analytics</h3>
+                <p className="text-sm text-teal-700 mb-3">View system reports and analytics</p>
+                <button className="w-full bg-teal-600 text-white py-2 px-4 rounded hover:bg-teal-700 text-sm">
+                  View Reports
+                </button>
+              </div>
+              
+              <div className="bg-pink-50 p-4 rounded-lg border border-pink-200">
+                <h3 className="font-semibold text-pink-900 mb-2">Audit Logs</h3>
+                <p className="text-sm text-pink-700 mb-3">Monitor system activity and logs</p>
+                <button className="w-full bg-pink-600 text-white py-2 px-4 rounded hover:bg-pink-700 text-sm">
+                  View Logs
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         
         <div className="mt-8 p-4 bg-green-50 rounded-lg">
           <h3 className="font-semibold text-green-900">System Status</h3>
