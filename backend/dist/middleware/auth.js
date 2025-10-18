@@ -48,7 +48,8 @@ const authenticateToken = async (req, res, next) => {
 };
 exports.authenticateToken = authenticateToken;
 const requireHR = (req, res, next) => {
-    if (!req.user) {
+    const authReq = req;
+    if (!authReq.user) {
         res.status(401).json({
             success: false,
             error: "Authentication required",
@@ -56,7 +57,7 @@ const requireHR = (req, res, next) => {
         });
         return;
     }
-    if (!["SUPER_ADMIN", "HR_MANAGER"].includes(req.user.role)) {
+    if (!["SUPER_ADMIN", "HR_MANAGER"].includes(authReq.user.role)) {
         res.status(403).json({
             success: false,
             error: "HR access required",

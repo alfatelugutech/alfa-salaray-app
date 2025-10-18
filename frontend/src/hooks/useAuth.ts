@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from 'react-query'
+import { useNavigate } from 'react-router-dom'
 import { authService } from '../services/authService'
 import { User, LoginCredentials, RegisterData } from '../types'
 import toast from 'react-hot-toast'
@@ -8,6 +9,7 @@ export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
 
   useEffect(() => {
     const storedUser = authService.getStoredUser()
@@ -43,6 +45,7 @@ export const useAuth = () => {
       setUser(data.user)
       queryClient.invalidateQueries('currentUser')
       toast.success('Login successful!')
+      navigate('/dashboard')
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.error || 'Login failed')
@@ -55,6 +58,7 @@ export const useAuth = () => {
       setUser(data.user)
       queryClient.invalidateQueries('currentUser')
       toast.success('Registration successful!')
+      navigate('/dashboard')
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.error || 'Registration failed')
