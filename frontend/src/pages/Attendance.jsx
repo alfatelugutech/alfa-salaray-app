@@ -8,8 +8,6 @@ const Attendance = () => {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingRecord, setEditingRecord] = useState(null);
-  const [selectedEmployee, setSelectedEmployee] = useState('');
-  const [selectedDate, setSelectedDate] = useState('');
   const [formData, setFormData] = useState({
     employee_id: '',
     date: '',
