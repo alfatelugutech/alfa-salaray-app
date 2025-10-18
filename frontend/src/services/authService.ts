@@ -28,13 +28,29 @@ export const authService = {
 
   // Check if user is authenticated
   isAuthenticated(): boolean {
-    return !!localStorage.getItem('token')
+    try {
+      const token = localStorage.getItem('token')
+      return !!(token && token !== 'undefined' && token !== 'null')
+    } catch (error) {
+      console.error('Error checking authentication:', error)
+      return false
+    }
   },
 
   // Get stored user
   getStoredUser(): User | null {
-    const userStr = localStorage.getItem('user')
-    return userStr ? JSON.parse(userStr) : null
+    try {
+      const userStr = localStorage.getItem('user')
+      if (!userStr || userStr === 'undefined' || userStr === 'null') {
+        return null
+      }
+      return JSON.parse(userStr)
+    } catch (error) {
+      console.error('Error parsing stored user:', error)
+      localStorage.removeItem('user')
+      localStorage.removeItem('token')
+      return null
+    }
   },
 
   // Store user data
