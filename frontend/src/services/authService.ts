@@ -4,20 +4,20 @@ import { LoginCredentials, RegisterData, User } from '../types'
 export const authService = {
   // Login user
   async login(credentials: LoginCredentials): Promise<{ user: User; token: string }> {
-    const response = await api.post<{ success: boolean; user: User; token: string }>('/auth/login', credentials)
-    return { user: response.data.user, token: response.data.token }
+    const response = await api.post<{ success: boolean; message: string; data: { user: User; token: string } }>('/auth/login', credentials)
+    return { user: response.data.data.user, token: response.data.data.token }
   },
 
   // Register user
   async register(userData: RegisterData): Promise<{ user: User; token: string }> {
-    const response = await api.post<{ success: boolean; user: User; token: string }>('/auth/register', userData)
-    return { user: response.data.user, token: response.data.token }
+    const response = await api.post<{ success: boolean; message: string; data: { user: User; token: string } }>('/auth/register', userData)
+    return { user: response.data.data.user, token: response.data.data.token }
   },
 
   // Get current user
   async getCurrentUser(): Promise<User> {
-    const response = await api.get<{ success: boolean; user: User }>('/auth/profile')
-    return response.data.user
+    const response = await api.get<{ success: boolean; data: { user: User } }>('/auth/me')
+    return response.data.data.user
   },
 
   // Logout (client-side only)
