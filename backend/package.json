@@ -6,10 +6,11 @@
   "scripts": {
     "dev": "nodemon src/index.ts",
     "build": "tsc",
-    "start": "node dist/index.js",
+    "start": "chmod +x scripts/start.sh && ./scripts/start.sh",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:seed": "ts-node prisma/seed.ts",
+    "db:setup": "prisma db push && npm run db:seed",
     "postinstall": "prisma generate"
   },
   "dependencies": {
