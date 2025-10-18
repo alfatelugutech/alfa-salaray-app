@@ -362,9 +362,7 @@ router.get("/stats/overview", requireHR, async (req, res) => {
   }
 });
 
-// Get employee
-'
-s attendance history
+// Get employee's attendance history
 router.get("/employee/:employeeId", async (req, res) => {
   try {
     const { employeeId } = req.params;
