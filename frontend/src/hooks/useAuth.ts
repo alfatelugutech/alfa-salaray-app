@@ -12,11 +12,17 @@ export const useAuth = () => {
   const navigate = useNavigate()
 
   useEffect(() => {
-    const storedUser = authService.getStoredUser()
-    if (storedUser && authService.isAuthenticated()) {
-      setUser(storedUser)
+    try {
+      const storedUser = authService.getStoredUser()
+      if (storedUser && authService.isAuthenticated()) {
+        setUser(storedUser)
+      }
+    } catch (error) {
+      console.error('Error initializing auth:', error)
+      authService.logout()
+    } finally {
+      setIsLoading(false)
     }
-    setIsLoading(false)
   }, [])
 
   const { data: currentUser, isLoading: isFetchingUser } = useQuery(

@@ -30,7 +30,10 @@ export const authService = {
   isAuthenticated(): boolean {
     try {
       const token = localStorage.getItem('token')
-      return !!(token && token !== 'undefined' && token !== 'null')
+      if (!token || token === 'undefined' || token === 'null' || token === '') {
+        return false
+      }
+      return true
     } catch (error) {
       console.error('Error checking authentication:', error)
       return false
@@ -41,9 +44,17 @@ export const authService = {
   getStoredUser(): User | null {
     try {
       const userStr = localStorage.getItem('user')
-      if (!userStr || userStr === 'undefined' || userStr === 'null') {
+      if (!userStr || userStr === 'undefined' || userStr === 'null' || userStr === '') {
         return null
       }
+      
+      // Additional check to prevent parsing undefined
+      if (userStr === 'undefined' || userStr === 'null') {
+        localStorage.removeItem('user')
+        localStorage.removeItem('token')
+        return null
+      }
+      
       return JSON.parse(userStr)
     } catch (error) {
       console.error('Error parsing stored user:', error)
