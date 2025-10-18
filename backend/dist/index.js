@@ -11,6 +11,7 @@ const compression_1 = __importDefault(require("compression"));
 const morgan_1 = __importDefault(require("morgan"));
 const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
 const dotenv_1 = __importDefault(require("dotenv"));
+const client_1 = require("@prisma/client");
 // Import routes
 const auth_1 = __importDefault(require("./routes/auth"));
 const employees_1 = __importDefault(require("./routes/employees"));
@@ -21,9 +22,11 @@ const errorHandler_1 = require("./middleware/errorHandler");
 const notFound_1 = require("./middleware/notFound");
 // Load environment variables
 dotenv_1.default.config();
+// Initialize Prisma client
+const prisma = new client_1.PrismaClient();
 const app = (0, express_1.default)();
 exports.app = app;
-const PORT = process.env.PORT || 5000;
+const PORT = parseInt(process.env.PORT || '5000', 10);
 // Security middleware
 app.use((0, helmet_1.default)({
     contentSecurityPolicy: {
@@ -80,16 +83,46 @@ app.use('/api/leave', leave_1.default);
 // Error handling middleware
 app.use(notFound_1.notFound);
 app.use(errorHandler_1.errorHandler);
+// Database connection function
+async function connectDatabase() {
+    try {
+        await prisma.$connect();
+        console.log('✅ Database connected successfully!');
+    }
+    catch (error) {
+        console.error('❌ Database connection failed:', error);
+        process.exit(1);
+    }
+}
 // Start server
-app.listen(PORT, () => {
-    console.log(`🚀 Employee Attendance System - Phase 1`);
-    console.log(`📊 Server running on port ${PORT}`);
-    console.log(`🔗 Health check: http://localhost:${PORT}/health`);
-    console.log(`📱 Frontend: ${process.env.FRONTEND_URL || "http://localhost:3000"}`);
-    console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-});
+async function startServer() {
+    try {
+        // Connect to database
+        await connectDatabase();
+        // Start the server
+        app.listen(PORT, '0.0.0.0', () => {
+            console.log(`🚀 Employee Attendance System - Phase 1`);
+            console.log(`📊 Server running on port ${PORT}`);
+            console.log(`🔗 Health check: http://0.0.0.0:${PORT}/health`);
+            console.log(`📱 Frontend: ${process.env.FRONTEND_URL || "http://localhost:3000"}`);
+            console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+        });
+    }
+    catch (error) {
+        console.error('❌ Server startup failed:', error);
+        process.exit(1);
+    }
+}
+// Start the server
+startServer();
 // Graceful shutdown
-process.on('SIGTERM', () => {
+process.on('SIGTERM', async () => {
     console.log('SIGTERM received, shutting down gracefully');
+    await prisma.$disconnect();
+    process.exit(0);
+});
+process.on('SIGINT', async () => {
+    console.log('SIGINT received, shutting down gracefully');
+    await prisma.$disconnect();
     process.exit(0);
 });

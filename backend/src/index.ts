@@ -5,6 +5,7 @@ import compression from 'compression';
 import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
+import { PrismaClient } from '@prisma/client';
 
 // Import routes
 import authRoutes from './routes/auth';
@@ -19,8 +20,11 @@ import { notFound } from './middleware/notFound';
 // Load environment variables
 dotenv.config();
 
+// Initialize Prisma client
+const prisma = new PrismaClient();
+
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = parseInt(process.env.PORT || '5000', 10);
 
 // Security middleware
 app.use(helmet({
@@ -85,18 +89,50 @@ app.use('/api/leave', leaveRoutes);
 app.use(notFound);
 app.use(errorHandler);
 
+// Database connection function
+async function connectDatabase() {
+  try {
+    await prisma.$connect();
+    console.log('✅ Database connected successfully!');
+  } catch (error) {
+    console.error('❌ Database connection failed:', error);
+    process.exit(1);
+  }
+}
+
 // Start server
-app.listen(PORT, () => {
-  console.log(`🚀 Employee Attendance System - Phase 1`);
-  console.log(`📊 Server running on port ${PORT}`);
-  console.log(`🔗 Health check: http://localhost:${PORT}/health`);
-  console.log(`📱 Frontend: ${process.env.FRONTEND_URL || "http://localhost:3000"}`);
-  console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-});
+async function startServer() {
+  try {
+    // Connect to database
+    await connectDatabase();
+    
+    // Start the server
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`🚀 Employee Attendance System - Phase 1`);
+      console.log(`📊 Server running on port ${PORT}`);
+      console.log(`🔗 Health check: http://0.0.0.0:${PORT}/health`);
+      console.log(`📱 Frontend: ${process.env.FRONTEND_URL || "http://localhost:3000"}`);
+      console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+    });
+  } catch (error) {
+    console.error('❌ Server startup failed:', error);
+    process.exit(1);
+  }
+}
+
+// Start the server
+startServer();
 
 // Graceful shutdown
-process.on('SIGTERM', () => {
+process.on('SIGTERM', async () => {
   console.log('SIGTERM received, shutting down gracefully');
+  await prisma.$disconnect();
+  process.exit(0);
+});
+
+process.on('SIGINT', async () => {
+  console.log('SIGINT received, shutting down gracefully');
+  await prisma.$disconnect();
   process.exit(0);
 });
 
