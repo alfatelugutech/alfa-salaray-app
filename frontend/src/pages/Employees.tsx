@@ -636,7 +636,7 @@ const EditEmployeeModal: React.FC<{
             <select
               className="input"
               value={formData.status}
-              onChange={(e) => setFormData({...formData, status: e.target.value})}
+              onChange={(e) => setFormData({...formData, status: e.target.value as 'ACTIVE' | 'INACTIVE' | 'TERMINATED' | 'ON_LEAVE'})}
             >
               <option value="ACTIVE">Active</option>
               <option value="INACTIVE">Inactive</option>

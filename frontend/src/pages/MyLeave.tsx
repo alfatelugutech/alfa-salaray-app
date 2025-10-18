@@ -18,7 +18,6 @@ const MyLeave: React.FC = () => {
     ['my-leave-requests', searchTerm, statusFilter, typeFilter],
     () => leaveService.getLeaveRequests({
       employeeId: user?.employeeId,
-      search: searchTerm,
       status: statusFilter,
       leaveType: typeFilter
     })
@@ -309,10 +308,12 @@ const RequestLeaveModal: React.FC<{
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    requestLeaveMutation.mutate({
-      employeeId: user?.employeeId,
-      ...formData
-    })
+    if (user?.employeeId) {
+      requestLeaveMutation.mutate({
+        employeeId: user.employeeId,
+        ...formData
+      })
+    }
   }
 
   return (

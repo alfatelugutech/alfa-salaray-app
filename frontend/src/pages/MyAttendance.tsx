@@ -15,7 +15,6 @@ const MyAttendance: React.FC = () => {
     ['my-attendance', searchTerm, dateFilter, statusFilter],
     () => attendanceService.getAttendance({
       employeeId: user?.employeeId,
-      search: searchTerm,
       startDate: dateFilter,
       endDate: dateFilter,
       status: statusFilter

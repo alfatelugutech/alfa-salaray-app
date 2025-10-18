@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Calendar, Plus, Search, Filter, Clock, CheckCircle, XCircle, Edit, Trash2, Eye } from 'lucide-react'
+import { Calendar, Plus, Search, Filter, Clock, CheckCircle, XCircle, Trash2, Eye } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from 'react-query'
 import { leaveService } from '../services/leaveService'
 import { employeeService } from '../services/employeeService'
@@ -17,7 +17,6 @@ const LeaveRequests: React.FC = () => {
   const { data: leaveData, isLoading, error } = useQuery(
     ['leaveRequests', searchTerm, statusFilter, typeFilter],
     () => leaveService.getLeaveRequests({
-      search: searchTerm,
       status: statusFilter,
       leaveType: typeFilter
     })
@@ -32,7 +31,7 @@ const LeaveRequests: React.FC = () => {
   // Update leave request status mutation
   const updateLeaveStatusMutation = useMutation(
     ({ id, status, comments }: { id: string; status: string; comments?: string }) =>
-      leaveService.updateLeaveRequestStatus(id, status, comments),
+      leaveService.updateLeaveRequestStatus(id, { status, comments }),
     {
       onSuccess: () => {
         queryClient.invalidateQueries('leaveRequests')
@@ -92,7 +91,7 @@ const LeaveRequests: React.FC = () => {
             <div className="ml-3">
               <p className="text-sm font-medium text-gray-600">Pending</p>
               <p className="text-xl font-bold text-gray-900">
-                {leaveData?.data?.pendingRequests || 0}
+                {leaveData?.data?.leaveRequests?.filter((leave: any) => leave.status === 'PENDING').length || 0}
               </p>
             </div>
           </div>
@@ -105,7 +104,7 @@ const LeaveRequests: React.FC = () => {
             <div className="ml-3">
               <p className="text-sm font-medium text-gray-600">Approved</p>
               <p className="text-xl font-bold text-gray-900">
-                {leaveData?.data?.approvedRequests || 0}
+                {leaveData?.data?.leaveRequests?.filter((leave: any) => leave.status === 'APPROVED').length || 0}
               </p>
             </div>
           </div>
@@ -118,7 +117,7 @@ const LeaveRequests: React.FC = () => {
             <div className="ml-3">
               <p className="text-sm font-medium text-gray-600">Rejected</p>
               <p className="text-xl font-bold text-gray-900">
-                {leaveData?.data?.rejectedRequests || 0}
+                {leaveData?.data?.leaveRequests?.filter((leave: any) => leave.status === 'REJECTED').length || 0}
               </p>
             </div>
           </div>
@@ -131,7 +130,7 @@ const LeaveRequests: React.FC = () => {
             <div className="ml-3">
               <p className="text-sm font-medium text-gray-600">Total</p>
               <p className="text-xl font-bold text-gray-900">
-                {leaveData?.data?.totalRequests || 0}
+                {leaveData?.data?.leaveRequests?.length || 0}
               </p>
             </div>
           </div>

@@ -3,7 +3,7 @@ import { Clock, Plus, Search, Filter, CheckCircle, XCircle, Edit, Trash2, Eye } 
 import { useQuery, useMutation, useQueryClient } from 'react-query'
 import { attendanceService } from '../services/attendanceService'
 import { employeeService } from '../services/employeeService'
-import { Attendance } from '../types'
+import type { Attendance } from '../types'
 import toast from 'react-hot-toast'
 
 const Attendance: React.FC = () => {
@@ -17,7 +17,6 @@ const Attendance: React.FC = () => {
   const { data: attendanceData, isLoading, error } = useQuery(
     ['attendance', searchTerm, dateFilter, statusFilter],
     () => attendanceService.getAttendance({
-      search: searchTerm,
       startDate: dateFilter,
       endDate: dateFilter,
       status: statusFilter
@@ -76,7 +75,7 @@ const Attendance: React.FC = () => {
             <div className="ml-3">
               <p className="text-sm font-medium text-gray-600">Present Today</p>
               <p className="text-xl font-bold text-gray-900">
-                {attendanceData?.data?.presentCount || 0}
+                {attendanceData?.data?.attendances?.filter((att: any) => att.status === 'PRESENT').length || 0}
               </p>
             </div>
           </div>
@@ -89,7 +88,7 @@ const Attendance: React.FC = () => {
             <div className="ml-3">
               <p className="text-sm font-medium text-gray-600">Absent Today</p>
               <p className="text-xl font-bold text-gray-900">
-                {attendanceData?.data?.absentCount || 0}
+                {attendanceData?.data?.attendances?.filter((att: any) => att.status === 'ABSENT').length || 0}
               </p>
             </div>
           </div>
@@ -102,7 +101,7 @@ const Attendance: React.FC = () => {
             <div className="ml-3">
               <p className="text-sm font-medium text-gray-600">Late Today</p>
               <p className="text-xl font-bold text-gray-900">
-                {attendanceData?.data?.lateCount || 0}
+                {attendanceData?.data?.attendances?.filter((att: any) => att.status === 'LATE').length || 0}
               </p>
             </div>
           </div>
@@ -115,8 +114,8 @@ const Attendance: React.FC = () => {
             <div className="ml-3">
               <p className="text-sm font-medium text-gray-600">Attendance Rate</p>
               <p className="text-xl font-bold text-gray-900">
-                {attendanceData?.data?.attendanceRate ? 
-                  `${Math.round(attendanceData.data.attendanceRate)}%` : '0%'}
+                {attendanceData?.data?.attendances?.length ? 
+                  `${Math.round((attendanceData.data.attendances.filter((att: any) => att.status === 'PRESENT').length / attendanceData.data.attendances.length) * 100)}%` : '0%'}
               </p>
             </div>
           </div>
