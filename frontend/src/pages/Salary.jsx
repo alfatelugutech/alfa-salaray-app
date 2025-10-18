@@ -55,7 +55,7 @@ const Salary = () => {
     }
 
     try {
-      const response = await salaryApi.calculateSalary(selectedEmployee, selectedMonth, selectedYear);
+      await salaryApi.calculateSalary(selectedEmployee, selectedMonth, selectedYear);
       alert('Salary calculated successfully!');
       fetchSalaryRecords();
     } catch (error) {
@@ -72,7 +72,7 @@ const Salary = () => {
 
     if (window.confirm(`Generate payroll for ${selectedYear}-${selectedMonth.padStart(2, '0')}?`)) {
       try {
-        const response = await salaryApi.generatePayroll(selectedMonth, selectedYear);
+        await salaryApi.generatePayroll(selectedMonth, selectedYear);
         alert('Payroll generated successfully!');
         fetchSalaryRecords();
       } catch (error) {
