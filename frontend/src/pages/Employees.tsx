@@ -2,11 +2,15 @@ import React, { useState } from 'react'
 import { Users, Plus, Search, Filter, Edit, Trash2, Eye } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from 'react-query'
 import { employeeService } from '../services/employeeService'
+import { authService } from '../services/authService'
 import { Employee } from '../types'
 import toast from 'react-hot-toast'
 
 const Employees: React.FC = () => {
   const [showAddModal, setShowAddModal] = useState(false)
+  const [showViewModal, setShowViewModal] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [departmentFilter, setDepartmentFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
@@ -37,6 +41,16 @@ const Employees: React.FC = () => {
     if (window.confirm('Are you sure you want to delete this employee?')) {
       deleteEmployeeMutation.mutate(id)
     }
+  }
+
+  const handleViewEmployee = (employee: Employee) => {
+    setSelectedEmployee(employee)
+    setShowViewModal(true)
+  }
+
+  const handleEditEmployee = (employee: Employee) => {
+    setSelectedEmployee(employee)
+    setShowEditModal(true)
   }
 
   return (
@@ -196,15 +210,24 @@ const Employees: React.FC = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <div className="flex space-x-2">
-                          <button className="text-blue-600 hover:text-blue-900">
+                          <button 
+                            onClick={() => handleViewEmployee(employee)}
+                            className="text-blue-600 hover:text-blue-900"
+                            title="View Employee"
+                          >
                             <Eye className="h-4 w-4" />
                           </button>
-                          <button className="text-indigo-600 hover:text-indigo-900">
+                          <button 
+                            onClick={() => handleEditEmployee(employee)}
+                            className="text-indigo-600 hover:text-indigo-900"
+                            title="Edit Employee"
+                          >
                             <Edit className="h-4 w-4" />
                           </button>
                           <button 
                             onClick={() => handleDeleteEmployee(employee.id)}
                             className="text-red-600 hover:text-red-900"
+                            title="Delete Employee"
                           >
                             <Trash2 className="h-4 w-4" />
                           </button>
@@ -225,6 +248,33 @@ const Employees: React.FC = () => {
           onClose={() => setShowAddModal(false)}
           onSuccess={() => {
             setShowAddModal(false)
+            queryClient.invalidateQueries('employees')
+          }}
+        />
+      )}
+
+      {/* View Employee Modal */}
+      {showViewModal && selectedEmployee && (
+        <ViewEmployeeModal 
+          employee={selectedEmployee}
+          onClose={() => {
+            setShowViewModal(false)
+            setSelectedEmployee(null)
+          }}
+        />
+      )}
+
+      {/* Edit Employee Modal */}
+      {showEditModal && selectedEmployee && (
+        <EditEmployeeModal 
+          employee={selectedEmployee}
+          onClose={() => {
+            setShowEditModal(false)
+            setSelectedEmployee(null)
+          }}
+          onSuccess={() => {
+            setShowEditModal(false)
+            setSelectedEmployee(null)
             queryClient.invalidateQueries('employees')
           }}
         />
@@ -254,32 +304,19 @@ const AddEmployeeModal: React.FC<{
 
   const createEmployeeMutation = useMutation(
     async (data: any) => {
-      // First create user
-      const userResponse = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          email: data.email,
-          password: data.password,
-          firstName: data.firstName,
-          lastName: data.lastName,
-          phone: data.phone,
-          role: 'EMPLOYEE'
-        })
+      // First create user using authService
+      const userData = await authService.register({
+        email: data.email,
+        password: data.password,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        phone: data.phone,
+        role: 'EMPLOYEE'
       })
-      
-      if (!userResponse.ok) {
-        throw new Error('Failed to create user')
-      }
-      
-      const userData = await userResponse.json()
       
       // Then create employee record
       return employeeService.createEmployee({
-        userId: userData.data.user.id,
+        userId: userData.user.id,
         employeeId: data.employeeId,
         department: data.department,
         position: data.position,
@@ -411,6 +448,198 @@ const AddEmployeeModal: React.FC<{
               className="btn btn-primary btn-md"
             >
               {createEmployeeMutation.isLoading ? 'Creating...' : 'Create Employee'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+// View Employee Modal Component
+const ViewEmployeeModal: React.FC<{
+  employee: Employee
+  onClose: () => void
+}> = ({ employee, onClose }) => {
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+        <h2 className="text-xl font-bold mb-4">Employee Details</h2>
+        <div className="space-y-4">
+          <div className="flex items-center space-x-4">
+            <div className="h-16 w-16 rounded-full bg-blue-100 flex items-center justify-center">
+              <span className="text-blue-600 font-medium text-xl">
+                {employee.user?.firstName?.charAt(0)}{employee.user?.lastName?.charAt(0)}
+              </span>
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold">
+                {employee.user?.firstName} {employee.user?.lastName}
+              </h3>
+              <p className="text-gray-600">{employee.user?.email}</p>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="label">Employee ID</label>
+              <p className="text-gray-900">{employee.employeeId}</p>
+            </div>
+            <div>
+              <label className="label">Department</label>
+              <p className="text-gray-900">{employee.department || 'N/A'}</p>
+            </div>
+            <div>
+              <label className="label">Position</label>
+              <p className="text-gray-900">{employee.position || 'N/A'}</p>
+            </div>
+            <div>
+              <label className="label">Status</label>
+              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                employee.status === 'ACTIVE' 
+                  ? 'bg-green-100 text-green-800'
+                  : employee.status === 'INACTIVE'
+                  ? 'bg-red-100 text-red-800'
+                  : 'bg-yellow-100 text-yellow-800'
+              }`}>
+                {employee.status}
+              </span>
+            </div>
+            <div>
+              <label className="label">Hire Date</label>
+              <p className="text-gray-900">{new Date(employee.hireDate).toLocaleDateString()}</p>
+            </div>
+            <div>
+              <label className="label">Salary</label>
+              <p className="text-gray-900">{employee.salary ? `$${employee.salary}` : 'N/A'}</p>
+            </div>
+          </div>
+          
+          <div className="flex justify-end">
+            <button
+              onClick={onClose}
+              className="btn btn-outline btn-md"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Edit Employee Modal Component
+const EditEmployeeModal: React.FC<{
+  employee: Employee
+  onClose: () => void
+  onSuccess: () => void
+}> = ({ employee, onClose, onSuccess }) => {
+  const [formData, setFormData] = useState({
+    department: employee.department || '',
+    position: employee.position || '',
+    status: employee.status,
+    salary: employee.salary?.toString() || '',
+    workLocation: employee.workLocation || ''
+  })
+
+  const updateEmployeeMutation = useMutation(
+    (data: any) => employeeService.updateEmployee(employee.id, data),
+    {
+      onSuccess: () => {
+        toast.success('Employee updated successfully!')
+        onSuccess()
+      },
+      onError: (error: any) => {
+        toast.error(error.response?.data?.error || 'Failed to update employee')
+      }
+    }
+  )
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    updateEmployeeMutation.mutate(formData)
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+        <h2 className="text-xl font-bold mb-4">Edit Employee</h2>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="label">Department</label>
+              <select
+                className="input"
+                value={formData.department}
+                onChange={(e) => setFormData({...formData, department: e.target.value})}
+              >
+                <option value="">Select Department</option>
+                <option value="HR">HR</option>
+                <option value="IT">IT</option>
+                <option value="Finance">Finance</option>
+                <option value="Marketing">Marketing</option>
+                <option value="Operations">Operations</option>
+              </select>
+            </div>
+            <div>
+              <label className="label">Position</label>
+              <input
+                type="text"
+                className="input"
+                value={formData.position}
+                onChange={(e) => setFormData({...formData, position: e.target.value})}
+              />
+            </div>
+          </div>
+          <div>
+            <label className="label">Status</label>
+            <select
+              className="input"
+              value={formData.status}
+              onChange={(e) => setFormData({...formData, status: e.target.value})}
+            >
+              <option value="ACTIVE">Active</option>
+              <option value="INACTIVE">Inactive</option>
+              <option value="ON_LEAVE">On Leave</option>
+            </select>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="label">Salary</label>
+              <input
+                type="number"
+                className="input"
+                value={formData.salary}
+                onChange={(e) => setFormData({...formData, salary: e.target.value})}
+                placeholder="Enter salary"
+              />
+            </div>
+            <div>
+              <label className="label">Work Location</label>
+              <input
+                type="text"
+                className="input"
+                value={formData.workLocation}
+                onChange={(e) => setFormData({...formData, workLocation: e.target.value})}
+                placeholder="Enter work location"
+              />
+            </div>
+          </div>
+          <div className="flex justify-end space-x-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="btn btn-outline btn-md"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={updateEmployeeMutation.isLoading}
+              className="btn btn-primary btn-md"
+            >
+              {updateEmployeeMutation.isLoading ? 'Updating...' : 'Update Employee'}
             </button>
           </div>
         </form>

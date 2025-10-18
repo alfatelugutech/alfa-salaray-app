@@ -1,7 +1,52 @@
-import React from 'react'
-import { Clock, Plus, Search, Filter, CheckCircle, XCircle } from 'lucide-react'
+import React, { useState } from 'react'
+import { Clock, Plus, Search, Filter, CheckCircle, XCircle, Edit, Trash2, Eye } from 'lucide-react'
+import { useQuery, useMutation, useQueryClient } from 'react-query'
+import { attendanceService } from '../services/attendanceService'
+import { employeeService } from '../services/employeeService'
+import { Attendance } from '../types'
+import toast from 'react-hot-toast'
 
 const Attendance: React.FC = () => {
+  const [showMarkModal, setShowMarkModal] = useState(false)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [dateFilter, setDateFilter] = useState(new Date().toISOString().split('T')[0])
+  const [statusFilter, setStatusFilter] = useState('')
+  const queryClient = useQueryClient()
+
+  // Fetch attendance records
+  const { data: attendanceData, isLoading, error } = useQuery(
+    ['attendance', searchTerm, dateFilter, statusFilter],
+    () => attendanceService.getAttendance({
+      search: searchTerm,
+      startDate: dateFilter,
+      endDate: dateFilter,
+      status: statusFilter
+    })
+  )
+
+  // Fetch employees for marking attendance
+  const { data: employeesData } = useQuery(
+    'employees',
+    () => employeeService.getEmployees()
+  )
+
+  // Delete attendance mutation
+  const deleteAttendanceMutation = useMutation(attendanceService.deleteAttendance, {
+    onSuccess: () => {
+      queryClient.invalidateQueries('attendance')
+      toast.success('Attendance record deleted successfully')
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || 'Failed to delete attendance record')
+    }
+  })
+
+  const handleDeleteAttendance = (id: string) => {
+    if (window.confirm('Are you sure you want to delete this attendance record?')) {
+      deleteAttendanceMutation.mutate(id)
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -11,11 +56,10 @@ const Attendance: React.FC = () => {
           <p className="text-gray-600">Track employee attendance and working hours</p>
         </div>
         <div className="flex gap-2">
-          <button className="btn btn-outline btn-md">
-            <CheckCircle className="h-4 w-4 mr-2" />
-            Check In
-          </button>
-          <button className="btn btn-primary btn-md">
+          <button 
+            onClick={() => setShowMarkModal(true)}
+            className="btn btn-primary btn-md"
+          >
             <Plus className="h-4 w-4 mr-2" />
             Mark Attendance
           </button>
@@ -31,7 +75,9 @@ const Attendance: React.FC = () => {
             </div>
             <div className="ml-3">
               <p className="text-sm font-medium text-gray-600">Present Today</p>
-              <p className="text-xl font-bold text-gray-900">24</p>
+              <p className="text-xl font-bold text-gray-900">
+                {attendanceData?.data?.presentCount || 0}
+              </p>
             </div>
           </div>
         </div>
@@ -42,7 +88,9 @@ const Attendance: React.FC = () => {
             </div>
             <div className="ml-3">
               <p className="text-sm font-medium text-gray-600">Absent Today</p>
-              <p className="text-xl font-bold text-gray-900">3</p>
+              <p className="text-xl font-bold text-gray-900">
+                {attendanceData?.data?.absentCount || 0}
+              </p>
             </div>
           </div>
         </div>
@@ -53,7 +101,9 @@ const Attendance: React.FC = () => {
             </div>
             <div className="ml-3">
               <p className="text-sm font-medium text-gray-600">Late Today</p>
-              <p className="text-xl font-bold text-gray-900">2</p>
+              <p className="text-xl font-bold text-gray-900">
+                {attendanceData?.data?.lateCount || 0}
+              </p>
             </div>
           </div>
         </div>
@@ -64,7 +114,10 @@ const Attendance: React.FC = () => {
             </div>
             <div className="ml-3">
               <p className="text-sm font-medium text-gray-600">Attendance Rate</p>
-              <p className="text-xl font-bold text-gray-900">89%</p>
+              <p className="text-xl font-bold text-gray-900">
+                {attendanceData?.data?.attendanceRate ? 
+                  `${Math.round(attendanceData.data.attendanceRate)}%` : '0%'}
+              </p>
             </div>
           </div>
         </div>
@@ -80,6 +133,8 @@ const Attendance: React.FC = () => {
                 type="text"
                 placeholder="Search attendance records..."
                 className="input pl-10"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
           </div>
@@ -87,17 +142,31 @@ const Attendance: React.FC = () => {
             <input
               type="date"
               className="input"
-              defaultValue={new Date().toISOString().split('T')[0]}
+              value={dateFilter}
+              onChange={(e) => setDateFilter(e.target.value)}
             />
-            <select className="input">
-              <option>All Status</option>
-              <option>Present</option>
-              <option>Absent</option>
-              <option>Late</option>
+            <select 
+              className="input"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
+              <option value="">All Status</option>
+              <option value="PRESENT">Present</option>
+              <option value="ABSENT">Absent</option>
+              <option value="LATE">Late</option>
+              <option value="EARLY_LEAVE">Early Leave</option>
+              <option value="HALF_DAY">Half Day</option>
             </select>
-            <button className="btn btn-outline btn-md">
+            <button 
+              className="btn btn-outline btn-md"
+              onClick={() => {
+                setSearchTerm('')
+                setDateFilter(new Date().toISOString().split('T')[0])
+                setStatusFilter('')
+              }}
+            >
               <Filter className="h-4 w-4 mr-2" />
-              Filter
+              Clear
             </button>
           </div>
         </div>
@@ -109,16 +178,256 @@ const Attendance: React.FC = () => {
           <h3 className="text-lg font-medium text-gray-900">Today's Attendance</h3>
         </div>
         <div className="p-6">
-          <div className="text-center py-12">
-            <Clock className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No attendance records</h3>
-            <p className="text-gray-600 mb-4">Start tracking attendance by marking check-ins</p>
-            <button className="btn btn-primary btn-md">
-              <Plus className="h-4 w-4 mr-2" />
-              Mark Attendance
+          {isLoading ? (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+              <p className="text-gray-600 mt-2">Loading attendance records...</p>
+            </div>
+          ) : error ? (
+            <div className="text-center py-12">
+              <p className="text-red-600">Error loading attendance records</p>
+            </div>
+          ) : !attendanceData?.data?.attendances?.length ? (
+            <div className="text-center py-12">
+              <Clock className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No attendance records</h3>
+              <p className="text-gray-600 mb-4">Start tracking attendance by marking check-ins</p>
+              <button 
+                onClick={() => setShowMarkModal(true)}
+                className="btn btn-primary btn-md"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Mark Attendance
+              </button>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Employee
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Date
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Check In
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Check Out
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {attendanceData.data.attendances.map((attendance: Attendance) => (
+                    <tr key={attendance.id}>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                            <span className="text-blue-600 font-medium">
+                              {attendance.employee?.user?.firstName?.charAt(0)}{attendance.employee?.user?.lastName?.charAt(0)}
+                            </span>
+                          </div>
+                          <div className="ml-4">
+                            <div className="text-sm font-medium text-gray-900">
+                              {attendance.employee?.user?.firstName} {attendance.employee?.user?.lastName}
+                            </div>
+                            <div className="text-sm text-gray-500">{attendance.employee?.user?.email}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {new Date(attendance.date).toLocaleDateString()}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {attendance.checkIn ? new Date(attendance.checkIn).toLocaleTimeString() : 'N/A'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {attendance.checkOut ? new Date(attendance.checkOut).toLocaleTimeString() : 'N/A'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                          attendance.status === 'PRESENT' 
+                            ? 'bg-green-100 text-green-800'
+                            : attendance.status === 'ABSENT'
+                            ? 'bg-red-100 text-red-800'
+                            : attendance.status === 'LATE'
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : 'bg-gray-100 text-gray-800'
+                        }`}>
+                          {attendance.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <div className="flex space-x-2">
+                          <button className="text-blue-600 hover:text-blue-900">
+                            <Eye className="h-4 w-4" />
+                          </button>
+                          <button className="text-indigo-600 hover:text-indigo-900">
+                            <Edit className="h-4 w-4" />
+                          </button>
+                          <button 
+                            onClick={() => handleDeleteAttendance(attendance.id)}
+                            className="text-red-600 hover:text-red-900"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Mark Attendance Modal */}
+      {showMarkModal && (
+        <MarkAttendanceModal 
+          onClose={() => setShowMarkModal(false)}
+          onSuccess={() => {
+            setShowMarkModal(false)
+            queryClient.invalidateQueries('attendance')
+          }}
+          employees={employeesData?.data?.employees || []}
+        />
+      )}
+    </div>
+  )
+}
+
+// Mark Attendance Modal Component
+const MarkAttendanceModal: React.FC<{
+  onClose: () => void
+  onSuccess: () => void
+  employees: any[]
+}> = ({ onClose, onSuccess, employees }) => {
+  const [formData, setFormData] = useState({
+    employeeId: '',
+    date: new Date().toISOString().split('T')[0],
+    checkIn: '',
+    checkOut: '',
+    status: 'PRESENT',
+    notes: ''
+  })
+
+  const markAttendanceMutation = useMutation(attendanceService.markAttendance, {
+    onSuccess: () => {
+      toast.success('Attendance marked successfully!')
+      onSuccess()
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || 'Failed to mark attendance')
+    }
+  })
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    markAttendanceMutation.mutate(formData)
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+        <h2 className="text-xl font-bold mb-4">Mark Attendance</h2>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="label">Employee *</label>
+            <select
+              className="input"
+              value={formData.employeeId}
+              onChange={(e) => setFormData({...formData, employeeId: e.target.value})}
+              required
+            >
+              <option value="">Select Employee</option>
+              {employees.map((employee) => (
+                <option key={employee.id} value={employee.id}>
+                  {employee.user?.firstName} {employee.user?.lastName} ({employee.user?.email})
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="label">Date *</label>
+            <input
+              type="date"
+              className="input"
+              value={formData.date}
+              onChange={(e) => setFormData({...formData, date: e.target.value})}
+              required
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="label">Check In</label>
+              <input
+                type="time"
+                className="input"
+                value={formData.checkIn}
+                onChange={(e) => setFormData({...formData, checkIn: e.target.value})}
+              />
+            </div>
+            <div>
+              <label className="label">Check Out</label>
+              <input
+                type="time"
+                className="input"
+                value={formData.checkOut}
+                onChange={(e) => setFormData({...formData, checkOut: e.target.value})}
+              />
+            </div>
+          </div>
+          <div>
+            <label className="label">Status *</label>
+            <select
+              className="input"
+              value={formData.status}
+              onChange={(e) => setFormData({...formData, status: e.target.value})}
+              required
+            >
+              <option value="PRESENT">Present</option>
+              <option value="ABSENT">Absent</option>
+              <option value="LATE">Late</option>
+              <option value="EARLY_LEAVE">Early Leave</option>
+              <option value="HALF_DAY">Half Day</option>
+            </select>
+          </div>
+          <div>
+            <label className="label">Notes</label>
+            <textarea
+              className="input"
+              rows={3}
+              value={formData.notes}
+              onChange={(e) => setFormData({...formData, notes: e.target.value})}
+              placeholder="Optional notes..."
+            />
+          </div>
+          <div className="flex justify-end space-x-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="btn btn-outline btn-md"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={markAttendanceMutation.isLoading}
+              className="btn btn-primary btn-md"
+            >
+              {markAttendanceMutation.isLoading ? 'Marking...' : 'Mark Attendance'}
             </button>
           </div>
-        </div>
+        </form>
       </div>
     </div>
   )
