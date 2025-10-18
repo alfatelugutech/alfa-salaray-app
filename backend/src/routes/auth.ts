@@ -1,4 +1,4 @@
-import express from "express";
+import express, { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { PrismaClient } from "@prisma/client";
@@ -23,7 +23,7 @@ const loginSchema = Joi.object({
 });
 
 // Register new user
-router.post("/register", async (req, res) => {
+router.post("/register", async (req: Request, res: Response) => {
   try {
     const { error, value } = registerSchema.validate(req.body);
     if (error) {
@@ -100,7 +100,7 @@ router.post("/register", async (req, res) => {
 });
 
 // Login user
-router.post("/login", async (req, res) => {
+router.post("/login", async (req: Request, res: Response) => {
   try {
     const { error, value } = loginSchema.validate(req.body);
     if (error) {
@@ -182,7 +182,7 @@ router.post("/login", async (req, res) => {
 });
 
 // Get current user
-router.get("/me", async (req, res) => {
+router.get("/me", async (req: Request, res: Response) => {
   try {
     const authHeader = req.headers.authorization;
     const token = authHeader && authHeader.split(" ")[1];

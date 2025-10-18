@@ -1,4 +1,4 @@
-import express from "express";
+import express, { Request, Response } from "express";
 import { PrismaClient } from "@prisma/client";
 import { authenticateToken, requireHR } from "../middleware/auth";
 import Joi from "joi";
@@ -24,7 +24,7 @@ const updateLeaveRequestSchema = Joi.object({
 });
 
 // Create leave request
-router.post("/request", async (req, res) => {
+router.post("/request", async (req: Request, res: Response) => {
   try {
     const { error, value } = createLeaveRequestSchema.validate(req.body);
     if (error) {
@@ -108,7 +108,7 @@ router.post("/request", async (req, res) => {
 });
 
 // Get leave requests
-router.get("/", async (req, res) => {
+router.get("/", async (req: Request, res: Response) => {
   try {
     const { 
       page = 1, 
@@ -192,7 +192,7 @@ router.get("/", async (req, res) => {
 });
 
 // Get leave request by ID
-router.get("/:id", async (req, res) => {
+router.get("/:id", async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     
@@ -238,7 +238,7 @@ router.get("/:id", async (req, res) => {
 });
 
 // Update leave request status (approve/reject)
-router.put("/:id/status", requireHR, async (req, res) => {
+router.put("/:id/status", requireHR, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { error, value } = updateLeaveRequestSchema.validate(req.body);
@@ -293,7 +293,7 @@ router.put("/:id/status", requireHR, async (req, res) => {
 });
 
 // Cancel leave request
-router.put("/:id/cancel", async (req, res) => {
+router.put("/:id/cancel", async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
@@ -334,7 +334,7 @@ router.put("/:id/cancel", async (req, res) => {
 });
 
 // Delete leave request
-router.delete("/:id", requireHR, async (req, res) => {
+router.delete("/:id", requireHR, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
@@ -358,7 +358,7 @@ router.delete("/:id", requireHR, async (req, res) => {
 });
 
 // Get leave statistics
-router.get("/stats/overview", requireHR, async (req, res) => {
+router.get("/stats/overview", requireHR, async (req: Request, res: Response) => {
   try {
     const { startDate, endDate } = req.query;
     
@@ -401,7 +401,7 @@ router.get("/stats/overview", requireHR, async (req, res) => {
 });
 
 // Get employee's leave history
-router.get("/employee/:employeeId", async (req, res) => {
+router.get("/employee/:employeeId", async (req: Request, res: Response) => {
   try {
     const { employeeId } = req.params;
     const { page = 1, limit = 10, startDate, endDate } = req.query;

@@ -1,4 +1,4 @@
-import express from "express";
+import express, { Request, Response } from "express";
 import { PrismaClient } from "@prisma/client";
 import { authenticateToken, requireHR } from "../middleware/auth";
 import Joi from "joi";
@@ -27,7 +27,7 @@ const updateAttendanceSchema = Joi.object({
 });
 
 // Mark attendance (for employees and admins)
-router.post("/mark", async (req, res) => {
+router.post("/mark", async (req: Request, res: Response) => {
   try {
     const { error, value } = markAttendanceSchema.validate(req.body);
     if (error) {
@@ -110,7 +110,7 @@ router.post("/mark", async (req, res) => {
 });
 
 // Get attendance records
-router.get("/", async (req, res) => {
+router.get("/", async (req: Request, res: Response) => {
   try {
     const { 
       page = 1, 
@@ -187,7 +187,7 @@ router.get("/", async (req, res) => {
 });
 
 // Get attendance by ID
-router.get("/:id", async (req, res) => {
+router.get("/:id", async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     
@@ -233,7 +233,7 @@ router.get("/:id", async (req, res) => {
 });
 
 // Update attendance
-router.put("/:id", requireHR, async (req, res) => {
+router.put("/:id", requireHR, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { error, value } = updateAttendanceSchema.validate(req.body);
@@ -298,7 +298,7 @@ router.put("/:id", requireHR, async (req, res) => {
 });
 
 // Delete attendance
-router.delete("/:id", requireHR, async (req, res) => {
+router.delete("/:id", requireHR, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
@@ -322,7 +322,7 @@ router.delete("/:id", requireHR, async (req, res) => {
 });
 
 // Get attendance statistics
-router.get("/stats/overview", requireHR, async (req, res) => {
+router.get("/stats/overview", requireHR, async (req: Request, res: Response) => {
   try {
     const { startDate, endDate } = req.query;
     
@@ -363,7 +363,7 @@ router.get("/stats/overview", requireHR, async (req, res) => {
 });
 
 // Get employee's attendance history
-router.get("/employee/:employeeId", async (req, res) => {
+router.get("/employee/:employeeId", async (req: Request, res: Response) => {
   try {
     const { employeeId } = req.params;
     const { page = 1, limit = 10, startDate, endDate } = req.query;

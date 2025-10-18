@@ -1,4 +1,4 @@
-import express from "express";
+import express, { Request, Response } from "express";
 import { PrismaClient } from "@prisma/client";
 import { authenticateToken, requireHR } from "../middleware/auth";
 import Joi from "joi";
@@ -29,7 +29,7 @@ const updateEmployeeSchema = Joi.object({
 });
 
 // Get all employees
-router.get("/", requireHR, async (req, res) => {
+router.get("/", requireHR, async (req: Request, res: Response) => {
   try {
     const { page = 1, limit = 10, search = "", department = "", status = "" } = req.query;
     
@@ -102,7 +102,7 @@ router.get("/", requireHR, async (req, res) => {
 });
 
 // Get employee by ID
-router.get("/:id", async (req, res) => {
+router.get("/:id", async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     
@@ -150,7 +150,7 @@ router.get("/:id", async (req, res) => {
 });
 
 // Create new employee
-router.post("/", requireHR, async (req, res) => {
+router.post("/", requireHR, async (req: Request, res: Response) => {
   try {
     const { error, value } = createEmployeeSchema.validate(req.body);
     if (error) {
@@ -220,7 +220,7 @@ router.post("/", requireHR, async (req, res) => {
 });
 
 // Update employee
-router.put("/:id", requireHR, async (req, res) => {
+router.put("/:id", requireHR, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { error, value } = updateEmployeeSchema.validate(req.body);
@@ -269,7 +269,7 @@ router.put("/:id", requireHR, async (req, res) => {
 });
 
 // Delete employee
-router.delete("/:id", requireHR, async (req, res) => {
+router.delete("/:id", requireHR, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
@@ -293,7 +293,7 @@ router.delete("/:id", requireHR, async (req, res) => {
 });
 
 // Get employee statistics
-router.get("/stats/overview", requireHR, async (req, res) => {
+router.get("/stats/overview", requireHR, async (req: Request, res: Response) => {
   try {
     const [totalEmployees, activeEmployees, inactiveEmployees, onLeaveEmployees] = await Promise.all([
       prisma.employee.count(),
