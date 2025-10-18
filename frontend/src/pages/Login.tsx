@@ -113,18 +113,17 @@ const Login: React.FC = () => {
                 )}
               </button>
             </div>
-          </form>
-
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">
-              Demo Credentials:
-            </p>
-            <div className="mt-2 text-xs text-gray-500 space-y-1">
-              <p><strong>Super Admin:</strong> admin@company.com / password</p>
-              <p><strong>HR Manager:</strong> hr@company.com / password</p>
-              <p><strong>Employee:</strong> employee@company.com / password</p>
+            
+            {/* Demo Credentials */}
+            <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+              <h4 className="text-sm font-medium text-blue-900 mb-2">Demo Credentials</h4>
+              <div className="space-y-1 text-xs text-blue-800">
+                <div><strong>Super Admin:</strong> admin@company.com / password</div>
+                <div><strong>HR Manager:</strong> hr@company.com / password</div>
+                <div><strong>Employee:</strong> employee@company.com / password</div>
+              </div>
             </div>
-          </div>
+          </form>
         </div>
 
         {/* Footer */}

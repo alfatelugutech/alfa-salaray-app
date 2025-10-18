@@ -47,6 +47,13 @@ api.interceptors.response.use(
       return Promise.reject(error)
     }
     
+    // Handle rate limiting (429)
+    if (error.response?.status === 429) {
+      console.warn('Rate limit exceeded - backend may be temporarily unavailable')
+      toast.error('Server is busy - please try again in a few minutes')
+      return Promise.reject(error)
+    }
+    
     // Handle server errors (5xx)
     if (error.response?.status >= 500) {
       console.error('Server error:', error.response?.data)

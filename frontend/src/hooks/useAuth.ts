@@ -54,7 +54,18 @@ export const useAuth = () => {
       navigate('/dashboard')
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.error || 'Login failed')
+      console.error('Login error:', error)
+      
+      // Handle specific error cases
+      if (error.response?.status === 429) {
+        toast.error('Server is busy - please try again in a few minutes')
+      } else if (error.response?.status === 401) {
+        toast.error('Invalid email or password')
+      } else if (error.response?.status === 0 || error.code === 'NETWORK_ERROR') {
+        toast.error('Cannot connect to server - please check your internet connection')
+      } else {
+        toast.error(error.response?.data?.error || 'Login failed')
+      }
     }
   })
 
