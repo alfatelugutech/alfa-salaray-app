@@ -34,14 +34,28 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         </div>
       </div>
 
-      {/* Simple navigation */}
+      {/* Role-based navigation */}
       <div className="bg-white border-b">
         <div className="px-4 py-2">
           <nav className="flex space-x-4">
             <a href="/" className="text-blue-600 font-medium">Dashboard</a>
-            <a href="/employees" className="text-gray-600 hover:text-gray-900">Employees</a>
-            <a href="/attendance" className="text-gray-600 hover:text-gray-900">Attendance</a>
-            <a href="/leave" className="text-gray-600 hover:text-gray-900">Leave</a>
+            
+            {/* Show different navigation based on user role */}
+            {user?.role === 'SUPER_ADMIN' || user?.role === 'HR_MANAGER' ? (
+              // Admin/HR navigation
+              <>
+                <a href="/employees" className="text-gray-600 hover:text-gray-900">Employees</a>
+                <a href="/attendance" className="text-gray-600 hover:text-gray-900">Attendance</a>
+                <a href="/leave" className="text-gray-600 hover:text-gray-900">Leave</a>
+              </>
+            ) : (
+              // Employee navigation
+              <>
+                <a href="/attendance" className="text-gray-600 hover:text-gray-900">My Attendance</a>
+                <a href="/leave" className="text-gray-600 hover:text-gray-900">My Leave</a>
+                <a href="/profile" className="text-gray-600 hover:text-gray-900">Profile</a>
+              </>
+            )}
           </nav>
         </div>
       </div>

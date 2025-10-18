@@ -304,26 +304,40 @@ const AddEmployeeModal: React.FC<{
 
   const createEmployeeMutation = useMutation(
     async (data: any) => {
-      // First create user using authService
-      const userData = await authService.register({
-        email: data.email,
-        password: data.password,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        phone: data.phone,
-        role: 'EMPLOYEE'
-      })
-      
-      // Then create employee record
-      return employeeService.createEmployee({
-        userId: userData.user.id,
-        employeeId: data.employeeId,
-        department: data.department,
-        position: data.position,
-        hireDate: data.hireDate,
-        salary: data.salary ? parseFloat(data.salary) : undefined,
-        workLocation: data.workLocation
-      })
+      try {
+        // First create user using authService
+        const userData = await authService.register({
+          email: data.email,
+          password: data.password,
+          firstName: data.firstName,
+          lastName: data.lastName,
+          phone: data.phone,
+          role: 'EMPLOYEE'
+        })
+        
+        // Then create employee record
+        return employeeService.createEmployee({
+          userId: userData.user.id,
+          employeeId: data.employeeId,
+          department: data.department,
+          position: data.position,
+          hireDate: data.hireDate,
+          salary: data.salary ? parseFloat(data.salary) : undefined,
+          workLocation: data.workLocation
+        })
+      } catch (error: any) {
+        console.error('Employee creation error:', error)
+        // Check if it's a user already exists error
+        if (error.response?.data?.code === 'USER_EXISTS') {
+          throw new Error('User with this email already exists. Please use a different email.')
+        }
+        // Check if it's a validation error
+        if (error.response?.data?.code === 'VALIDATION_ERROR') {
+          throw new Error(error.response.data.error || 'Validation failed. Please check your input.')
+        }
+        // Generic error
+        throw new Error(error.response?.data?.error || error.message || 'Failed to create employee')
+      }
     },
     {
       onSuccess: () => {
@@ -331,6 +345,7 @@ const AddEmployeeModal: React.FC<{
         onSuccess()
       },
       onError: (error: any) => {
+        console.error('Employee creation failed:', error)
         toast.error(error.message || 'Failed to create employee')
       }
     }
@@ -338,6 +353,23 @@ const AddEmployeeModal: React.FC<{
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Basic validation
+    if (!formData.email || !formData.password || !formData.firstName || !formData.lastName || !formData.employeeId || !formData.hireDate) {
+      toast.error('Please fill in all required fields')
+      return
+    }
+    
+    if (formData.password.length < 6) {
+      toast.error('Password must be at least 6 characters long')
+      return
+    }
+    
+    if (!formData.email.includes('@')) {
+      toast.error('Please enter a valid email address')
+      return
+    }
+    
     createEmployeeMutation.mutate(formData)
   }
 
@@ -445,9 +477,16 @@ const AddEmployeeModal: React.FC<{
             <button
               type="submit"
               disabled={createEmployeeMutation.isLoading}
-              className="btn btn-primary btn-md"
+              className="btn btn-primary btn-md disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {createEmployeeMutation.isLoading ? 'Creating...' : 'Create Employee'}
+              {createEmployeeMutation.isLoading ? (
+                <div className="flex items-center">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Creating...
+                </div>
+              ) : (
+                'Create Employee'
+              )}
             </button>
           </div>
         </form>
