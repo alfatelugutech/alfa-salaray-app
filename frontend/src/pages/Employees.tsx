@@ -311,7 +311,7 @@ const AddEmployeeModal: React.FC<{
           password: data.password,
           firstName: data.firstName,
           lastName: data.lastName,
-          phone: data.phone,
+          phone: data.phone || undefined, // Send undefined if empty
           role: 'EMPLOYEE'
         })
         
@@ -357,6 +357,12 @@ const AddEmployeeModal: React.FC<{
     // Basic validation
     if (!formData.email || !formData.password || !formData.firstName || !formData.lastName || !formData.employeeId || !formData.hireDate) {
       toast.error('Please fill in all required fields')
+      return
+    }
+    
+    // Phone validation (optional but if provided, should be valid)
+    if (formData.phone && formData.phone.length < 10) {
+      toast.error('Please enter a valid phone number (at least 10 digits)')
       return
     }
     
@@ -419,6 +425,16 @@ const AddEmployeeModal: React.FC<{
                 required
               />
             </div>
+          </div>
+          <div>
+            <label className="label">Phone</label>
+            <input
+              type="tel"
+              className="input"
+              value={formData.phone}
+              onChange={(e) => setFormData({...formData, phone: e.target.value})}
+              placeholder="Enter phone number"
+            />
           </div>
           <div>
             <label className="label">Employee ID *</label>
