@@ -27,9 +27,6 @@ model User {
   employee      Employee?
   attendances   Attendance[]
   leaveRequests LeaveRequest[]
-  createdBy     User?     @relation("UserCreatedBy", fields: [createdById], references: [id])
-  createdById   String?
-  createdUsers  User[]    @relation("UserCreatedBy")
 
   @@map("users")
 }
