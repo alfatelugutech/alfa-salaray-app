@@ -12,7 +12,7 @@ interface AuthRequest extends Request {
   };
 }
 
-export const authenticateToken = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+export const authenticateToken = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const authHeader = req.headers.authorization;
     const token = authHeader && authHeader.split(" ")[1];
@@ -41,7 +41,7 @@ export const authenticateToken = async (req: AuthRequest, res: Response, next: N
       return;
     }
 
-    req.user = {
+    (req as AuthRequest).user = {
       id: user.id,
       email: user.email,
       role: user.role
@@ -57,8 +57,9 @@ export const authenticateToken = async (req: AuthRequest, res: Response, next: N
   }
 };
 
-export const requireHR = (req: AuthRequest, res: Response, next: NextFunction): void => {
-  if (!req.user) {
+export const requireHR = (req: Request, res: Response, next: NextFunction): void => {
+  const authReq = req as AuthRequest;
+  if (!authReq.user) {
     res.status(401).json({
       success: false,
       error: "Authentication required",
@@ -67,7 +68,7 @@ export const requireHR = (req: AuthRequest, res: Response, next: NextFunction): 
     return;
   }
 
-  if (!["SUPER_ADMIN", "HR_MANAGER"].includes(req.user.role)) {
+  if (!["SUPER_ADMIN", "HR_MANAGER"].includes(authReq.user.role)) {
     res.status(403).json({
       success: false,
       error: "HR access required",
