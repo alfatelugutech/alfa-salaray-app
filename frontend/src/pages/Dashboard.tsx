@@ -1,5 +1,4 @@
 import React from 'react'
-import { useQuery } from 'react-query'
 import { 
   Users, 
   Clock, 
@@ -7,37 +6,14 @@ import {
   TrendingUp,
   UserCheck
 } from 'lucide-react'
-import { employeeService } from '../services/employeeService'
-import { attendanceService } from '../services/attendanceService'
-import { leaveService } from '../services/leaveService'
-import LoadingSpinner from '../components/LoadingSpinner'
 
 const Dashboard: React.FC = () => {
-  const { data: employeeStats, isLoading: employeeStatsLoading } = useQuery(
-    'employeeStats',
-    employeeService.getEmployeeStats
-  )
-
-  const { data: attendanceStats, isLoading: attendanceStatsLoading } = useQuery(
-    'attendanceStats',
-    () => attendanceService.getAttendanceStats()
-  )
-
-  const { data: leaveStats, isLoading: leaveStatsLoading } = useQuery(
-    'leaveStats',
-    () => leaveService.getLeaveStats()
-  )
-
-  const isLoading = employeeStatsLoading || attendanceStatsLoading || leaveStatsLoading
-
-  if (isLoading) {
-    return <LoadingSpinner className="h-64" />
-  }
+  // Simplified dashboard without API calls for now
 
   const stats = [
     {
       name: 'Total Employees',
-      value: employeeStats?.totalEmployees || 0,
+      value: 0,
       icon: Users,
       color: 'bg-blue-500',
       change: '+12%',
@@ -45,7 +21,7 @@ const Dashboard: React.FC = () => {
     },
     {
       name: 'Active Employees',
-      value: employeeStats?.activeEmployees || 0,
+      value: 0,
       icon: UserCheck,
       color: 'bg-green-500',
       change: '+8%',
@@ -53,7 +29,7 @@ const Dashboard: React.FC = () => {
     },
     {
       name: 'Present Today',
-      value: attendanceStats?.presentCount || 0,
+      value: 0,
       icon: Clock,
       color: 'bg-purple-500',
       change: '+5%',
@@ -61,7 +37,7 @@ const Dashboard: React.FC = () => {
     },
     {
       name: 'Pending Leaves',
-      value: leaveStats?.pendingRequests || 0,
+      value: 0,
       icon: Calendar,
       color: 'bg-orange-500',
       change: '-2%',
