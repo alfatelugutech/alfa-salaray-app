@@ -1,6 +1,6 @@
 import React from 'react'
 import { useAuth } from '../hooks/useAuth'
-import { User, Mail, Phone, Calendar, MapPin, Shield } from 'lucide-react'
+import { User, Mail, Calendar, MapPin, Shield } from 'lucide-react'
 
 const Profile: React.FC = () => {
   const { user } = useAuth()

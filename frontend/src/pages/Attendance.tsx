@@ -1,5 +1,5 @@
 import React from 'react'
-import { Clock, Plus, Search, Filter, CheckIn, CheckOut } from 'lucide-react'
+import { Clock, Plus, Search, Filter, CheckCircle, XCircle } from 'lucide-react'
 
 const Attendance: React.FC = () => {
   return (
@@ -12,7 +12,7 @@ const Attendance: React.FC = () => {
         </div>
         <div className="flex gap-2">
           <button className="btn btn-outline btn-md">
-            <CheckIn className="h-4 w-4 mr-2" />
+            <CheckCircle className="h-4 w-4 mr-2" />
             Check In
           </button>
           <button className="btn btn-primary btn-md">
@@ -27,7 +27,7 @@ const Attendance: React.FC = () => {
         <div className="card p-4">
           <div className="flex items-center">
             <div className="p-2 bg-green-100 rounded-lg">
-              <CheckIn className="h-5 w-5 text-green-600" />
+              <CheckCircle className="h-5 w-5 text-green-600" />
             </div>
             <div className="ml-3">
               <p className="text-sm font-medium text-gray-600">Present Today</p>
@@ -38,7 +38,7 @@ const Attendance: React.FC = () => {
         <div className="card p-4">
           <div className="flex items-center">
             <div className="p-2 bg-red-100 rounded-lg">
-              <CheckOut className="h-5 w-5 text-red-600" />
+              <XCircle className="h-5 w-5 text-red-600" />
             </div>
             <div className="ml-3">
               <p className="text-sm font-medium text-gray-600">Absent Today</p>

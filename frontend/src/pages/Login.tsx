@@ -8,7 +8,6 @@ const Login: React.FC = () => {
     email: '',
     password: ''
   })
-  const [isLogin, setIsLogin] = useState(true)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

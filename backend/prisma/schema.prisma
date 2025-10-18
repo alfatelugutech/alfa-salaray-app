@@ -25,8 +25,6 @@ model User {
 
   // Relations
   employee      Employee?
-  attendances   Attendance[]
-  leaveRequests LeaveRequest[]
 
   @@map("users")
 }
@@ -49,8 +47,6 @@ model Employee {
 
   // Relations
   user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  manager         Employee? @relation("EmployeeManager", fields: [managerId], references: [id])
-  subordinates    Employee[] @relation("EmployeeManager")
   attendances     Attendance[]
   leaveRequests   LeaveRequest[]
 

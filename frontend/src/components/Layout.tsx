@@ -9,8 +9,7 @@ import {
   User, 
   Menu, 
   X,
-  LogOut,
-  Settings
+  LogOut
 } from 'lucide-react'
 
 interface LayoutProps {

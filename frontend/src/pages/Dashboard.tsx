@@ -5,8 +5,7 @@ import {
   Clock, 
   Calendar, 
   TrendingUp,
-  UserCheck,
-  UserX
+  UserCheck
 } from 'lucide-react'
 import { employeeService } from '../services/employeeService'
 import { attendanceService } from '../services/attendanceService'
