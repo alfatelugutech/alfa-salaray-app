@@ -19,35 +19,80 @@ const Dashboard: React.FC = () => {
   })
   const queryClient = useQueryClient()
   
-  // Fetch data based on user role
-  const { data: attendanceData } = useQuery(
+  // Fetch data based on user role with better error handling
+  const { data: attendanceData, error: attendanceError } = useQuery(
     'my-attendance',
     () => attendanceService.getAttendance({ employeeId: user?.employeeId }),
-    { enabled: !!user?.employeeId }
+    { 
+      enabled: !!user?.employeeId,
+      retry: 2,
+      retryDelay: 1000,
+      onError: (error: any) => {
+        if (error.code !== 'NETWORK_ERROR') {
+          console.error('Attendance data fetch error:', error)
+        }
+      }
+    }
   )
   
-  const { data: leaveData } = useQuery(
+  const { data: leaveData, error: leaveError } = useQuery(
     'my-leave-requests',
     () => leaveService.getLeaveRequests({ employeeId: user?.employeeId }),
-    { enabled: !!user?.employeeId }
+    { 
+      enabled: !!user?.employeeId,
+      retry: 2,
+      retryDelay: 1000,
+      onError: (error: any) => {
+        if (error.code !== 'NETWORK_ERROR') {
+          console.error('Leave data fetch error:', error)
+        }
+      }
+    }
   )
   
-  const { data: employeeStats } = useQuery(
+  const { data: employeeStats, error: employeeStatsError } = useQuery(
     'employee-stats',
     () => employeeService.getEmployeeStats(),
-    { enabled: user?.role === 'SUPER_ADMIN' || user?.role === 'HR_MANAGER' }
+    { 
+      enabled: user?.role === 'SUPER_ADMIN' || user?.role === 'HR_MANAGER',
+      retry: 2,
+      retryDelay: 1000,
+      onError: (error: any) => {
+        if (error.code !== 'NETWORK_ERROR') {
+          console.error('Employee stats fetch error:', error)
+        }
+      }
+    }
   )
   
-  const { data: attendanceStats } = useQuery(
+  const { data: attendanceStats, error: attendanceStatsError } = useQuery(
     'attendance-stats',
     () => attendanceService.getAttendanceStats(),
-    { enabled: user?.role === 'SUPER_ADMIN' || user?.role === 'HR_MANAGER' }
+    { 
+      enabled: user?.role === 'SUPER_ADMIN' || user?.role === 'HR_MANAGER',
+      retry: 2,
+      retryDelay: 1000,
+      onError: (error: any) => {
+        if (error.code !== 'NETWORK_ERROR') {
+          console.error('Attendance stats fetch error:', error)
+        }
+      }
+    }
   )
   
-  const { data: leaveStats } = useQuery(
+  const { data: leaveStats, error: leaveStatsError } = useQuery(
     'leave-stats',
     () => leaveService.getLeaveStats(),
-    { enabled: user?.role === 'SUPER_ADMIN' || user?.role === 'HR_MANAGER' }
+    { 
+      enabled: user?.role === 'SUPER_ADMIN' || user?.role === 'HR_MANAGER',
+      retry: 2,
+      retryDelay: 1000,
+      onError: (error: any) => {
+        if (error.code !== 'NETWORK_ERROR') {
+          console.error('Leave stats fetch error:', error)
+        }
+      }
+    }
   )
 
   // Self-attendance mutation
@@ -260,6 +305,13 @@ const Dashboard: React.FC = () => {
         <div className="mt-8 p-4 bg-green-50 rounded-lg">
           <h3 className="font-semibold text-green-900">System Status</h3>
           <p className="text-green-700">✅ All systems operational</p>
+          {(attendanceError || leaveError || employeeStatsError || attendanceStatsError || leaveStatsError) && (
+            <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded">
+              <p className="text-yellow-800 text-sm">
+                ⚠️ Some data may not be up to date due to network issues. Please refresh the page.
+              </p>
+            </div>
+          )}
         </div>
       </div>
 

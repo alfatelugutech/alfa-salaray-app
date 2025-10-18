@@ -355,7 +355,7 @@ const AddEmployeeModal: React.FC<{
     e.preventDefault()
     
     // Basic validation
-    if (!formData.email || !formData.password || !formData.firstName || !formData.lastName || !formData.employeeId || !formData.hireDate) {
+    if (!formData.email || !formData.password || !formData.firstName || !formData.lastName || !formData.employeeId || !formData.hireDate || !formData.workLocation) {
       toast.error('Please fill in all required fields')
       return
     }
@@ -469,6 +469,29 @@ const AddEmployeeModal: React.FC<{
                 className="input"
                 value={formData.position}
                 onChange={(e) => setFormData({...formData, position: e.target.value})}
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="label">Salary</label>
+              <input
+                type="number"
+                className="input"
+                value={formData.salary}
+                onChange={(e) => setFormData({...formData, salary: e.target.value})}
+                placeholder="Enter salary"
+              />
+            </div>
+            <div>
+              <label className="label">Work Location *</label>
+              <input
+                type="text"
+                className="input"
+                value={formData.workLocation}
+                onChange={(e) => setFormData({...formData, workLocation: e.target.value})}
+                placeholder="Enter work location"
+                required
               />
             </div>
           </div>

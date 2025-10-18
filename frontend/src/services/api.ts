@@ -6,6 +6,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://alfa-salaray-app.o
 // Create axios instance
 const api = axios.create({
   baseURL: API_BASE_URL,
+  timeout: 10000, // 10 second timeout
   headers: {
     'Content-Type': 'application/json',
   },
@@ -31,12 +32,36 @@ api.interceptors.response.use(
     return response
   },
   (error) => {
+    // Handle authentication errors
     if (error.response?.status === 401) {
       localStorage.removeItem('token')
       localStorage.removeItem('user')
       window.location.href = '/login'
+      return Promise.reject(error)
     }
     
+    // Handle network errors more gracefully
+    if (error.code === 'NETWORK_ERROR' || error.message === 'Network Error') {
+      console.warn('Network error - backend may be temporarily unavailable')
+      // Don't show toast for network errors to avoid spam
+      return Promise.reject(error)
+    }
+    
+    // Handle server errors (5xx)
+    if (error.response?.status >= 500) {
+      console.error('Server error:', error.response?.data)
+      toast.error('Server error - please try again later')
+      return Promise.reject(error)
+    }
+    
+    // Handle client errors (4xx) with specific messages
+    if (error.response?.status >= 400 && error.response?.status < 500) {
+      const message = error.response?.data?.error || 'Request failed'
+      toast.error(message)
+      return Promise.reject(error)
+    }
+    
+    // Handle other errors
     const message = error.response?.data?.error || error.message || 'An error occurred'
     toast.error(message)
     
