@@ -12,10 +12,6 @@
   ],
   "routes": [
     {
-      "src": "/api/(.*)",
-      "dest": "/api/$1"
-    },
-    {
       "src": "/assets/(.*)",
       "dest": "/assets/$1"
     },
@@ -26,11 +22,6 @@
   ],
   "env": {
     "VITE_API_URL": "@vite_api_url"
-  },
-  "functions": {
-    "src/api/**/*.ts": {
-      "runtime": "nodejs18.x"
-    }
   },
   "headers": [
     {
