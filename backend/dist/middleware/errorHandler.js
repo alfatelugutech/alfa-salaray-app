@@ -50,4 +50,3 @@ const errorHandler = (err, req, res, next) => {
     });
 };
 exports.errorHandler = errorHandler;
-//# sourceMappingURL=errorHandler.js.map

@@ -381,4 +381,3 @@ router.get("/employee/:employeeId", async (req, res) => {
     }
 });
 exports.default = router;
-//# sourceMappingURL=attendance.js.map

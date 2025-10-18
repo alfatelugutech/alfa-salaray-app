@@ -61,7 +61,7 @@ router.post("/mark", async (req: Request, res: Response) => {
     }
 
     // Calculate total hours if both check-in and check-out are provided
-    let totalHours = null;
+    let totalHours: number | null = null;
     if (checkIn && checkOut) {
       const checkInTime = new Date(checkIn);
       const checkOutTime = new Date(checkOut);
@@ -250,7 +250,7 @@ router.put("/:id", requireHR, async (req: Request, res: Response) => {
     const { checkIn, checkOut, status, notes } = value;
 
     // Calculate total hours if both check-in and check-out are provided
-    let totalHours = null;
+    let totalHours: number | null = null;
     if (checkIn && checkOut) {
       const checkInTime = new Date(checkIn);
       const checkOutTime = new Date(checkOut);

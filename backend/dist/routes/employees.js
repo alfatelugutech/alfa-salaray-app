@@ -296,4 +296,3 @@ router.get("/stats/overview", auth_1.requireHR, async (req, res) => {
     }
 });
 exports.default = router;
-//# sourceMappingURL=employees.js.map

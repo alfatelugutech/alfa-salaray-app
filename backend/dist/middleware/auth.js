@@ -67,4 +67,3 @@ const requireHR = (req, res, next) => {
     next();
 };
 exports.requireHR = requireHR;
-//# sourceMappingURL=auth.js.map
