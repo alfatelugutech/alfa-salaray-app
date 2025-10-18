@@ -39,7 +39,6 @@ router.post('/mark', async (req, res) => {
     }
 
     const { employeeId, date, checkIn, checkOut, status, notes } = value;
-    const userId = req.user?.id;
 
     // Check if attendance already exists for this date
     const existingAttendance = await prisma.attendance.findUnique({
@@ -75,8 +74,7 @@ router.post('/mark', async (req, res) => {
         checkOut: checkOut ? new Date(checkOut) : null,
         totalHours,
         status,
-        notes,
-        createdBy: userId
+        notes
       },
       include: {
         employee: {

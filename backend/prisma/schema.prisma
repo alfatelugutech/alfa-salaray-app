@@ -36,12 +36,10 @@ model Employee {
   employeeId      String    @unique
   department      String?
   position        String?
-  managerId       String?
   hireDate        DateTime
   salary          Decimal?
   status          EmployeeStatus @default(ACTIVE)
   workLocation    String?
-  emergencyContact Json?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
@@ -63,7 +61,6 @@ model Attendance {
   totalHours  Decimal?
   status      AttendanceStatus @default(PRESENT)
   notes       String?
-  createdBy   String?  // User ID who marked the attendance
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

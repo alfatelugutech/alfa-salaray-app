@@ -249,14 +249,12 @@ router.put('/:id/status', requireHR, async (req, res) => {
     }
 
     const { status, comments } = value;
-    const approvedBy = req.user?.id;
 
     const leaveRequest = await prisma.leaveRequest.update({
       where: { id },
       data: {
         status,
         comments,
-        approvedBy,
         approvedAt: status === 'APPROVED' || status === 'REJECTED' ? new Date() : undefined
       },
       include: {

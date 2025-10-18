@@ -15,21 +15,17 @@ const createEmployeeSchema = Joi.object({
   employeeId: Joi.string().required(),
   department: Joi.string().optional(),
   position: Joi.string().optional(),
-  managerId: Joi.string().optional(),
   hireDate: Joi.date().required(),
   salary: Joi.number().optional(),
-  workLocation: Joi.string().optional(),
-  emergencyContact: Joi.object().optional()
+  workLocation: Joi.string().optional()
 });
 
 const updateEmployeeSchema = Joi.object({
   department: Joi.string().optional(),
   position: Joi.string().optional(),
-  managerId: Joi.string().optional(),
   salary: Joi.number().optional(),
   status: Joi.string().valid('ACTIVE', 'INACTIVE', 'TERMINATED', 'ON_LEAVE').optional(),
-  workLocation: Joi.string().optional(),
-  emergencyContact: Joi.object().optional()
+  workLocation: Joi.string().optional()
 });
 
 // Get all employees
@@ -72,16 +68,6 @@ router.get('/', requireHR, async (req, res) => {
               role: true,
               isActive: true,
               lastLoginAt: true
-            }
-          },
-          manager: {
-            include: {
-              user: {
-                select: {
-                  firstName: true,
-                  lastName: true
-                }
-              }
             }
           }
         },
@@ -135,26 +121,6 @@ router.get('/:id', async (req, res) => {
             isActive: true,
             lastLoginAt: true
           }
-        },
-        manager: {
-          include: {
-            user: {
-              select: {
-                firstName: true,
-                lastName: true
-              }
-            }
-          }
-        },
-        subordinates: {
-          include: {
-            user: {
-              select: {
-                firstName: true,
-                lastName: true
-              }
-            }
-          }
         }
       }
     });
@@ -194,7 +160,7 @@ router.post('/', requireHR, async (req, res) => {
       });
     }
 
-    const { userId, employeeId, department, position, managerId, hireDate, salary, workLocation, emergencyContact } = value;
+    const { userId, employeeId, department, position, hireDate, salary, workLocation } = value;
 
     // Check if employee ID already exists
     const existingEmployee = await prisma.employee.findUnique({
@@ -215,11 +181,9 @@ router.post('/', requireHR, async (req, res) => {
         employeeId,
         department,
         position,
-        managerId,
         hireDate: new Date(hireDate),
         salary,
-        workLocation,
-        emergencyContact
+        workLocation
       },
       include: {
         user: {
