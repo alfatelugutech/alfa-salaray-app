@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Clock, Search, Filter, CheckCircle, XCircle } from 'lucide-react'
+import { Clock, Search, Filter, CheckCircle, XCircle, MapPin, Home } from 'lucide-react'
 import { useQuery } from 'react-query'
 import { attendanceService } from '../services/attendanceService'
 import { useAuth } from '../hooks/useAuth'
@@ -162,7 +162,13 @@ const MyAttendance: React.FC = () => {
                       Status
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Notes
+                      Selfie
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Location
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Details
                     </th>
                   </tr>
                 </thead>
@@ -179,20 +185,73 @@ const MyAttendance: React.FC = () => {
                         {attendance.checkOut ? new Date(attendance.checkOut).toLocaleTimeString() : 'N/A'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                          attendance.status === 'PRESENT' 
-                            ? 'bg-green-100 text-green-800'
-                            : attendance.status === 'ABSENT'
-                            ? 'bg-red-100 text-red-800'
-                            : attendance.status === 'LATE'
-                            ? 'bg-yellow-100 text-yellow-800'
-                            : 'bg-gray-100 text-gray-800'
-                        }`}>
-                          {attendance.status}
-                        </span>
+                        <div className="flex flex-col gap-1">
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                            attendance.status === 'PRESENT' 
+                              ? 'bg-green-100 text-green-800'
+                              : attendance.status === 'ABSENT'
+                              ? 'bg-red-100 text-red-800'
+                              : attendance.status === 'LATE'
+                              ? 'bg-yellow-100 text-yellow-800'
+                              : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {attendance.status}
+                          </span>
+                          {attendance.isRemote && (
+                            <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-blue-700 bg-blue-50 rounded">
+                              <Home className="w-3 h-3" />
+                              Remote
+                            </span>
+                          )}
+                        </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {attendance.notes || 'N/A'}
+                      <td className="px-6 py-4">
+                        {(attendance as any).selfieUrl ? (
+                          <img 
+                            src={(attendance as any).selfieUrl} 
+                            alt="My Selfie" 
+                            className="w-12 h-12 object-cover rounded-full border-2 border-green-500 cursor-pointer hover:scale-110 transition-transform"
+                            onClick={() => window.open((attendance as any).selfieUrl, '_blank')}
+                            title="Click to view full size"
+                          />
+                        ) : (
+                          <span className="text-gray-400 text-xs">No photo</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-900">
+                        {attendance.location ? (
+                          <a
+                            href={`https://www.google.com/maps?q=${attendance.location.latitude},${attendance.location.longitude}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1 text-blue-600 hover:text-blue-800"
+                            title={attendance.location.address}
+                          >
+                            <MapPin className="w-3 h-3" />
+                            <span className="text-xs">View Map</span>
+                          </a>
+                        ) : (
+                          <span className="text-gray-400 text-xs">No location</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-900">
+                        <div className="flex flex-col gap-1">
+                          {attendance.overtimeHours > 0 && (
+                            <span className="text-xs text-orange-600 font-medium">
+                              ⏰ +{attendance.overtimeHours}h OT
+                            </span>
+                          )}
+                          {attendance.shift && (
+                            <span className="text-xs text-purple-600">
+                              🔄 {attendance.shift.name}
+                            </span>
+                          )}
+                          {attendance.notes && (
+                            <span className="text-xs text-gray-600" title={attendance.notes}>
+                              📝 {attendance.notes.substring(0, 20)}{attendance.notes.length > 20 ? '...' : ''}
+                            </span>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}

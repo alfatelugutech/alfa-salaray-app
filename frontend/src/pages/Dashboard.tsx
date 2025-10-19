@@ -5,8 +5,10 @@ import { useQuery, useMutation, useQueryClient } from 'react-query'
 import { attendanceService } from '../services/attendanceService'
 import { leaveService } from '../services/leaveService'
 import { employeeService } from '../services/employeeService'
-import { Clock, X } from 'lucide-react'
+import { Clock, X, MapPin, Smartphone, Camera, Upload } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { getCompleteLocation, getDeviceInfo } from '../utils/geolocation'
+import { captureSelfie, selectImageFile, compressImage } from '../utils/camera'
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth()
@@ -17,8 +19,14 @@ const Dashboard: React.FC = () => {
     checkIn: '',
     checkOut: '',
     status: 'PRESENT',
-    notes: ''
+    notes: '',
+    isRemote: false,
+    overtimeHours: ''
   })
+  const [location, setLocation] = useState<any>(null)
+  const [isGettingLocation, setIsGettingLocation] = useState(false)
+  const [selfie, setSelfie] = useState<string | null>(null)
+  const [isCapturingSelfie, setIsCapturingSelfie] = useState(false)
   const queryClient = useQueryClient()
   
   // Fetch data based on user role with better error handling
@@ -99,30 +107,22 @@ const Dashboard: React.FC = () => {
 
   // Self-attendance mutation
   const markSelfAttendanceMutation = useMutation(
-    async (data: any) => {
-      if (!user?.employeeId) {
-        throw new Error('Employee ID not found')
-      }
-      return attendanceService.markAttendance({
-        employeeId: user.employeeId,
-        date: data.date,
-        checkIn: data.checkIn || undefined,
-        checkOut: data.checkOut || undefined,
-        status: data.status,
-        notes: data.notes || undefined
-      })
-    },
+    attendanceService.markAttendance,
     {
       onSuccess: () => {
         queryClient.invalidateQueries('my-attendance')
         toast.success('Attendance marked successfully!')
         setShowSelfAttendanceModal(false)
+        setLocation(null)
+        setSelfie(null)
         setSelfAttendanceData({
           date: new Date().toISOString().split('T')[0],
           checkIn: '',
           checkOut: '',
           status: 'PRESENT',
-          notes: ''
+          notes: '',
+          isRemote: false,
+          overtimeHours: ''
         })
       },
       onError: (error: any) => {
@@ -131,9 +131,69 @@ const Dashboard: React.FC = () => {
     }
   )
 
+  const handleGetLocation = async () => {
+    setIsGettingLocation(true)
+    try {
+      const loc = await getCompleteLocation()
+      setLocation(loc)
+      toast.success('📍 Location captured successfully!')
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to get location')
+    } finally {
+      setIsGettingLocation(false)
+    }
+  }
+
+  const handleCaptureSelfie = async () => {
+    setIsCapturingSelfie(true)
+    try {
+      const photo = await captureSelfie()
+      const compressed = await compressImage(photo, 800)
+      setSelfie(compressed)
+      toast.success('📸 Selfie captured successfully!')
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to capture selfie')
+    } finally {
+      setIsCapturingSelfie(false)
+    }
+  }
+
+  const handleUploadSelfie = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    try {
+      const imageData = await selectImageFile(file)
+      const compressed = await compressImage(imageData, 800)
+      setSelfie(compressed)
+      toast.success('📸 Photo uploaded successfully!')
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to upload photo')
+    }
+  }
+
   const handleMarkSelfAttendance = (e: React.FormEvent) => {
     e.preventDefault()
-    markSelfAttendanceMutation.mutate(selfAttendanceData)
+    
+    // Get device info
+    const deviceInfo = getDeviceInfo()
+    
+    // Prepare submit data
+    const submitData: any = {
+      employeeId: user?.employeeId,
+      date: selfAttendanceData.date,
+      checkIn: selfAttendanceData.checkIn ? new Date(`${selfAttendanceData.date}T${selfAttendanceData.checkIn}`).toISOString() : undefined,
+      checkOut: selfAttendanceData.checkOut ? new Date(`${selfAttendanceData.date}T${selfAttendanceData.checkOut}`).toISOString() : undefined,
+      status: selfAttendanceData.status,
+      notes: selfAttendanceData.notes || undefined,
+      isRemote: selfAttendanceData.isRemote,
+      overtimeHours: selfAttendanceData.overtimeHours ? parseFloat(selfAttendanceData.overtimeHours) : undefined,
+      location: location || undefined,
+      deviceInfo,
+      selfieUrl: selfie || undefined
+    }
+    
+    markSelfAttendanceMutation.mutate(submitData)
   }
 
   // Check if user is admin/HR
@@ -223,16 +283,16 @@ const Dashboard: React.FC = () => {
                 {user?.role === 'SUPER_ADMIN' && (
                   <>
                     <button 
-                      onClick={() => toast('Role Management feature coming soon!', { icon: 'ℹ️' })}
+                      onClick={() => navigate('/employees')}
                       className="w-full bg-purple-600 text-white py-2 px-4 rounded hover:bg-purple-700 transition-colors cursor-pointer"
                     >
-                      Role Management
+                      User & Role Management
                     </button>
                     <button 
-                      onClick={() => toast('Features Control coming soon!', { icon: 'ℹ️' })}
+                      onClick={() => navigate('/shifts')}
                       className="w-full bg-orange-600 text-white py-2 px-4 rounded hover:bg-orange-700 transition-colors cursor-pointer"
                     >
-                      Features Control
+                      Shift Management
                     </button>
                     <button 
                       onClick={() => navigate('/settings')}
@@ -281,24 +341,24 @@ const Dashboard: React.FC = () => {
             <h2 className="text-xl font-semibold text-gray-900 mb-4">Super Admin Features</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
-                <h3 className="font-semibold text-purple-900 mb-2">Role Management</h3>
-                <p className="text-sm text-purple-700 mb-3">Manage user roles and permissions</p>
+                <h3 className="font-semibold text-purple-900 mb-2">User Management</h3>
+                <p className="text-sm text-purple-700 mb-3">Manage employees and users</p>
                 <button 
-                  onClick={() => toast('Role Management feature coming soon!', { icon: 'ℹ️' })}
+                  onClick={() => navigate('/employees')}
                   className="w-full bg-purple-600 text-white py-2 px-4 rounded hover:bg-purple-700 text-sm transition-colors cursor-pointer"
                 >
-                  Manage Roles
+                  Manage Employees
                 </button>
               </div>
               
               <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
-                <h3 className="font-semibold text-orange-900 mb-2">Features Control</h3>
-                <p className="text-sm text-orange-700 mb-3">Enable/disable system features</p>
+                <h3 className="font-semibold text-orange-900 mb-2">Shift Management</h3>
+                <p className="text-sm text-orange-700 mb-3">Create and manage work shifts</p>
                 <button 
-                  onClick={() => toast('Features Control coming soon!', { icon: 'ℹ️' })}
+                  onClick={() => navigate('/shifts')}
                   className="w-full bg-orange-600 text-white py-2 px-4 rounded hover:bg-orange-700 text-sm transition-colors cursor-pointer"
                 >
-                  Control Features
+                  Manage Shifts
                 </button>
               </div>
               
@@ -314,35 +374,35 @@ const Dashboard: React.FC = () => {
               </div>
               
               <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-200">
-                <h3 className="font-semibold text-indigo-900 mb-2">User Management</h3>
-                <p className="text-sm text-indigo-700 mb-3">Manage all system users</p>
+                <h3 className="font-semibold text-indigo-900 mb-2">Payroll Management</h3>
+                <p className="text-sm text-indigo-700 mb-3">Manage employee salaries</p>
                 <button 
-                  onClick={() => navigate('/employees')}
+                  onClick={() => navigate('/payroll')}
                   className="w-full bg-indigo-600 text-white py-2 px-4 rounded hover:bg-indigo-700 text-sm transition-colors cursor-pointer"
                 >
-                  Manage Users
+                  Manage Payroll
                 </button>
               </div>
               
               <div className="bg-teal-50 p-4 rounded-lg border border-teal-200">
-                <h3 className="font-semibold text-teal-900 mb-2">Reports & Analytics</h3>
-                <p className="text-sm text-teal-700 mb-3">View system reports and analytics</p>
+                <h3 className="font-semibold text-teal-900 mb-2">Attendance Reports</h3>
+                <p className="text-sm text-teal-700 mb-3">View attendance analytics</p>
                 <button 
-                  onClick={() => toast('Reports & Analytics feature coming soon!', { icon: 'ℹ️' })}
+                  onClick={() => navigate('/attendance')}
                   className="w-full bg-teal-600 text-white py-2 px-4 rounded hover:bg-teal-700 text-sm transition-colors cursor-pointer"
                 >
-                  View Reports
+                  View Attendance
                 </button>
               </div>
               
               <div className="bg-pink-50 p-4 rounded-lg border border-pink-200">
-                <h3 className="font-semibold text-pink-900 mb-2">Audit Logs</h3>
-                <p className="text-sm text-pink-700 mb-3">Monitor system activity and logs</p>
+                <h3 className="font-semibold text-pink-900 mb-2">Leave Management</h3>
+                <p className="text-sm text-pink-700 mb-3">Manage leave requests</p>
                 <button 
-                  onClick={() => toast('Audit Logs feature coming soon!', { icon: 'ℹ️' })}
+                  onClick={() => navigate('/leave')}
                   className="w-full bg-pink-600 text-white py-2 px-4 rounded hover:bg-pink-700 text-sm transition-colors cursor-pointer"
                 >
-                  View Logs
+                  Manage Leaves
                 </button>
               </div>
             </div>
@@ -426,6 +486,112 @@ const Dashboard: React.FC = () => {
                   <option value="HALF_DAY">Half Day</option>
                 </select>
               </div>
+
+              {/* Phase 2: GPS Location */}
+              <div>
+                <label className="label">Location (Optional)</label>
+                {location ? (
+                  <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded">
+                    <MapPin className="w-4 h-4 text-green-600" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-green-900">Location Captured</p>
+                      <p className="text-xs text-green-700">{location.address || `${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setLocation(null)}
+                      className="text-green-600 hover:text-green-800"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleGetLocation}
+                    disabled={isGettingLocation}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 border border-blue-200 rounded hover:bg-blue-100 disabled:opacity-50"
+                  >
+                    <MapPin className="w-4 h-4" />
+                    {isGettingLocation ? 'Getting Location...' : 'Capture GPS Location'}
+                  </button>
+                )}
+              </div>
+
+              {/* Phase 2: Selfie Capture */}
+              <div>
+                <label className="label">Selfie/Photo (Optional)</label>
+                {selfie ? (
+                  <div className="space-y-2">
+                    <div className="relative">
+                      <img 
+                        src={selfie} 
+                        alt="Attendance Selfie" 
+                        className="w-full h-48 object-cover rounded-lg border-2 border-green-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setSelfie(null)}
+                        className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <p className="text-xs text-green-700 text-center">✅ Photo captured successfully</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={handleCaptureSelfie}
+                      disabled={isCapturingSelfie}
+                      className="flex items-center justify-center gap-2 px-4 py-2 bg-purple-50 text-purple-700 border border-purple-200 rounded hover:bg-purple-100 disabled:opacity-50"
+                    >
+                      <Camera className="w-4 h-4" />
+                      {isCapturingSelfie ? 'Opening...' : 'Take Selfie'}
+                    </button>
+                    <label className="flex items-center justify-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded hover:bg-indigo-100 cursor-pointer">
+                      <Upload className="w-4 h-4" />
+                      Upload Photo
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleUploadSelfie}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                )}
+              </div>
+
+              {/* Phase 2: Remote Work & Overtime */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id="isRemote"
+                    checked={selfAttendanceData.isRemote}
+                    onChange={(e) => setSelfAttendanceData({...selfAttendanceData, isRemote: e.target.checked})}
+                    className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                  />
+                  <label htmlFor="isRemote" className="ml-2 text-sm text-gray-700">
+                    🏠 Working Remotely
+                  </label>
+                </div>
+                <div>
+                  <label className="label text-xs">Overtime Hours</label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    min="0"
+                    max="12"
+                    className="input text-sm"
+                    value={selfAttendanceData.overtimeHours}
+                    onChange={(e) => setSelfAttendanceData({...selfAttendanceData, overtimeHours: e.target.value})}
+                    placeholder="0"
+                  />
+                </div>
+              </div>
               
               <div>
                 <label className="label">Notes</label>
@@ -436,6 +602,14 @@ const Dashboard: React.FC = () => {
                   onChange={(e) => setSelfAttendanceData({...selfAttendanceData, notes: e.target.value})}
                   placeholder="Optional notes about your attendance"
                 />
+              </div>
+
+              {/* Device Info Display */}
+              <div className="p-3 bg-gray-50 border border-gray-200 rounded">
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <Smartphone className="w-4 h-4" />
+                  <span>Device info will be captured automatically</span>
+                </div>
               </div>
               
               <div className="flex space-x-3 pt-4">
