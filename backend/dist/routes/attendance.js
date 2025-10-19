@@ -18,13 +18,46 @@ const markAttendanceSchema = joi_1.default.object({
     checkIn: joi_1.default.date().optional(),
     checkOut: joi_1.default.date().optional(),
     status: joi_1.default.string().valid("PRESENT", "ABSENT", "LATE", "EARLY_LEAVE", "HALF_DAY").required(),
-    notes: joi_1.default.string().optional()
+    notes: joi_1.default.string().optional(),
+    // Phase 2 fields
+    shiftId: joi_1.default.string().optional(),
+    location: joi_1.default.object({
+        latitude: joi_1.default.number().optional(),
+        longitude: joi_1.default.number().optional(),
+        address: joi_1.default.string().optional(),
+        accuracy: joi_1.default.number().optional()
+    }).optional(),
+    deviceInfo: joi_1.default.object({
+        deviceType: joi_1.default.string().optional(),
+        os: joi_1.default.string().optional(),
+        browser: joi_1.default.string().optional(),
+        userAgent: joi_1.default.string().optional()
+    }).optional(),
+    isRemote: joi_1.default.boolean().optional(),
+    overtimeHours: joi_1.default.number().optional()
 });
 const updateAttendanceSchema = joi_1.default.object({
     checkIn: joi_1.default.date().optional(),
     checkOut: joi_1.default.date().optional(),
     status: joi_1.default.string().valid("PRESENT", "ABSENT", "LATE", "EARLY_LEAVE", "HALF_DAY").optional(),
-    notes: joi_1.default.string().optional()
+    notes: joi_1.default.string().optional(),
+    // Phase 2 fields
+    shiftId: joi_1.default.string().optional(),
+    location: joi_1.default.object({
+        latitude: joi_1.default.number().optional(),
+        longitude: joi_1.default.number().optional(),
+        address: joi_1.default.string().optional(),
+        accuracy: joi_1.default.number().optional()
+    }).optional(),
+    deviceInfo: joi_1.default.object({
+        deviceType: joi_1.default.string().optional(),
+        os: joi_1.default.string().optional(),
+        browser: joi_1.default.string().optional(),
+        userAgent: joi_1.default.string().optional()
+    }).optional(),
+    isRemote: joi_1.default.boolean().optional(),
+    overtimeHours: joi_1.default.number().optional(),
+    selfieUrl: joi_1.default.string().optional() // Selfie/photo for verification
 });
 // Mark attendance (for employees and admins)
 router.post("/mark", async (req, res) => {
@@ -38,7 +71,7 @@ router.post("/mark", async (req, res) => {
             });
             return;
         }
-        const { employeeId, date, checkIn, checkOut, status, notes } = value;
+        const { employeeId, date, checkIn, checkOut, status, notes, shiftId, location, deviceInfo, isRemote, overtimeHours, selfieUrl } = value;
         // Check if attendance already exists for this date
         const existingAttendance = await prisma.attendance.findUnique({
             where: {
@@ -63,6 +96,10 @@ router.post("/mark", async (req, res) => {
             const checkOutTime = new Date(checkOut);
             totalHours = (checkOutTime.getTime() - checkInTime.getTime()) / (1000 * 60 * 60); // Convert to hours
         }
+        // Get IP address from request
+        const ipAddress = req.headers['x-forwarded-for'] || req.socket.remoteAddress || null;
+        // Get user ID from token for createdBy
+        const createdBy = req.user?.userId || null;
         const attendance = await prisma.attendance.create({
             data: {
                 employeeId,
@@ -71,7 +108,16 @@ router.post("/mark", async (req, res) => {
                 checkOut: checkOut ? new Date(checkOut) : null,
                 totalHours,
                 status,
-                notes
+                notes,
+                // Phase 2 fields
+                shiftId: shiftId || null,
+                location: location || null,
+                deviceInfo: deviceInfo || null,
+                ipAddress: ipAddress || null,
+                isRemote: isRemote || false,
+                overtimeHours: overtimeHours || null,
+                createdBy: createdBy,
+                selfieUrl: selfieUrl || null
             },
             include: {
                 employee: {

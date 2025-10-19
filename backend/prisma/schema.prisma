@@ -72,6 +72,7 @@ model Attendance {
   isRemote    Boolean  @default(false) // Remote work flag
   overtimeHours Decimal? // Overtime hours worked
   createdBy   String?  // User ID who marked the attendance
+  selfieUrl   String?  // Selfie/photo URL for verification
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

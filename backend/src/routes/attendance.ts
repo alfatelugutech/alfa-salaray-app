@@ -16,14 +16,47 @@ const markAttendanceSchema = Joi.object({
   checkIn: Joi.date().optional(),
   checkOut: Joi.date().optional(),
   status: Joi.string().valid("PRESENT", "ABSENT", "LATE", "EARLY_LEAVE", "HALF_DAY").required(),
-  notes: Joi.string().optional()
+  notes: Joi.string().optional(),
+  // Phase 2 fields
+  shiftId: Joi.string().optional(),
+  location: Joi.object({
+    latitude: Joi.number().optional(),
+    longitude: Joi.number().optional(),
+    address: Joi.string().optional(),
+    accuracy: Joi.number().optional()
+  }).optional(),
+  deviceInfo: Joi.object({
+    deviceType: Joi.string().optional(),
+    os: Joi.string().optional(),
+    browser: Joi.string().optional(),
+    userAgent: Joi.string().optional()
+  }).optional(),
+  isRemote: Joi.boolean().optional(),
+  overtimeHours: Joi.number().optional()
 });
 
 const updateAttendanceSchema = Joi.object({
   checkIn: Joi.date().optional(),
   checkOut: Joi.date().optional(),
   status: Joi.string().valid("PRESENT", "ABSENT", "LATE", "EARLY_LEAVE", "HALF_DAY").optional(),
-  notes: Joi.string().optional()
+  notes: Joi.string().optional(),
+  // Phase 2 fields
+  shiftId: Joi.string().optional(),
+  location: Joi.object({
+    latitude: Joi.number().optional(),
+    longitude: Joi.number().optional(),
+    address: Joi.string().optional(),
+    accuracy: Joi.number().optional()
+  }).optional(),
+  deviceInfo: Joi.object({
+    deviceType: Joi.string().optional(),
+    os: Joi.string().optional(),
+    browser: Joi.string().optional(),
+    userAgent: Joi.string().optional()
+  }).optional(),
+  isRemote: Joi.boolean().optional(),
+  overtimeHours: Joi.number().optional(),
+  selfieUrl: Joi.string().optional() // Selfie/photo for verification
 });
 
 // Mark attendance (for employees and admins)
@@ -39,7 +72,7 @@ router.post("/mark", async (req: Request, res: Response) => {
       return;
     }
 
-    const { employeeId, date, checkIn, checkOut, status, notes } = value;
+    const { employeeId, date, checkIn, checkOut, status, notes, shiftId, location, deviceInfo, isRemote, overtimeHours, selfieUrl } = value;
 
     // Check if attendance already exists for this date
     const existingAttendance = await prisma.attendance.findUnique({
@@ -68,6 +101,12 @@ router.post("/mark", async (req: Request, res: Response) => {
       totalHours = (checkOutTime.getTime() - checkInTime.getTime()) / (1000 * 60 * 60); // Convert to hours
     }
 
+    // Get IP address from request
+    const ipAddress = req.headers['x-forwarded-for'] || req.socket.remoteAddress || null;
+
+    // Get user ID from token for createdBy
+    const createdBy = (req as any).user?.userId || null;
+
     const attendance = await prisma.attendance.create({
       data: {
         employeeId,
@@ -76,7 +115,16 @@ router.post("/mark", async (req: Request, res: Response) => {
         checkOut: checkOut ? new Date(checkOut) : null,
         totalHours,
         status,
-        notes
+        notes,
+        // Phase 2 fields
+        shiftId: shiftId || null,
+        location: location || null,
+        deviceInfo: deviceInfo || null,
+        ipAddress: ipAddress as string || null,
+        isRemote: isRemote || false,
+        overtimeHours: overtimeHours || null,
+        createdBy: createdBy,
+        selfieUrl: selfieUrl || null
       },
       include: {
         employee: {
