@@ -18,7 +18,11 @@ const Notifications: React.FC = () => {
     }),
     {
       refetchInterval: 30000, // Refetch every 30 seconds
-      retry: 2
+      retry: 2,
+      onError: (error: any) => {
+        console.error('Notifications fetch error:', error);
+        toast.error(`Failed to fetch notifications: ${error.message}`);
+      }
     }
   )
 

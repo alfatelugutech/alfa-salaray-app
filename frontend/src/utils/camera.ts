@@ -18,12 +18,12 @@ export const captureSelfie = async (): Promise<string> => {
     }
 
     try {
-      // Request camera access
+      // Request camera access with higher resolution
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: 'user', // Front camera (selfie mode)
-          width: { ideal: 640 },
-          height: { ideal: 480 }
+          width: { ideal: 1280, min: 640 },
+          height: { ideal: 960, min: 480 }
         }
       })
 
@@ -33,13 +33,13 @@ export const captureSelfie = async (): Promise<string> => {
       video.autoplay = true
       await video.play()
 
-      // Wait for video to be ready
-      await new Promise(resolve => setTimeout(resolve, 500))
+      // Wait for video to be ready (longer wait for better quality)
+      await new Promise(resolve => setTimeout(resolve, 1000))
 
-      // Create canvas for capture
+      // Create canvas for capture with higher resolution
       const canvas = document.createElement('canvas')
-      canvas.width = video.videoWidth || 640
-      canvas.height = video.videoHeight || 480
+      canvas.width = video.videoWidth || 1280
+      canvas.height = video.videoHeight || 960
       
       // Draw video frame to canvas
       const context = canvas.getContext('2d')
@@ -50,8 +50,8 @@ export const captureSelfie = async (): Promise<string> => {
       // Stop camera
       stream.getTracks().forEach(track => track.stop())
 
-      // Convert to base64
-      const imageData = canvas.toDataURL('image/jpeg', 0.8)
+      // Convert to base64 with higher quality
+      const imageData = canvas.toDataURL('image/jpeg', 0.9)
       
       resolve(imageData)
     } catch (error: any) {
@@ -105,7 +105,7 @@ export const selectImageFile = async (file: File): Promise<string> => {
 /**
  * Compress image to reduce file size
  */
-export const compressImage = async (dataUrl: string, maxWidth: number = 800): Promise<string> => {
+export const compressImage = async (dataUrl: string, maxWidth: number = 1200): Promise<string> => {
   return new Promise((resolve) => {
     const img = new Image()
     
@@ -128,8 +128,8 @@ export const compressImage = async (dataUrl: string, maxWidth: number = 800): Pr
         ctx.drawImage(img, 0, 0, width, height)
       }
 
-      // Convert to base64 with compression
-      const compressed = canvas.toDataURL('image/jpeg', 0.7)
+      // Convert to base64 with higher quality compression
+      const compressed = canvas.toDataURL('image/jpeg', 0.85)
       resolve(compressed)
     }
 

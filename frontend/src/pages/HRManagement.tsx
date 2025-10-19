@@ -1,7 +1,8 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useQuery, useMutation } from 'react-query'
 import { Target, GraduationCap, FileText, Star } from 'lucide-react'
 import { hrService } from '../services/hrService'
+import { testBackendConnection } from '../utils/backendTest'
 import toast from 'react-hot-toast'
 
 const HRManagement: React.FC = () => {
@@ -9,13 +10,35 @@ const HRManagement: React.FC = () => {
   const [showPerformanceModal, setShowPerformanceModal] = useState(false)
   const [showGoalModal, setShowGoalModal] = useState(false)
   const [showTrainingModal, setShowTrainingModal] = useState(false)
+  const [backendStatus, setBackendStatus] = useState<'checking' | 'connected' | 'error'>('checking')
+
+  // Test backend connection on component mount
+  useEffect(() => {
+    const checkBackend = async () => {
+      const result = await testBackendConnection()
+      if (result.success) {
+        setBackendStatus('connected')
+        console.log('✅ Backend connection successful')
+      } else {
+        setBackendStatus('error')
+        console.error('❌ Backend connection failed:', result.error)
+        toast.error(`Backend connection failed: ${result.error}`)
+      }
+    }
+    
+    checkBackend()
+  }, [])
 
   // Fetch performance reviews
   const { data: performanceData, isLoading: performanceLoading } = useQuery(
     'performance-reviews',
     () => hrService.getPerformanceReviews(),
     {
-      retry: 2
+      retry: 2,
+      onError: (error: any) => {
+        console.error('Performance reviews fetch error:', error);
+        toast.error(`Failed to fetch performance reviews: ${error.message}`);
+      }
     }
   )
 
@@ -124,6 +147,23 @@ const HRManagement: React.FC = () => {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">HR Management</h1>
           <p className="text-gray-600">Advanced HR features and employee development</p>
+        </div>
+        <div className="mt-2 sm:mt-0">
+          {backendStatus === 'checking' && (
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+              🔍 Checking backend...
+            </span>
+          )}
+          {backendStatus === 'connected' && (
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+              ✅ Backend connected
+            </span>
+          )}
+          {backendStatus === 'error' && (
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+              ❌ Backend error
+            </span>
+          )}
         </div>
       </div>
 

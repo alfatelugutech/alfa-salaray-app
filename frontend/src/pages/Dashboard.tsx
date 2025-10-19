@@ -26,6 +26,8 @@ const Dashboard: React.FC = () => {
   const [location, setLocation] = useState<any>(null)
   const [selfie, setSelfie] = useState<string | null>(null)
   const [isAutoCapturing, setIsAutoCapturing] = useState(false)
+  const [showCameraPreview, setShowCameraPreview] = useState(false)
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null)
   const queryClient = useQueryClient()
   
   // Fetch data based on user role with better error handling
@@ -130,14 +132,83 @@ const Dashboard: React.FC = () => {
     }
   )
 
-  // Manual selfie and GPS capture
+  // Start camera preview
+  const startCameraPreview = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: 'user',
+          width: { ideal: 1280, min: 640 },
+          height: { ideal: 960, min: 480 }
+        }
+      })
+      setCameraStream(stream)
+      setShowCameraPreview(true)
+      toast.success('📸 Camera ready! Position yourself and click capture.')
+    } catch (error: any) {
+      toast.error('Failed to access camera: ' + error.message)
+    }
+  }
+
+  // Stop camera preview
+  const stopCameraPreview = () => {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(track => track.stop())
+      setCameraStream(null)
+    }
+    setShowCameraPreview(false)
+  }
+
+  // Capture photo from preview
+  const captureFromPreview = async () => {
+    if (!cameraStream) return
+    
+    try {
+      setIsAutoCapturing(true)
+      
+      // Create video element to capture from stream
+      const video = document.createElement('video')
+      video.srcObject = cameraStream
+      video.autoplay = true
+      await video.play()
+      
+      // Wait for video to be ready
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
+      // Create canvas for capture
+      const canvas = document.createElement('canvas')
+      canvas.width = video.videoWidth || 1280
+      canvas.height = video.videoHeight || 960
+      
+      const context = canvas.getContext('2d')
+      if (context) {
+        context.drawImage(video, 0, 0, canvas.width, canvas.height)
+      }
+      
+      // Convert to base64
+      const photo = canvas.toDataURL('image/jpeg', 0.9)
+      const compressed = await compressImage(photo, 1200)
+      setSelfie(compressed)
+      
+      // Stop camera
+      stopCameraPreview()
+      
+      toast.success('📸 Selfie captured successfully!')
+    } catch (error: any) {
+      toast.error('Failed to capture photo: ' + error.message)
+    } finally {
+      setIsAutoCapturing(false)
+    }
+  }
+
+  // Manual selfie and GPS capture (fallback method)
   const handleTakeSelfieAndLocation = async () => {
     setIsAutoCapturing(true)
     
-    // Capture selfie
+    // Capture selfie with higher quality
     try {
       const photo = await captureSelfie()
-      const compressed = await compressImage(photo, 800)
+      const compressed = await compressImage(photo, 1200) // Increased from 800 to 1200
       setSelfie(compressed)
       toast.success('📸 Selfie captured successfully!')
     } catch (error: any) {
@@ -441,6 +512,17 @@ const Dashboard: React.FC = () => {
                   HR Management
                 </button>
               </div>
+              
+              <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+                <h3 className="font-semibold text-red-900 mb-2">Backend Test</h3>
+                <p className="text-sm text-red-700 mb-3">Test backend connections</p>
+                <button 
+                  onClick={() => navigate('/backend-test')}
+                  className="w-full bg-red-600 text-white py-2 px-4 rounded hover:bg-red-700 text-sm transition-colors cursor-pointer"
+                >
+                  Test Backend
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -530,47 +612,108 @@ const Dashboard: React.FC = () => {
               {/* Phase 2: Selfie & Location Capture */}
               {!selfie && !location ? (
                 <div className="p-8 bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 border-2 border-blue-400 rounded-xl shadow-md">
-                  <div className="text-center mb-6">
-                    <div className="bg-blue-600 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-                      <Camera className="w-10 h-10 text-white" />
+                  {!showCameraPreview ? (
+                    <>
+                      <div className="text-center mb-6">
+                        <div className="bg-blue-600 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+                          <Camera className="w-10 h-10 text-white" />
+                        </div>
+                        <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                          {selfAttendanceData.checkOut ? '📸 Check-Out Selfie' : '📸 Check-In Selfie'}
+                        </h3>
+                        <p className="text-base text-gray-700">
+                          {selfAttendanceData.checkOut 
+                            ? '🏃 Leaving office? Take your check-out selfie'
+                            : '🌅 Good morning! Take your check-in selfie'}
+                        </p>
+                        <p className="text-sm text-gray-600 mt-2">
+                          {selfAttendanceData.checkOut 
+                            ? 'Evening selfie + location will be captured'
+                            : 'Morning selfie + location will be captured'}
+                        </p>
+                      </div>
+                      <div className="space-y-3">
+                        <button
+                          type="button"
+                          onClick={startCameraPreview}
+                          className="w-full flex items-center justify-center gap-3 px-8 py-4 bg-gradient-to-r from-green-600 to-green-700 text-white text-xl font-bold rounded-xl hover:from-green-700 hover:to-green-800 shadow-xl transform transition hover:scale-105"
+                        >
+                          <Camera className="w-6 h-6" />
+                          📸 Start Camera Preview
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleTakeSelfieAndLocation}
+                          disabled={isAutoCapturing}
+                          className="w-full flex items-center justify-center gap-3 px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white text-xl font-bold rounded-xl hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 disabled:cursor-not-allowed shadow-xl transform transition hover:scale-105"
+                        >
+                          {isAutoCapturing ? (
+                            <>
+                              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+                              Opening Camera...
+                            </>
+                          ) : (
+                            <>
+                              <Camera className="w-6 h-6" />
+                              {selfAttendanceData.checkOut ? '📸 Take Evening Selfie' : '📸 Take Morning Selfie'}
+                            </>
+                          )}
+                        </button>
+                      </div>
+                      <p className="text-xs text-gray-600 mt-4 text-center bg-white/50 p-3 rounded-lg">
+                        {selfAttendanceData.checkOut 
+                          ? 'ℹ️ Auto-marked as HALF_DAY if after 11:59 AM'
+                          : 'ℹ️ Camera and location permissions will be requested'}
+                      </p>
+                    </>
+                  ) : (
+                    <div className="text-center">
+                      <h3 className="text-xl font-bold text-gray-900 mb-4">
+                        📸 Camera Preview - Position Yourself
+                      </h3>
+                      <div className="relative bg-black rounded-xl overflow-hidden mb-4">
+                        <video
+                          ref={(video) => {
+                            if (video && cameraStream) {
+                              video.srcObject = cameraStream;
+                              video.play();
+                            }
+                          }}
+                          className="w-full h-80 object-cover"
+                          autoPlay
+                          muted
+                        />
+                        <div className="absolute inset-0 border-4 border-white rounded-xl pointer-events-none"></div>
+                      </div>
+                      <div className="flex gap-3">
+                        <button
+                          type="button"
+                          onClick={captureFromPreview}
+                          disabled={isAutoCapturing}
+                          className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 disabled:opacity-50"
+                        >
+                          {isAutoCapturing ? (
+                            <>
+                              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                              Capturing...
+                            </>
+                          ) : (
+                            <>
+                              <Camera className="w-5 h-5" />
+                              📸 Capture Photo
+                            </>
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={stopCameraPreview}
+                          className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-gray-600 text-white font-bold rounded-lg hover:bg-gray-700"
+                        >
+                          ❌ Cancel
+                        </button>
+                      </div>
                     </div>
-                    <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                      {selfAttendanceData.checkOut ? '📸 Check-Out Selfie' : '📸 Check-In Selfie'}
-                    </h3>
-                    <p className="text-base text-gray-700">
-                      {selfAttendanceData.checkOut 
-                        ? '🏃 Leaving office? Take your check-out selfie'
-                        : '🌅 Good morning! Take your check-in selfie'}
-                    </p>
-                    <p className="text-sm text-gray-600 mt-2">
-                      {selfAttendanceData.checkOut 
-                        ? 'Evening selfie + location will be captured'
-                        : 'Morning selfie + location will be captured'}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleTakeSelfieAndLocation}
-                    disabled={isAutoCapturing}
-                    className="w-full flex items-center justify-center gap-3 px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white text-xl font-bold rounded-xl hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 disabled:cursor-not-allowed shadow-xl transform transition hover:scale-105"
-                  >
-                    {isAutoCapturing ? (
-                      <>
-                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
-                        Opening Camera...
-                      </>
-                    ) : (
-                      <>
-                        <Camera className="w-6 h-6" />
-                        {selfAttendanceData.checkOut ? '📸 Take Evening Selfie' : '📸 Take Morning Selfie'}
-                      </>
-                    )}
-                  </button>
-                  <p className="text-xs text-gray-600 mt-4 text-center bg-white/50 p-3 rounded-lg">
-                    {selfAttendanceData.checkOut 
-                      ? 'ℹ️ Auto-marked as HALF_DAY if after 11:59 AM'
-                      : 'ℹ️ Camera and location permissions will be requested'}
-                  </p>
+                  )}
                 </div>
               ) : (
                 <>

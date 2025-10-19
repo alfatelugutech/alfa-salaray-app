@@ -18,6 +18,7 @@ import Analytics from './pages/Analytics'
 import Notifications from './pages/Notifications'
 import AI from './pages/AI'
 import HRManagement from './pages/HRManagement'
+import BackendTest from './pages/BackendTest'
 import LoadingSpinner from './components/LoadingSpinner'
 
 function App() {
@@ -57,10 +58,10 @@ function App() {
             <Route path="/payroll" element={<PayrollManagement />} />
             <Route path="/settings" element={<SystemSettings />} />
             {/* Phase 3 routes */}
-            <Route path="/analytics" element={<Analytics />} />
-            <Route path="/notifications" element={<Notifications />} />
-            <Route path="/ai" element={<AI />} />
-            <Route path="/hr" element={<HRManagement />} />
+        <Route path="/analytics" element={<Analytics />} />
+        <Route path="/notifications" element={<Notifications />} />
+        <Route path="/ai" element={<AI />} />
+        <Route path="/hr" element={<HRManagement />} />
           </>
         ) : (
           <>
@@ -73,6 +74,7 @@ function App() {
         )}
         
         <Route path="/login" element={<Navigate to="/" replace />} />
+        <Route path="/backend-test" element={<BackendTest />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Layout>

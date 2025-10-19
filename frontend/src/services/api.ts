@@ -32,6 +32,16 @@ api.interceptors.response.use(
     return response
   },
   (error) => {
+    // Log the full error for debugging
+    console.error('API Error:', {
+      message: error.message,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      url: error.config?.url,
+      method: error.config?.method,
+      baseURL: error.config?.baseURL
+    });
+
     // Handle authentication errors
     if (error.response?.status === 401) {
       localStorage.removeItem('token')
