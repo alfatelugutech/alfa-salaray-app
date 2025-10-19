@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Edit, Trash2, Settings, Save, RefreshCw } from 'lucide-react'
+import { useQuery, useMutation, useQueryClient } from 'react-query'
+import { Plus, Edit, Trash2 } from 'lucide-react'
 import { settingsService } from '../services/settingsService'
 import { SystemSetting, CreateSettingData } from '../types'
 import toast from 'react-hot-toast'
@@ -241,9 +241,9 @@ const SystemSettings: React.FC = () => {
               <button
                 onClick={handleBulkUpdate}
                 className="btn btn-primary btn-sm"
-                disabled={bulkUpdateMutation.isPending}
+                disabled={bulkUpdateMutation.isLoading}
               >
-                {bulkUpdateMutation.isPending ? 'Saving...' : 'Save All'}
+                {bulkUpdateMutation.isLoading ? 'Saving...' : 'Save All'}
               </button>
             </div>
           </div>
@@ -331,7 +331,7 @@ const SystemSettings: React.FC = () => {
         <CreateSettingModal
           onClose={() => setShowCreateModal(false)}
           onSubmit={handleCreateSetting}
-          isLoading={createSettingMutation.isPending}
+          isLoading={createSettingMutation.isLoading}
         />
       )}
 
@@ -341,7 +341,7 @@ const SystemSettings: React.FC = () => {
           setting={editingSetting}
           onClose={() => setEditingSetting(null)}
           onSubmit={(data) => handleUpdateSetting(editingSetting.key, data)}
-          isLoading={updateSettingMutation.isPending}
+          isLoading={updateSettingMutation.isLoading}
         />
       )}
     </div>

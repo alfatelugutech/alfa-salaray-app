@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Edit, Trash2, Users, Clock, Calendar } from 'lucide-react'
+import { useQuery, useMutation, useQueryClient } from 'react-query'
+import { Plus, Edit, Trash2, Users, Clock } from 'lucide-react'
 import { shiftService } from '../services/shiftService'
 import { employeeService } from '../services/employeeService'
 import { Shift, CreateShiftData, AssignShiftData, Employee } from '../types'
@@ -242,7 +242,7 @@ const ShiftManagement: React.FC = () => {
         <CreateShiftModal
           onClose={() => setShowCreateModal(false)}
           onSubmit={handleCreateShift}
-          isLoading={createShiftMutation.isPending}
+          isLoading={createShiftMutation.isLoading}
         />
       )}
 
@@ -252,7 +252,7 @@ const ShiftManagement: React.FC = () => {
           shift={editingShift}
           onClose={() => setEditingShift(null)}
           onSubmit={handleUpdateShift}
-          isLoading={updateShiftMutation.isPending}
+          isLoading={updateShiftMutation.isLoading}
         />
       )}
 
@@ -266,7 +266,7 @@ const ShiftManagement: React.FC = () => {
             setSelectedShift(null)
           }}
           onSubmit={handleAssignShift}
-          isLoading={assignShiftMutation.isPending}
+          isLoading={assignShiftMutation.isLoading}
         />
       )}
     </div>

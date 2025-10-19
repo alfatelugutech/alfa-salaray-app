@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from 'react-query'
 import { Plus, Edit, Trash2, DollarSign, Calendar, User, CheckCircle } from 'lucide-react'
 import { payrollService } from '../services/payrollService'
 import { employeeService } from '../services/employeeService'
@@ -390,7 +390,7 @@ const PayrollManagement: React.FC = () => {
           employees={employeesData?.data.employees || []}
           onClose={() => setShowCreateModal(false)}
           onSubmit={handleCreatePayroll}
-          isLoading={createPayrollMutation.isPending}
+          isLoading={createPayrollMutation.isLoading}
         />
       )}
 
@@ -400,7 +400,7 @@ const PayrollManagement: React.FC = () => {
           payroll={editingPayroll}
           onClose={() => setEditingPayroll(null)}
           onSubmit={handleUpdatePayroll}
-          isLoading={updatePayrollMutation.isPending}
+          isLoading={updatePayrollMutation.isLoading}
         />
       )}
     </div>
