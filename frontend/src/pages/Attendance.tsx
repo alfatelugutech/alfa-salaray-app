@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Plus, Search, Filter, Edit, Trash2, Eye, MapPin, Smartphone, Home, X, Camera } from 'lucide-react'
+import { Plus, Search, Filter, Edit, Trash2, Eye, MapPin, Smartphone, Home, X, Camera, RefreshCw } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from 'react-query'
 import { attendanceService } from '../services/attendanceService'
 import { employeeService } from '../services/employeeService'
@@ -20,7 +20,7 @@ const Attendance: React.FC = () => {
   const queryClient = useQueryClient()
 
   // Fetch attendance records
-  const { data: attendanceData } = useQuery(
+  const { data: attendanceData, refetch: refetchAttendance } = useQuery(
     ['attendance', searchTerm, dateFilter, statusFilter],
     () => attendanceService.getAttendance({
       startDate: dateFilter,
@@ -78,13 +78,26 @@ const Attendance: React.FC = () => {
           <h1 className="text-2xl font-bold text-gray-900">Attendance</h1>
           <p className="text-gray-600">Track employee attendance and working hours</p>
         </div>
-        <button
-          onClick={() => setShowMarkModal(true)}
-          className="btn btn-primary"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Mark Attendance
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={() => {
+              refetchAttendance()
+              toast.success('Attendance data refreshed!')
+            }}
+            className="btn btn-secondary flex items-center gap-2"
+            title="Refresh attendance data"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Refresh
+          </button>
+          <button
+            onClick={() => setShowMarkModal(true)}
+            className="btn btn-primary"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Mark Attendance
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -244,21 +257,43 @@ const Attendance: React.FC = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-900">
-                    <div className="flex flex-col gap-1">
+                    <div className="flex flex-col gap-2">
                       {(attendance as any).checkInLocation && (
-                        <div className="flex items-center gap-1">
-                          <MapPin className="w-3 h-3 text-green-600" />
-                          <span className="text-xs text-green-700">Check-in</span>
+                        <div className="p-2 bg-green-50 border border-green-200 rounded">
+                          <div className="flex items-center gap-1 mb-1">
+                            <MapPin className="w-3 h-3 text-green-600" />
+                            <span className="text-xs font-medium text-green-700">Check-in Location</span>
+                          </div>
+                          <div className="text-xs text-green-800">
+                            {(attendance as any).checkInLocation.address || 
+                             `${(attendance as any).checkInLocation.latitude?.toFixed(4)}, ${(attendance as any).checkInLocation.longitude?.toFixed(4)}`}
+                          </div>
+                          {(attendance as any).checkInLocation.accuracy && (
+                            <div className="text-xs text-green-600 mt-1">
+                              ±{(attendance as any).checkInLocation.accuracy.toFixed(0)}m accuracy
+                            </div>
+                          )}
                         </div>
                       )}
                       {(attendance as any).checkOutLocation && (
-                        <div className="flex items-center gap-1">
-                          <MapPin className="w-3 h-3 text-orange-600" />
-                          <span className="text-xs text-orange-700">Check-out</span>
+                        <div className="p-2 bg-orange-50 border border-orange-200 rounded">
+                          <div className="flex items-center gap-1 mb-1">
+                            <MapPin className="w-3 h-3 text-orange-600" />
+                            <span className="text-xs font-medium text-orange-700">Check-out Location</span>
+                          </div>
+                          <div className="text-xs text-orange-800">
+                            {(attendance as any).checkOutLocation.address || 
+                             `${(attendance as any).checkOutLocation.latitude?.toFixed(4)}, ${(attendance as any).checkOutLocation.longitude?.toFixed(4)}`}
+                          </div>
+                          {(attendance as any).checkOutLocation.accuracy && (
+                            <div className="text-xs text-orange-600 mt-1">
+                              ±{(attendance as any).checkOutLocation.accuracy.toFixed(0)}m accuracy
+                            </div>
+                          )}
                         </div>
                       )}
                       {!(attendance as any).checkInLocation && !(attendance as any).checkOutLocation && (
-                        <span className="text-gray-400 text-xs">No location</span>
+                        <span className="text-gray-400 text-xs">No location data</span>
                       )}
                     </div>
                   </td>

@@ -33,6 +33,27 @@ const Dashboard: React.FC = () => {
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null)
   const queryClient = useQueryClient()
   
+  // Smart attendance logic - determine current status
+  const getCurrentAttendanceStatus = () => {
+    if (!attendanceData?.data?.attendances) return 'NO_ATTENDANCE'
+    
+    const today = new Date().toISOString().split('T')[0]
+    const todayAttendance = attendanceData.data.attendances.find((att: any) => 
+      att.date === today
+    )
+    
+    if (!todayAttendance) return 'NO_ATTENDANCE'
+    
+    if (todayAttendance.checkIn && !todayAttendance.checkOut) return 'CHECKED_IN'
+    if (todayAttendance.checkIn && todayAttendance.checkOut) return 'CHECKED_OUT'
+    if (todayAttendance.status === 'ABSENT') return 'ABSENT'
+    if (todayAttendance.status === 'EARLY_LEAVE') return 'ON_LEAVE'
+    
+    return 'UNKNOWN'
+  }
+  
+  const currentStatus = getCurrentAttendanceStatus()
+  
   // Fetch data based on user role with better error handling
   const { data: attendanceData, error: attendanceError } = useQuery(
     'my-attendance',
@@ -241,29 +262,40 @@ const Dashboard: React.FC = () => {
     // Get device info
     const deviceInfo = getDeviceInfo()
     
-    // Determine if this is check-in or check-out
-    const isCheckOut = !!selfAttendanceData.checkOut
-    
-    // Prepare submit data
-    const submitData: any = {
+    // Smart logic based on current status
+    let submitData: any = {
       employeeId: user?.employeeId,
       date: selfAttendanceData.date,
-      checkIn: selfAttendanceData.checkIn ? new Date(`${selfAttendanceData.date}T${selfAttendanceData.checkIn}`).toISOString() : undefined,
-      checkOut: selfAttendanceData.checkOut ? new Date(`${selfAttendanceData.date}T${selfAttendanceData.checkOut}`).toISOString() : undefined,
-      status: selfAttendanceData.status,
+      deviceInfo,
       notes: selfAttendanceData.notes || undefined,
       isRemote: selfAttendanceData.isRemote,
       overtimeHours: selfAttendanceData.overtimeHours ? parseFloat(selfAttendanceData.overtimeHours) : undefined,
-      deviceInfo,
-      // Enhanced check-out fields
-      checkOutReason: selfAttendanceData.checkOutReason || undefined,
-      workSummary: selfAttendanceData.workSummary || undefined,
-      nextDayTasks: selfAttendanceData.nextDayTasks || undefined,
-      // Dual selfies: check-in selfie or check-out selfie
-      checkInSelfie: !isCheckOut && selfie ? selfie : undefined,
-      checkOutSelfie: isCheckOut && selfie ? selfie : undefined,
-      checkInLocation: !isCheckOut && location ? location : undefined,
-      checkOutLocation: isCheckOut && location ? location : undefined
+    }
+    
+    // Handle different attendance scenarios
+    if (currentStatus === 'NO_ATTENDANCE') {
+      // First attendance of the day - check-in
+      submitData.checkIn = new Date(`${selfAttendanceData.date}T${selfAttendanceData.checkIn}`).toISOString()
+      submitData.status = selfAttendanceData.status
+      submitData.checkInSelfie = selfie
+      submitData.checkInLocation = location
+      
+      // If status is EARLY_LEAVE, mark as leave and close the day
+      if (selfAttendanceData.status === 'EARLY_LEAVE') {
+        submitData.checkOut = new Date(`${selfAttendanceData.date}T${selfAttendanceData.checkIn}`).toISOString() // Same time as check-in
+        submitData.checkOutSelfie = selfie
+        submitData.checkOutLocation = location
+        submitData.checkOutReason = 'LEAVE_APPLIED'
+        submitData.workSummary = 'Leave day - no work performed'
+      }
+    } else if (currentStatus === 'CHECKED_IN') {
+      // Already checked in - this is check-out
+      submitData.checkOut = new Date(`${selfAttendanceData.date}T${selfAttendanceData.checkOut}`).toISOString()
+      submitData.checkOutSelfie = selfie
+      submitData.checkOutLocation = location
+      submitData.checkOutReason = selfAttendanceData.checkOutReason || undefined
+      submitData.workSummary = selfAttendanceData.workSummary || undefined
+      submitData.nextDayTasks = selfAttendanceData.nextDayTasks || undefined
     }
     
     markSelfAttendanceMutation.mutate(submitData)
@@ -583,7 +615,8 @@ const Dashboard: React.FC = () => {
                 />
               </div>
               
-              <div className="grid grid-cols-2 gap-4">
+              {/* Smart Time Selection Based on Current Status */}
+              {currentStatus === 'NO_ATTENDANCE' && (
                 <div>
                   <label className="label flex items-center gap-2">
                     <Clock className="w-4 h-4 text-blue-600" />
@@ -597,6 +630,9 @@ const Dashboard: React.FC = () => {
                     placeholder="Select check-in time"
                   />
                 </div>
+              )}
+              
+              {currentStatus === 'CHECKED_IN' && (
                 <div>
                   <label className="label flex items-center gap-2">
                     <Clock className="w-4 h-4 text-orange-600" />
@@ -610,22 +646,52 @@ const Dashboard: React.FC = () => {
                     placeholder="Select check-out time"
                   />
                 </div>
-              </div>
+              )}
               
-              <div>
-                <label className="label">Status *</label>
-                <select
-                  className="input"
-                  value={selfAttendanceData.status}
-                  onChange={(e) => setSelfAttendanceData({...selfAttendanceData, status: e.target.value})}
-                  required
-                >
-                  <option value="PRESENT">Present</option>
-                  <option value="LATE">Late</option>
-                  <option value="EARLY_LEAVE">Early Leave</option>
-                  <option value="HALF_DAY">Half Day</option>
-                </select>
-              </div>
+              {currentStatus === 'CHECKED_OUT' && (
+                <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg text-center">
+                  <p className="text-gray-600">✅ Attendance already completed for today</p>
+                </div>
+              )}
+              
+              {currentStatus === 'ON_LEAVE' && (
+                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg text-center">
+                  <p className="text-blue-600">🏖️ You are on leave today</p>
+                </div>
+              )}
+              
+              {/* Smart Status Selection Based on Current Status */}
+              {currentStatus === 'NO_ATTENDANCE' && (
+                <div>
+                  <label className="label">Status *</label>
+                  <select
+                    className="input"
+                    value={selfAttendanceData.status}
+                    onChange={(e) => setSelfAttendanceData({...selfAttendanceData, status: e.target.value})}
+                    required
+                  >
+                    <option value="PRESENT">Present</option>
+                    <option value="LATE">Late</option>
+                    <option value="EARLY_LEAVE">Leave</option>
+                    <option value="HALF_DAY">Half Day</option>
+                  </select>
+                  {selfAttendanceData.status === 'EARLY_LEAVE' && (
+                    <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <p className="text-sm text-blue-800">
+                        🏖️ Leave selected - attendance will be closed for the day
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              {currentStatus === 'CHECKED_IN' && (
+                <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <p className="text-sm text-green-800">
+                    ✅ Already checked in - now checking out
+                  </p>
+                </div>
+              )}
 
               {/* Phase 2: Selfie & Location Capture */}
               {!selfie && !location ? (
@@ -637,15 +703,15 @@ const Dashboard: React.FC = () => {
                           <Camera className="w-10 h-10 text-white" />
                         </div>
                         <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                          {selfAttendanceData.checkOut ? '📸 Check-Out Selfie' : '📸 Check-In Selfie'}
+                          {currentStatus === 'CHECKED_IN' ? '📸 Check-Out Selfie' : '📸 Check-In Selfie'}
                         </h3>
                         <p className="text-base text-gray-700">
-                          {selfAttendanceData.checkOut 
+                          {currentStatus === 'CHECKED_IN' 
                             ? '🏃 Leaving office? Take your check-out selfie'
                             : '🌅 Good morning! Take your check-in selfie'}
                         </p>
                         <p className="text-sm text-gray-600 mt-2">
-                          {selfAttendanceData.checkOut 
+                          {currentStatus === 'CHECKED_IN' 
                             ? 'Evening selfie + location will be captured'
                             : 'Morning selfie + location will be captured'}
                         </p>
@@ -673,13 +739,13 @@ const Dashboard: React.FC = () => {
                           ) : (
                             <>
                               <Camera className="w-6 h-6" />
-                              {selfAttendanceData.checkOut ? '📸 Take Evening Selfie' : '📸 Take Morning Selfie'}
+                              {currentStatus === 'CHECKED_IN' ? '📸 Take Evening Selfie' : '📸 Take Morning Selfie'}
                             </>
                           )}
                         </button>
                       </div>
                       <p className="text-xs text-gray-600 mt-4 text-center bg-white/50 p-3 rounded-lg">
-                        {selfAttendanceData.checkOut 
+                        {currentStatus === 'CHECKED_IN' 
                           ? 'ℹ️ Auto-marked as HALF_DAY if after 11:59 AM'
                           : 'ℹ️ Camera and location permissions will be requested'}
                       </p>
@@ -739,12 +805,12 @@ const Dashboard: React.FC = () => {
                   {selfie && (
                     <div>
                       <label className="label text-lg font-semibold">
-                        {selfAttendanceData.checkOut ? '📸 Evening Selfie ✅' : '🌅 Morning Selfie ✅'}
+                        {currentStatus === 'CHECKED_IN' ? '📸 Evening Selfie ✅' : '🌅 Morning Selfie ✅'}
                       </label>
                       <div className="relative">
                         <img 
                           src={selfie} 
-                          alt={selfAttendanceData.checkOut ? 'Check-Out Selfie' : 'Check-In Selfie'} 
+                          alt={currentStatus === 'CHECKED_IN' ? 'Check-Out Selfie' : 'Check-In Selfie'} 
                           className="w-full h-80 object-cover rounded-xl border-4 border-green-500 shadow-lg"
                         />
                         <button
@@ -793,8 +859,8 @@ const Dashboard: React.FC = () => {
               {/* Show additional options only after selfie is captured */}
               {selfie && location && (
                 <>
-                  {/* Working Hours Preview */}
-                  {selfAttendanceData.checkIn && selfAttendanceData.checkOut && (
+                  {/* Working Hours Preview - Only for Check-out */}
+                  {currentStatus === 'CHECKED_IN' && selfAttendanceData.checkOut && (
                     <div className="border-t pt-4">
                       <p className="text-sm font-medium text-gray-700 mb-3">Working Hours Preview</p>
                       <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
@@ -1021,7 +1087,7 @@ const Dashboard: React.FC = () => {
                 <button
                   type="submit"
                   disabled={markSelfAttendanceMutation.isLoading || !selfie || !location || 
-                    (!!selfAttendanceData.checkOut && (!selfAttendanceData.checkOutReason || !selfAttendanceData.workSummary))}
+                    (currentStatus === 'CHECKED_IN' && (!selfAttendanceData.checkOutReason || !selfAttendanceData.workSummary))}
                   className="flex-1 bg-green-600 text-white py-3 px-6 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors flex items-center justify-center gap-2"
                 >
                   {markSelfAttendanceMutation.isLoading ? (
@@ -1044,7 +1110,7 @@ const Dashboard: React.FC = () => {
                     ⚠️ Please capture selfie and location before marking attendance
                   </p>
                 </div>
-              ) : selfAttendanceData.checkOut && (!selfAttendanceData.checkOutReason || !selfAttendanceData.workSummary) ? (
+              ) : currentStatus === 'CHECKED_IN' && (!selfAttendanceData.checkOutReason || !selfAttendanceData.workSummary) ? (
                 <div className="mt-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
                   <p className="text-sm text-orange-800 text-center">
                     ⚠️ For check-out: Please provide reason and work summary
