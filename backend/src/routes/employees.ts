@@ -21,11 +21,19 @@ const createEmployeeSchema = Joi.object({
 });
 
 const updateEmployeeSchema = Joi.object({
+  // User fields
+  firstName: Joi.string().optional(),
+  lastName: Joi.string().optional(),
+  email: Joi.string().email().optional(),
+  phone: Joi.string().optional(),
+  // Employee fields
+  employeeId: Joi.string().optional(),
   department: Joi.string().optional(),
   position: Joi.string().optional(),
   salary: Joi.number().optional(),
   status: Joi.string().valid("ACTIVE", "INACTIVE", "TERMINATED", "ON_LEAVE").optional(),
-  workLocation: Joi.string().optional()
+  workLocation: Joi.string().optional(),
+  hireDate: Joi.date().optional()
 });
 
 // Get all employees
@@ -234,9 +242,83 @@ router.put("/:id", requireHR, async (req: Request, res: Response) => {
       return;
     }
 
+    // Separate user fields from employee fields
+    const { firstName, lastName, email, phone, ...employeeData } = value;
+    
+    // Get the employee to find the userId
+    const existingEmployee = await prisma.employee.findUnique({
+      where: { id },
+      include: { user: true }
+    });
+
+    if (!existingEmployee) {
+      res.status(404).json({
+        success: false,
+        error: "Employee not found",
+        code: "EMPLOYEE_NOT_FOUND"
+      });
+      return;
+    }
+
+    // Check if email is being changed and if it already exists
+    if (email && email !== existingEmployee.user.email) {
+      const emailExists = await prisma.user.findUnique({
+        where: { email }
+      });
+      
+      if (emailExists) {
+        res.status(400).json({
+          success: false,
+          error: "Email already exists",
+          code: "EMAIL_EXISTS"
+        });
+        return;
+      }
+    }
+
+    // Check if employeeId is being changed and if it already exists
+    if (employeeData.employeeId && employeeData.employeeId !== existingEmployee.employeeId) {
+      const employeeIdExists = await prisma.employee.findUnique({
+        where: { employeeId: employeeData.employeeId }
+      });
+      
+      if (employeeIdExists) {
+        res.status(400).json({
+          success: false,
+          error: "Employee ID already exists",
+          code: "EMPLOYEE_ID_EXISTS"
+        });
+        return;
+      }
+    }
+
+    // Update user information if provided
+    const userUpdateData: any = {};
+    if (firstName !== undefined) userUpdateData.firstName = firstName;
+    if (lastName !== undefined) userUpdateData.lastName = lastName;
+    if (email !== undefined) userUpdateData.email = email;
+    if (phone !== undefined) userUpdateData.phone = phone;
+
+    if (Object.keys(userUpdateData).length > 0) {
+      await prisma.user.update({
+        where: { id: existingEmployee.userId },
+        data: userUpdateData
+      });
+    }
+
+    // Update employee information
+    const employeeUpdateData: any = {};
+    if (employeeData.employeeId !== undefined) employeeUpdateData.employeeId = employeeData.employeeId;
+    if (employeeData.department !== undefined) employeeUpdateData.department = employeeData.department;
+    if (employeeData.position !== undefined) employeeUpdateData.position = employeeData.position;
+    if (employeeData.salary !== undefined) employeeUpdateData.salary = employeeData.salary;
+    if (employeeData.status !== undefined) employeeUpdateData.status = employeeData.status;
+    if (employeeData.workLocation !== undefined) employeeUpdateData.workLocation = employeeData.workLocation;
+    if (employeeData.hireDate !== undefined) employeeUpdateData.hireDate = new Date(employeeData.hireDate);
+
     const employee = await prisma.employee.update({
       where: { id },
-      data: value,
+      data: employeeUpdateData,
       include: {
         user: {
           select: {
