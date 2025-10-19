@@ -2,7 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './hooks/useAuth'
 import Layout from './components/Layout'
 import Login from './pages/Login'
-import Dashboard from './pages/Dashboard'
+import SafeDashboard from './pages/SafeDashboard'
 import Employees from './pages/Employees'
 import Attendance from './pages/Attendance'
 import LeaveRequests from './pages/LeaveRequests'
@@ -45,8 +45,8 @@ function App() {
     <>
       <Layout>
         <Routes>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/" element={<SafeDashboard />} />
+        <Route path="/dashboard" element={<SafeDashboard />} />
           <Route path="/profile" element={<Profile />} />
           
           {/* Admin/HR only routes */}
