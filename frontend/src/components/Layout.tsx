@@ -10,6 +10,15 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { user, logout } = useAuth()
   
   console.log('Layout component rendering...', { user })
+  
+  // Safety check - if no user, show loading
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -22,7 +31,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             </h1>
             <div className="flex items-center space-x-4">
               <span className="text-sm text-gray-600">
-                Welcome, {user?.firstName} {user?.lastName}
+                Welcome, {user?.firstName || 'User'} {user?.lastName || ''}
               </span>
               <button
                 onClick={logout}

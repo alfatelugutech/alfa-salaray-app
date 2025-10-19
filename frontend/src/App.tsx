@@ -1,8 +1,8 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './hooks/useAuth'
-import SimpleLayout from './components/SimpleLayout'
+import Layout from './components/Layout'
 import Login from './pages/Login'
-import SimpleDashboard from './pages/SimpleDashboard'
+import Dashboard from './pages/Dashboard'
 import Employees from './pages/Employees'
 import Attendance from './pages/Attendance'
 import LeaveRequests from './pages/LeaveRequests'
@@ -43,10 +43,10 @@ function App() {
 
   return (
     <>
-      <SimpleLayout>
+      <Layout>
         <Routes>
-        <Route path="/" element={<SimpleDashboard />} />
-        <Route path="/dashboard" element={<SimpleDashboard />} />
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/profile" element={<Profile />} />
           
           {/* Admin/HR only routes */}
@@ -79,7 +79,7 @@ function App() {
           <Route path="/backend-test" element={<BackendTest />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-      </SimpleLayout>
+      </Layout>
       <Toaster 
         position="top-right"
         toastOptions={{
