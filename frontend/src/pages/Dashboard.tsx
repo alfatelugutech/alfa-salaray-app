@@ -11,8 +11,23 @@ import { getCompleteLocation, getDeviceInfo } from '../utils/geolocation'
 import { captureSelfie, compressImage } from '../utils/camera'
 
 const Dashboard: React.FC = () => {
-  const { user } = useAuth()
+  const { user, isLoading } = useAuth()
   const navigate = useNavigate()
+  
+  // Show loading while user data is being fetched
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      </div>
+    )
+  }
+  
+  // Safety check - if no user, redirect to login
+  if (!user) {
+    navigate('/login')
+    return null
+  }
   const [showSelfAttendanceModal, setShowSelfAttendanceModal] = useState(false)
   const [selfAttendanceData, setSelfAttendanceData] = useState({
     date: new Date().toISOString().split('T')[0],
@@ -59,7 +74,7 @@ const Dashboard: React.FC = () => {
     'my-attendance',
     () => attendanceService.getAttendance({ employeeId: user?.employeeId }),
     { 
-      enabled: !!user?.employeeId,
+      enabled: !!user && !!user.employeeId,
       retry: 1,
       retryDelay: 1000,
       onError: (error: any) => {
@@ -73,7 +88,7 @@ const Dashboard: React.FC = () => {
     'my-leave-requests',
     () => leaveService.getLeaveRequests({ employeeId: user?.employeeId }),
     { 
-      enabled: !!user?.employeeId,
+      enabled: !!user && !!user.employeeId,
       retry: 1,
       retryDelay: 1000,
       onError: (error: any) => {
@@ -299,10 +314,11 @@ const Dashboard: React.FC = () => {
     markSelfAttendanceMutation.mutate(submitData)
   }
 
-  // Check if user is admin/HR
-  const isAdmin = user?.role === 'SUPER_ADMIN' || user?.role === 'HR_MANAGER'
+  // Check if user is admin/HR - with safety check
+  const isAdmin = user && (user.role === 'SUPER_ADMIN' || user.role === 'HR_MANAGER')
   
-  return (
+  try {
+    return (
     <div className="p-6">
       <div className="bg-white rounded-lg shadow p-6">
         <h1 className="text-3xl font-bold text-gray-900 mb-4">
@@ -1126,7 +1142,24 @@ const Dashboard: React.FC = () => {
         </div>
       )}
     </div>
-  )
+    )
+  } catch (error) {
+    console.error('Dashboard rendering error:', error)
+    return (
+      <div className="p-6">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+          <h1 className="text-xl font-bold text-red-800 mb-2">Dashboard Error</h1>
+          <p className="text-red-600">There was an error loading the dashboard. Please try refreshing the page.</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="mt-4 bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+          >
+            Refresh Page
+          </button>
+        </div>
+      </div>
+    )
+  }
 }
 
 export default Dashboard
