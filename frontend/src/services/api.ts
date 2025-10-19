@@ -60,7 +60,7 @@ api.interceptors.response.use(
     // Handle network errors more gracefully
     if (error.code === 'NETWORK_ERROR' || error.message === 'Network Error' || error.code === 'ERR_NETWORK') {
       console.error('Network error - backend may be unavailable at:', API_BASE_URL)
-      toast.error('Cannot connect to server. Please check if the backend is running.')
+      toast.error('Backend server is not responding. Please contact the administrator to start the backend service.')
       return Promise.reject(error)
     }
     

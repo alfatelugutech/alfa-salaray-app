@@ -1,10 +1,10 @@
 {
   "env": {
-    "VITE_API_URL": "https://employee-management-backend.onrender.com/api"
+    "VITE_API_URL": "https://alfa-salaray-app.onrender.com/api"
   },
   "build": {
     "env": {
-      "VITE_API_URL": "https://employee-management-backend.onrender.com/api"
+      "VITE_API_URL": "https://alfa-salaray-app.onrender.com/api"
     }
   }
 }
