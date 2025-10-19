@@ -2,7 +2,7 @@ import express, { Request, Response } from "express";
 import { PrismaClient } from "@prisma/client";
 import { authenticateToken } from "../middleware/auth";
 import Joi from "joi";
-import nodemailer from "nodemailer";
+import * as nodemailer from "nodemailer";
 import twilio from "twilio";
 
 const router = express.Router();
