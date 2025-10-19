@@ -363,7 +363,7 @@ function generateEmailTemplate(template: string, data: any): string {
     `
   };
 
-  return templates[template] || message;
+  return templates[template] || 'Default message';
 }
 
 export default router;

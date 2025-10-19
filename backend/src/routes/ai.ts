@@ -76,7 +76,7 @@ router.post("/smart-schedule", requireHR, async (req: Request, res: Response) =>
         },
         employee: {
           status: 'ACTIVE',
-          ...(department && { department })
+          ...(department && { department: department as string })
         }
       },
       include: {
@@ -138,7 +138,7 @@ router.post("/anomaly-detection", requireHR, async (req: Request, res: Response)
         },
         ...(employeeId && { employeeId }),
         ...(department && {
-          employee: { department }
+          employee: { department: department as string }
         })
       },
       include: {
@@ -198,7 +198,7 @@ router.get("/predictive-analytics", requireHR, async (req: Request, res: Respons
           lte: endDate
         },
         ...(department && {
-          employee: { department }
+          employee: { department: department as string }
         })
       },
       include: {
@@ -312,7 +312,7 @@ function generateSmartSchedule(employees: any[], attendanceData: any[], options:
       const optimalShift = predictOptimalShift(employee, employeeAttendance, currentDate);
       
       if (optimalShift) {
-        schedule.push({
+        (schedule as any[]).push({
           employeeId: employee.id,
           employeeName: `${employee.user.firstName} ${employee.user.lastName}`,
           date: currentDate.toISOString().split('T')[0],
@@ -338,7 +338,7 @@ function detectAnomalies(attendanceData: any[], threshold: number) {
     const isAnomaly = checkAttendanceAnomaly(attendance, attendanceData);
     
     if (isAnomaly.score > threshold) {
-      anomalies.push({
+      (anomalies as any[]).push({
         id: attendance.id,
         employeeId: attendance.employeeId,
         employeeName: `${attendance.employee.user.firstName} ${attendance.employee.user.lastName}`,

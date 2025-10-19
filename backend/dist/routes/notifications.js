@@ -332,6 +332,6 @@ function generateEmailTemplate(template, data) {
       </div>
     `
     };
-    return templates[template] || message;
+    return templates[template] || 'Default message';
 }
 exports.default = router;

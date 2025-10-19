@@ -73,7 +73,7 @@ router.post("/smart-schedule", auth_1.requireHR, async (req, res) => {
                 },
                 employee: {
                     status: 'ACTIVE',
-                    ...(department && { department })
+                    ...(department && { department: department })
                 }
             },
             include: {
@@ -130,7 +130,7 @@ router.post("/anomaly-detection", auth_1.requireHR, async (req, res) => {
                 },
                 ...(employeeId && { employeeId }),
                 ...(department && {
-                    employee: { department }
+                    employee: { department: department }
                 })
             },
             include: {
@@ -185,7 +185,7 @@ router.get("/predictive-analytics", auth_1.requireHR, async (req, res) => {
                     lte: endDate
                 },
                 ...(department && {
-                    employee: { department }
+                    employee: { department: department }
                 })
             },
             include: {
