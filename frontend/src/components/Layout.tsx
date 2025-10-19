@@ -1,4 +1,5 @@
 import React from 'react'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 
 interface LayoutProps {
@@ -38,32 +39,30 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       <div className="bg-white border-b">
         <div className="px-4 py-2">
           <nav className="flex space-x-4">
-            <a href="/" className="text-blue-600 font-medium">Dashboard</a>
+            <Link to="/" className="text-blue-600 font-medium">Dashboard</Link>
             
             {/* Show different navigation based on user role */}
             {user?.role === 'SUPER_ADMIN' || user?.role === 'HR_MANAGER' ? (
               // Admin/HR navigation
               <>
-                <a href="/employees" className="text-gray-600 hover:text-gray-900">Employees</a>
-                <a href="/attendance" className="text-gray-600 hover:text-gray-900">Attendance</a>
-                <a href="/leave" className="text-gray-600 hover:text-gray-900">Leave</a>
+                <Link to="/employees" className="text-gray-600 hover:text-gray-900">Employees</Link>
+                <Link to="/attendance" className="text-gray-600 hover:text-gray-900">Attendance</Link>
+                <Link to="/leave" className="text-gray-600 hover:text-gray-900">Leave</Link>
                 {/* Phase 2 navigation */}
-                <a href="/shifts" className="text-gray-600 hover:text-gray-900">Shifts</a>
-                <a href="/payroll" className="text-gray-600 hover:text-gray-900">Payroll</a>
+                <Link to="/shifts" className="text-gray-600 hover:text-gray-900">Shifts</Link>
+                <Link to="/payroll" className="text-gray-600 hover:text-gray-900">Payroll</Link>
                 {user?.role === 'SUPER_ADMIN' && (
                   <>
-                    <a href="/settings" className="text-gray-600 hover:text-gray-900">Settings</a>
-                    <a href="/admin/roles" className="text-purple-600 hover:text-purple-900">Role Management</a>
-                    <a href="/admin/features" className="text-orange-600 hover:text-orange-900">Features Control</a>
+                    <Link to="/settings" className="text-gray-600 hover:text-gray-900">Settings</Link>
                   </>
                 )}
               </>
             ) : (
               // Employee navigation
               <>
-                <a href="/attendance" className="text-gray-600 hover:text-gray-900">My Attendance</a>
-                <a href="/leave" className="text-gray-600 hover:text-gray-900">My Leave</a>
-                <a href="/profile" className="text-gray-600 hover:text-gray-900">Profile</a>
+                <Link to="/my-attendance" className="text-gray-600 hover:text-gray-900">My Attendance</Link>
+                <Link to="/my-leave" className="text-gray-600 hover:text-gray-900">My Leave</Link>
+                <Link to="/profile" className="text-gray-600 hover:text-gray-900">Profile</Link>
               </>
             )}
           </nav>

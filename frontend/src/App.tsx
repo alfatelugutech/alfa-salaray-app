@@ -39,9 +39,10 @@ function App() {
       <Routes>
         <Route path="/" element={<Dashboard />} />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/profile" element={<Profile />} />
         
         {/* Admin/HR only routes */}
-        {isAdmin && (
+        {isAdmin ? (
           <>
             <Route path="/employees" element={<Employees />} />
             <Route path="/attendance" element={<Attendance />} />
@@ -51,12 +52,15 @@ function App() {
             <Route path="/payroll" element={<PayrollManagement />} />
             <Route path="/settings" element={<SystemSettings />} />
           </>
+        ) : (
+          <>
+            {/* Employee routes */}
+            <Route path="/my-attendance" element={<MyAttendance />} />
+            <Route path="/my-leave" element={<MyLeave />} />
+            <Route path="/attendance" element={<Navigate to="/my-attendance" replace />} />
+            <Route path="/leave" element={<Navigate to="/my-leave" replace />} />
+          </>
         )}
-        
-        {/* Employee routes */}
-        <Route path="/attendance" element={isAdmin ? <Attendance /> : <MyAttendance />} />
-        <Route path="/leave" element={isAdmin ? <LeaveRequests /> : <MyLeave />} />
-        <Route path="/profile" element={<Profile />} />
         
         <Route path="/login" element={<Navigate to="/" replace />} />
         <Route path="*" element={<Navigate to="/" replace />} />
