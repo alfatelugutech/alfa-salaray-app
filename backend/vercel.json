@@ -1,0 +1,10 @@
+{
+  "env": {
+    "VITE_API_URL": "https://alfa-salaray-app.onrender.com/api"
+  },
+  "build": {
+    "env": {
+      "VITE_API_URL": "https://alfa-salaray-app.onrender.com/api"
+    }
+  }
+}
