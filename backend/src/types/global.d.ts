@@ -19,6 +19,8 @@ declare global {
       TWILIO_PHONE_NUMBER?: string
     }
   }
+
+  var process: NodeJS.Process
 }
 
 export {}
