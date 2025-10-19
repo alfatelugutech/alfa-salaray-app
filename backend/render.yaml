@@ -23,9 +23,9 @@ services:
       - key: BCRYPT_ROUNDS
         value: 12
       - key: RATE_LIMIT_WINDOW_MS
-        value: 900000
+        value: 60000
       - key: RATE_LIMIT_MAX_REQUESTS
-        value: 100
+        value: 1000
 
 databases:
   - name: attendance-db
