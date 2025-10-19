@@ -597,7 +597,7 @@ const ViewEmployeeModal: React.FC<{
             </div>
             <div>
               <label className="label">Salary</label>
-              <p className="text-gray-900">{employee.salary ? `$${employee.salary}` : 'N/A'}</p>
+              <p className="text-gray-900">{employee.salary ? `₹${employee.salary}` : 'N/A'}</p>
             </div>
           </div>
           

@@ -5,10 +5,10 @@ import { useQuery, useMutation, useQueryClient } from 'react-query'
 import { attendanceService } from '../services/attendanceService'
 import { leaveService } from '../services/leaveService'
 import { employeeService } from '../services/employeeService'
-import { Clock, X, MapPin, Smartphone, Camera, Upload } from 'lucide-react'
+import { Clock, X, MapPin, Camera } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { getCompleteLocation, getDeviceInfo } from '../utils/geolocation'
-import { captureSelfie, selectImageFile, compressImage } from '../utils/camera'
+import { captureSelfie, compressImage } from '../utils/camera'
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth()
@@ -24,9 +24,7 @@ const Dashboard: React.FC = () => {
     overtimeHours: ''
   })
   const [location, setLocation] = useState<any>(null)
-  const [isGettingLocation, setIsGettingLocation] = useState(false)
   const [selfie, setSelfie] = useState<string | null>(null)
-  const [isCapturingSelfie, setIsCapturingSelfie] = useState(false)
   const [isAutoCapturing, setIsAutoCapturing] = useState(false)
   const queryClient = useQueryClient()
   
@@ -132,21 +130,11 @@ const Dashboard: React.FC = () => {
     }
   )
 
-  const handleGetLocation = async () => {
-    setIsGettingLocation(true)
-    try {
-      const loc = await getCompleteLocation()
-      setLocation(loc)
-      toast.success('📍 Location captured successfully!')
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to get location')
-    } finally {
-      setIsGettingLocation(false)
-    }
-  }
-
-  const handleCaptureSelfie = async () => {
-    setIsCapturingSelfie(true)
+  // Manual selfie and GPS capture
+  const handleTakeSelfieAndLocation = async () => {
+    setIsAutoCapturing(true)
+    
+    // Capture selfie
     try {
       const photo = await captureSelfie()
       const compressed = await compressImage(photo, 800)
@@ -154,63 +142,21 @@ const Dashboard: React.FC = () => {
       toast.success('📸 Selfie captured successfully!')
     } catch (error: any) {
       toast.error(error.message || 'Failed to capture selfie')
-    } finally {
-      setIsCapturingSelfie(false)
-    }
-  }
-
-  const handleUploadSelfie = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    try {
-      const imageData = await selectImageFile(file)
-      const compressed = await compressImage(imageData, 800)
-      setSelfie(compressed)
-      toast.success('📸 Photo uploaded successfully!')
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to upload photo')
-    }
-  }
-
-  // Auto-capture selfie and location when modal opens
-  const handleAutoCapture = async () => {
-    setIsAutoCapturing(true)
-    
-    // Auto-capture selfie
-    try {
-      const photo = await captureSelfie()
-      const compressed = await compressImage(photo, 800)
-      setSelfie(compressed)
-      toast.success('📸 Selfie captured!')
-    } catch (error: any) {
-      toast('ℹ️ Camera not available. You can upload a photo instead.', { duration: 3000 })
+      setIsAutoCapturing(false)
+      return
     }
 
-    // Auto-capture GPS location
+    // Capture GPS location
     try {
       const loc = await getCompleteLocation()
       setLocation(loc)
-      
-      // Auto-detect remote work based on location
-      // You can add your office coordinates here for auto-detection
-      const isRemoteWork = false // Will be enhanced with office location check
-      setSelfAttendanceData(prev => ({ ...prev, isRemote: isRemoteWork }))
-      
-      toast.success('📍 Location captured!')
+      toast.success('📍 Location captured successfully!')
     } catch (error: any) {
-      toast('ℹ️ Location not available. Proceeding without GPS.', { duration: 3000 })
+      toast.error(error.message || 'Failed to get location')
     }
 
     setIsAutoCapturing(false)
   }
-
-  // Trigger auto-capture when modal opens
-  React.useEffect(() => {
-    if (showSelfAttendanceModal && !selfie && !location) {
-      handleAutoCapture()
-    }
-  }, [showSelfAttendanceModal])
 
   const handleMarkSelfAttendance = (e: React.FormEvent) => {
     e.preventDefault()
@@ -483,14 +429,6 @@ const Dashboard: React.FC = () => {
               </button>
             </div>
 
-            {isAutoCapturing && (
-              <div className="p-6 text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                <p className="text-gray-700 font-medium">Capturing selfie and location...</p>
-                <p className="text-sm text-gray-500 mt-2">Please allow camera and location permissions</p>
-              </div>
-            )}
-            
             <form onSubmit={handleMarkSelfAttendance} className="p-6 space-y-4">
               <div>
                 <label className="label">Date *</label>
@@ -539,130 +477,148 @@ const Dashboard: React.FC = () => {
                 </select>
               </div>
 
-              {/* Phase 2: GPS Location */}
-              <div>
-                <label className="label">Location (Optional)</label>
-                {location ? (
-                  <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded">
-                    <MapPin className="w-4 h-4 text-green-600" />
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-green-900">Location Captured</p>
-                      <p className="text-xs text-green-700">{location.address || `${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`}</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setLocation(null)}
-                      className="text-green-600 hover:text-green-800"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
+              {/* Phase 2: Selfie & Location Capture */}
+              {!selfie && !location ? (
+                <div className="p-6 bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-300 rounded-lg">
+                  <div className="text-center mb-4">
+                    <Camera className="w-12 h-12 text-blue-600 mx-auto mb-2" />
+                    <h3 className="text-lg font-semibold text-gray-900">Take Your Selfie</h3>
+                    <p className="text-sm text-gray-600 mt-1">We'll capture your photo and location</p>
                   </div>
-                ) : (
                   <button
                     type="button"
-                    onClick={handleGetLocation}
-                    disabled={isGettingLocation}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 border border-blue-200 rounded hover:bg-blue-100 disabled:opacity-50"
+                    onClick={handleTakeSelfieAndLocation}
+                    disabled={isAutoCapturing}
+                    className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white text-lg font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
                   >
-                    <MapPin className="w-4 h-4" />
-                    {isGettingLocation ? 'Getting Location...' : 'Capture GPS Location'}
+                    {isAutoCapturing ? (
+                      <>
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                        Capturing...
+                      </>
+                    ) : (
+                      <>
+                        <Camera className="w-5 h-5" />
+                        📸 Take Selfie & Mark Attendance
+                      </>
+                    )}
                   </button>
-                )}
-              </div>
-
-              {/* Phase 2: Selfie Capture */}
-              <div>
-                <label className="label">Selfie/Photo (Optional)</label>
-                {selfie ? (
-                  <div className="space-y-2">
-                    <div className="relative">
-                      <img 
-                        src={selfie} 
-                        alt="Attendance Selfie" 
-                        className="w-full h-48 object-cover rounded-lg border-2 border-green-500"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setSelfie(null)}
-                        className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
+                  <p className="text-xs text-gray-500 mt-3 text-center">
+                    Camera and location permissions will be requested
+                  </p>
+                </div>
+              ) : (
+                <>
+                  {/* Show captured selfie */}
+                  {selfie && (
+                    <div>
+                      <label className="label">Your Selfie ✅</label>
+                      <div className="relative">
+                        <img 
+                          src={selfie} 
+                          alt="Your Selfie" 
+                          className="w-full h-48 object-cover rounded-lg border-2 border-green-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelfie(null)
+                            setLocation(null)
+                          }}
+                          className="absolute top-2 right-2 bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 flex items-center gap-1"
+                        >
+                          <Camera className="w-4 h-4" />
+                          Retake
+                        </button>
+                      </div>
                     </div>
-                    <p className="text-xs text-green-700 text-center">✅ Photo captured successfully</p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={handleCaptureSelfie}
-                      disabled={isCapturingSelfie}
-                      className="flex items-center justify-center gap-2 px-4 py-2 bg-purple-50 text-purple-700 border border-purple-200 rounded hover:bg-purple-100 disabled:opacity-50"
-                    >
-                      <Camera className="w-4 h-4" />
-                      {isCapturingSelfie ? 'Opening...' : 'Take Selfie'}
-                    </button>
-                    <label className="flex items-center justify-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded hover:bg-indigo-100 cursor-pointer">
-                      <Upload className="w-4 h-4" />
-                      Upload Photo
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleUploadSelfie}
-                        className="hidden"
-                      />
-                    </label>
-                  </div>
-                )}
-              </div>
+                  )}
 
-              {/* Phase 2: Remote Work & Overtime */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    id="isRemote"
-                    checked={selfAttendanceData.isRemote}
-                    onChange={(e) => setSelfAttendanceData({...selfAttendanceData, isRemote: e.target.checked})}
-                    className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-                  />
-                  <label htmlFor="isRemote" className="ml-2 text-sm text-gray-700">
-                    🏠 Working Remotely
-                  </label>
-                </div>
-                <div>
-                  <label className="label text-xs">Overtime Hours</label>
-                  <input
-                    type="number"
-                    step="0.5"
-                    min="0"
-                    max="12"
-                    className="input text-sm"
-                    value={selfAttendanceData.overtimeHours}
-                    onChange={(e) => setSelfAttendanceData({...selfAttendanceData, overtimeHours: e.target.value})}
-                    placeholder="0"
-                  />
-                </div>
-              </div>
-              
-              <div>
-                <label className="label">Notes</label>
-                <textarea
-                  className="input"
-                  rows={3}
-                  value={selfAttendanceData.notes}
-                  onChange={(e) => setSelfAttendanceData({...selfAttendanceData, notes: e.target.value})}
-                  placeholder="Optional notes about your attendance"
-                />
-              </div>
+                  {/* Show captured location */}
+                  {location && (
+                    <div>
+                      <label className="label">Your Location ✅</label>
+                      <div className="p-3 bg-green-50 border border-green-200 rounded">
+                        <div className="flex items-center gap-2">
+                          <MapPin className="w-4 h-4 text-green-600" />
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-green-900">
+                              {location.address || `${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
 
-              {/* Device Info Display */}
-              <div className="p-3 bg-gray-50 border border-gray-200 rounded">
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <Smartphone className="w-4 h-4" />
-                  <span>Device info will be captured automatically</span>
-                </div>
-              </div>
+              {/* Show additional options only after selfie is captured */}
+              {selfie && location && (
+                <>
+                  {/* Optional: Remote Work & Overtime */}
+                  <div className="border-t pt-4">
+                    <p className="text-sm font-medium text-gray-700 mb-3">Additional Details (Optional)</p>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="flex items-center">
+                        <input
+                          type="checkbox"
+                          id="isRemote"
+                          checked={selfAttendanceData.isRemote}
+                          onChange={(e) => setSelfAttendanceData({...selfAttendanceData, isRemote: e.target.checked})}
+                          className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                        />
+                        <label htmlFor="isRemote" className="ml-2 text-sm text-gray-700">
+                          🏠 Remote Work
+                        </label>
+                      </div>
+                      <div>
+                        <label className="label text-xs">Overtime (hrs)</label>
+                        <input
+                          type="number"
+                          step="0.5"
+                          min="0"
+                          max="12"
+                          className="input text-sm"
+                          value={selfAttendanceData.overtimeHours}
+                          onChange={(e) => setSelfAttendanceData({...selfAttendanceData, overtimeHours: e.target.value})}
+                          placeholder="0"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Optional: Check-out time */}
+                  <div>
+                    <label className="label">Check Out (if marking end of day)</label>
+                    <input
+                      type="time"
+                      className="input"
+                      value={selfAttendanceData.checkOut}
+                      onChange={(e) => setSelfAttendanceData({...selfAttendanceData, checkOut: e.target.value})}
+                    />
+                  </div>
+                  
+                  {/* Optional: Notes */}
+                  <div>
+                    <label className="label">Notes</label>
+                    <textarea
+                      className="input"
+                      rows={2}
+                      value={selfAttendanceData.notes}
+                      onChange={(e) => setSelfAttendanceData({...selfAttendanceData, notes: e.target.value})}
+                      placeholder="Any additional notes..."
+                    />
+                  </div>
+
+                  {/* Info Badge */}
+                  <div className="p-2 bg-blue-50 border border-blue-200 rounded text-center">
+                    <p className="text-xs text-blue-700">
+                      ✅ Selfie, Location, Device & IP captured
+                    </p>
+                  </div>
+                </>
+              )}
               
               <div className="flex space-x-3 pt-4">
                 <button
