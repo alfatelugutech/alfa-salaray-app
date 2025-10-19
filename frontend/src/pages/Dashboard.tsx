@@ -223,13 +223,13 @@ const Dashboard: React.FC = () => {
                 {user?.role === 'SUPER_ADMIN' && (
                   <>
                     <button 
-                      onClick={() => toast.info('Role Management feature coming soon!')}
+                      onClick={() => toast('Role Management feature coming soon!', { icon: 'ℹ️' })}
                       className="w-full bg-purple-600 text-white py-2 px-4 rounded hover:bg-purple-700 transition-colors cursor-pointer"
                     >
                       Role Management
                     </button>
                     <button 
-                      onClick={() => toast.info('Features Control coming soon!')}
+                      onClick={() => toast('Features Control coming soon!', { icon: 'ℹ️' })}
                       className="w-full bg-orange-600 text-white py-2 px-4 rounded hover:bg-orange-700 transition-colors cursor-pointer"
                     >
                       Features Control
@@ -284,7 +284,7 @@ const Dashboard: React.FC = () => {
                 <h3 className="font-semibold text-purple-900 mb-2">Role Management</h3>
                 <p className="text-sm text-purple-700 mb-3">Manage user roles and permissions</p>
                 <button 
-                  onClick={() => toast.info('Role Management feature coming soon!')}
+                  onClick={() => toast('Role Management feature coming soon!', { icon: 'ℹ️' })}
                   className="w-full bg-purple-600 text-white py-2 px-4 rounded hover:bg-purple-700 text-sm transition-colors cursor-pointer"
                 >
                   Manage Roles
@@ -295,7 +295,7 @@ const Dashboard: React.FC = () => {
                 <h3 className="font-semibold text-orange-900 mb-2">Features Control</h3>
                 <p className="text-sm text-orange-700 mb-3">Enable/disable system features</p>
                 <button 
-                  onClick={() => toast.info('Features Control coming soon!')}
+                  onClick={() => toast('Features Control coming soon!', { icon: 'ℹ️' })}
                   className="w-full bg-orange-600 text-white py-2 px-4 rounded hover:bg-orange-700 text-sm transition-colors cursor-pointer"
                 >
                   Control Features
@@ -328,7 +328,7 @@ const Dashboard: React.FC = () => {
                 <h3 className="font-semibold text-teal-900 mb-2">Reports & Analytics</h3>
                 <p className="text-sm text-teal-700 mb-3">View system reports and analytics</p>
                 <button 
-                  onClick={() => toast.info('Reports & Analytics feature coming soon!')}
+                  onClick={() => toast('Reports & Analytics feature coming soon!', { icon: 'ℹ️' })}
                   className="w-full bg-teal-600 text-white py-2 px-4 rounded hover:bg-teal-700 text-sm transition-colors cursor-pointer"
                 >
                   View Reports
@@ -339,7 +339,7 @@ const Dashboard: React.FC = () => {
                 <h3 className="font-semibold text-pink-900 mb-2">Audit Logs</h3>
                 <p className="text-sm text-pink-700 mb-3">Monitor system activity and logs</p>
                 <button 
-                  onClick={() => toast.info('Audit Logs feature coming soon!')}
+                  onClick={() => toast('Audit Logs feature coming soon!', { icon: 'ℹ️' })}
                   className="w-full bg-pink-600 text-white py-2 px-4 rounded hover:bg-pink-700 text-sm transition-colors cursor-pointer"
                 >
                   View Logs
