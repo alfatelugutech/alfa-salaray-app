@@ -560,6 +560,10 @@ const ViewEmployeeModal: React.FC<{
           
           <div className="grid grid-cols-2 gap-4">
             <div>
+              <label className="label">Phone</label>
+              <p className="text-gray-900">{employee.user?.phone || 'N/A'}</p>
+            </div>
+            <div>
               <label className="label">Employee ID</label>
               <p className="text-gray-900">{employee.employeeId}</p>
             </div>
@@ -582,6 +586,10 @@ const ViewEmployeeModal: React.FC<{
               }`}>
                 {employee.status}
               </span>
+            </div>
+            <div>
+              <label className="label">Work Location</label>
+              <p className="text-gray-900">{employee.workLocation || 'N/A'}</p>
             </div>
             <div>
               <label className="label">Hire Date</label>
@@ -614,11 +622,19 @@ const EditEmployeeModal: React.FC<{
   onSuccess: () => void
 }> = ({ employee, onClose, onSuccess }) => {
   const [formData, setFormData] = useState({
+    // User information
+    firstName: employee.user?.firstName || '',
+    lastName: employee.user?.lastName || '',
+    email: employee.user?.email || '',
+    phone: employee.user?.phone || '',
+    // Employee information
+    employeeId: employee.employeeId || '',
     department: employee.department || '',
     position: employee.position || '',
     status: employee.status,
     salary: employee.salary?.toString() || '',
-    workLocation: employee.workLocation || ''
+    workLocation: employee.workLocation || '',
+    hireDate: employee.hireDate ? new Date(employee.hireDate).toISOString().split('T')[0] : ''
   })
 
   const updateEmployeeMutation = useMutation(
@@ -636,75 +652,181 @@ const EditEmployeeModal: React.FC<{
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    updateEmployeeMutation.mutate(formData)
+    
+    // Validate required fields
+    if (!formData.firstName || !formData.lastName || !formData.email || !formData.employeeId) {
+      toast.error('Please fill in all required fields')
+      return
+    }
+    
+    if (!formData.email.includes('@')) {
+      toast.error('Please enter a valid email address')
+      return
+    }
+    
+    // Prepare data for submission
+    const submitData: any = {
+      firstName: formData.firstName,
+      lastName: formData.lastName,
+      email: formData.email,
+      phone: formData.phone || undefined,
+      employeeId: formData.employeeId,
+      department: formData.department,
+      position: formData.position,
+      status: formData.status,
+      salary: formData.salary ? parseFloat(formData.salary) : undefined,
+      workLocation: formData.workLocation,
+      hireDate: formData.hireDate
+    }
+    
+    updateEmployeeMutation.mutate(submitData)
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto">
+      <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4 my-8">
         <h2 className="text-xl font-bold mb-4">Edit Employee</h2>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="label">Department</label>
-              <select
-                className="input"
-                value={formData.department}
-                onChange={(e) => setFormData({...formData, department: e.target.value})}
-              >
-                <option value="">Select Department</option>
-                <option value="HR">HR</option>
-                <option value="IT">IT</option>
-                <option value="Finance">Finance</option>
-                <option value="Marketing">Marketing</option>
-                <option value="Operations">Operations</option>
-              </select>
+          {/* Personal Information Section */}
+          <div className="border-b pb-4">
+            <h3 className="text-md font-semibold text-gray-700 mb-3">Personal Information</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="label">First Name *</label>
+                <input
+                  type="text"
+                  className="input"
+                  value={formData.firstName}
+                  onChange={(e) => setFormData({...formData, firstName: e.target.value})}
+                  required
+                />
+              </div>
+              <div>
+                <label className="label">Last Name *</label>
+                <input
+                  type="text"
+                  className="input"
+                  value={formData.lastName}
+                  onChange={(e) => setFormData({...formData, lastName: e.target.value})}
+                  required
+                />
+              </div>
             </div>
-            <div>
-              <label className="label">Position</label>
-              <input
-                type="text"
-                className="input"
-                value={formData.position}
-                onChange={(e) => setFormData({...formData, position: e.target.value})}
-              />
-            </div>
-          </div>
-          <div>
-            <label className="label">Status</label>
-            <select
-              className="input"
-              value={formData.status}
-              onChange={(e) => setFormData({...formData, status: e.target.value as 'ACTIVE' | 'INACTIVE' | 'TERMINATED' | 'ON_LEAVE'})}
-            >
-              <option value="ACTIVE">Active</option>
-              <option value="INACTIVE">Inactive</option>
-              <option value="ON_LEAVE">On Leave</option>
-            </select>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="label">Salary</label>
-              <input
-                type="number"
-                className="input"
-                value={formData.salary}
-                onChange={(e) => setFormData({...formData, salary: e.target.value})}
-                placeholder="Enter salary"
-              />
-            </div>
-            <div>
-              <label className="label">Work Location</label>
-              <input
-                type="text"
-                className="input"
-                value={formData.workLocation}
-                onChange={(e) => setFormData({...formData, workLocation: e.target.value})}
-                placeholder="Enter work location"
-              />
+            <div className="grid grid-cols-2 gap-4 mt-4">
+              <div>
+                <label className="label">Email *</label>
+                <input
+                  type="email"
+                  className="input"
+                  value={formData.email}
+                  onChange={(e) => setFormData({...formData, email: e.target.value})}
+                  required
+                />
+              </div>
+              <div>
+                <label className="label">Phone</label>
+                <input
+                  type="tel"
+                  className="input"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                  placeholder="Enter phone number"
+                />
+              </div>
             </div>
           </div>
-          <div className="flex justify-end space-x-2">
+
+          {/* Employment Information Section */}
+          <div className="border-b pb-4">
+            <h3 className="text-md font-semibold text-gray-700 mb-3">Employment Information</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="label">Employee ID *</label>
+                <input
+                  type="text"
+                  className="input"
+                  value={formData.employeeId}
+                  onChange={(e) => setFormData({...formData, employeeId: e.target.value})}
+                  required
+                />
+              </div>
+              <div>
+                <label className="label">Department</label>
+                <select
+                  className="input"
+                  value={formData.department}
+                  onChange={(e) => setFormData({...formData, department: e.target.value})}
+                >
+                  <option value="">Select Department</option>
+                  <option value="HR">HR</option>
+                  <option value="IT">IT</option>
+                  <option value="Finance">Finance</option>
+                  <option value="Marketing">Marketing</option>
+                  <option value="Operations">Operations</option>
+                  <option value="Admin">Admin</option>
+                </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4 mt-4">
+              <div>
+                <label className="label">Position</label>
+                <input
+                  type="text"
+                  className="input"
+                  value={formData.position}
+                  onChange={(e) => setFormData({...formData, position: e.target.value})}
+                  placeholder="Enter position"
+                />
+              </div>
+              <div>
+                <label className="label">Status</label>
+                <select
+                  className="input"
+                  value={formData.status}
+                  onChange={(e) => setFormData({...formData, status: e.target.value as 'ACTIVE' | 'INACTIVE' | 'TERMINATED' | 'ON_LEAVE'})}
+                >
+                  <option value="ACTIVE">Active</option>
+                  <option value="INACTIVE">Inactive</option>
+                  <option value="ON_LEAVE">On Leave</option>
+                  <option value="TERMINATED">Terminated</option>
+                </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-4 mt-4">
+              <div>
+                <label className="label">Hire Date</label>
+                <input
+                  type="date"
+                  className="input"
+                  value={formData.hireDate}
+                  onChange={(e) => setFormData({...formData, hireDate: e.target.value})}
+                />
+              </div>
+              <div>
+                <label className="label">Salary</label>
+                <input
+                  type="number"
+                  className="input"
+                  value={formData.salary}
+                  onChange={(e) => setFormData({...formData, salary: e.target.value})}
+                  placeholder="Enter salary"
+                />
+              </div>
+              <div>
+                <label className="label">Work Location</label>
+                <input
+                  type="text"
+                  className="input"
+                  value={formData.workLocation}
+                  onChange={(e) => setFormData({...formData, workLocation: e.target.value})}
+                  placeholder="Location"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex justify-end space-x-2 pt-2">
             <button
               type="button"
               onClick={onClose}
@@ -715,9 +837,16 @@ const EditEmployeeModal: React.FC<{
             <button
               type="submit"
               disabled={updateEmployeeMutation.isLoading}
-              className="btn btn-primary btn-md"
+              className="btn btn-primary btn-md disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {updateEmployeeMutation.isLoading ? 'Updating...' : 'Update Employee'}
+              {updateEmployeeMutation.isLoading ? (
+                <div className="flex items-center">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Updating...
+                </div>
+              ) : (
+                'Update Employee'
+              )}
             </button>
           </div>
         </form>

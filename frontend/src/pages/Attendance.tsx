@@ -331,7 +331,25 @@ const MarkAttendanceModal: React.FC<{
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    markAttendanceMutation.mutate(formData)
+    
+    // Combine date and time for checkIn and checkOut
+    const submitData: any = {
+      employeeId: formData.employeeId,
+      date: formData.date,
+      status: formData.status,
+      notes: formData.notes
+    }
+    
+    // Convert time to ISO datetime if provided
+    if (formData.checkIn) {
+      submitData.checkIn = new Date(`${formData.date}T${formData.checkIn}`).toISOString()
+    }
+    
+    if (formData.checkOut) {
+      submitData.checkOut = new Date(`${formData.date}T${formData.checkOut}`).toISOString()
+    }
+    
+    markAttendanceMutation.mutate(submitData)
   }
 
   return (
