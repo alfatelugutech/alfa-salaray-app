@@ -14,7 +14,7 @@ const prisma = new client_1.PrismaClient();
 // Apply authentication to all routes
 router.use(auth_1.authenticateToken);
 // Email configuration
-const emailTransporter = nodemailer_1.default.createTransporter({
+const emailTransporter = nodemailer_1.default.createTransport({
     host: process.env.SMTP_HOST || 'smtp.gmail.com',
     port: parseInt(process.env.SMTP_PORT || '587'),
     secure: false,
@@ -249,12 +249,12 @@ async function sendEmailNotification(recipient, subject, message, template, data
         return { success: false, error: 'Failed to send email' };
     }
 }
-async function sendSMSNotification(recipient, message) {
+async function sendSMSNotification(_recipient, _message) {
     try {
         await twilioClient.messages.create({
-            body: message,
+            body: _message,
             from: process.env.TWILIO_PHONE_NUMBER,
-            to: recipient
+            to: _recipient
         });
         return { success: true, message: 'SMS sent successfully' };
     }
@@ -263,11 +263,11 @@ async function sendSMSNotification(recipient, message) {
         return { success: false, error: 'Failed to send SMS' };
     }
 }
-async function sendPushNotification(recipient, message, data) {
+async function sendPushNotification(_recipient, _message, _data) {
     try {
         // Get user's push subscription
         const user = await prisma.user.findUnique({
-            where: { email: recipient }
+            where: { email: _recipient }
         });
         if (!user) {
             return { success: false, error: 'User not found' };
@@ -281,7 +281,7 @@ async function sendPushNotification(recipient, message, data) {
         return { success: false, error: 'Failed to send push notification' };
     }
 }
-async function sendWhatsAppNotification(recipient, message) {
+async function sendWhatsAppNotification(_recipient, _message) {
     try {
         // WhatsApp Business API implementation
         // This is a placeholder - actual implementation would use WhatsApp Business API

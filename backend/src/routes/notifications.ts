@@ -12,7 +12,7 @@ const prisma = new PrismaClient();
 router.use(authenticateToken);
 
 // Email configuration
-const emailTransporter = nodemailer.createTransporter({
+const emailTransporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST || 'smtp.gmail.com',
   port: parseInt(process.env.SMTP_PORT || '587'),
   secure: false,
@@ -274,12 +274,12 @@ async function sendEmailNotification(recipient: string, subject: string, message
   }
 }
 
-async function sendSMSNotification(recipient: string, message: string) {
+async function sendSMSNotification(_recipient: string, _message: string) {
   try {
     await twilioClient.messages.create({
-      body: message,
+      body: _message,
       from: process.env.TWILIO_PHONE_NUMBER,
-      to: recipient
+      to: _recipient
     });
 
     return { success: true, message: 'SMS sent successfully' };
@@ -289,11 +289,11 @@ async function sendSMSNotification(recipient: string, message: string) {
   }
 }
 
-async function sendPushNotification(recipient: string, message: string, data?: any) {
+async function sendPushNotification(_recipient: string, _message: string, _data?: any) {
   try {
     // Get user's push subscription
     const user = await prisma.user.findUnique({
-      where: { email: recipient }
+      where: { email: _recipient }
     });
 
     if (!user) {
@@ -310,7 +310,7 @@ async function sendPushNotification(recipient: string, message: string, data?: a
   }
 }
 
-async function sendWhatsAppNotification(recipient: string, message: string) {
+async function sendWhatsAppNotification(_recipient: string, _message: string) {
   try {
     // WhatsApp Business API implementation
     // This is a placeholder - actual implementation would use WhatsApp Business API
