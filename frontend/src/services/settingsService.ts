@@ -54,3 +54,4 @@ export const settingsService = {
     return response.data.data.config
   }
 }
+

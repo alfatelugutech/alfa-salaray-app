@@ -10,6 +10,7 @@ export const payrollService = {
     month?: number
     year?: number
     status?: string
+    search?: string
   }): Promise<PaginatedResponse<Payroll>> {
     const response = await api.get<PaginatedResponse<Payroll>>('/payroll', { params })
     return response.data
@@ -69,3 +70,4 @@ export const payrollService = {
     return response.data
   }
 }
+

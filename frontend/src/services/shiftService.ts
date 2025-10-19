@@ -48,3 +48,4 @@ export const shiftService = {
     return response.data.data.currentShift
   }
 }
+

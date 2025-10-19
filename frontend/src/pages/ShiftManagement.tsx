@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, Edit, Trash2, Users, Clock, Calendar } from 'lucide-react'
 import { shiftService } from '../services/shiftService'
@@ -511,3 +511,4 @@ const AssignShiftModal: React.FC<{
 }
 
 export default ShiftManagement
+

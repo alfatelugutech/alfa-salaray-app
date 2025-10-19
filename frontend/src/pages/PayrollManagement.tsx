@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, Edit, Trash2, DollarSign, Calendar, User, CheckCircle } from 'lucide-react'
 import { payrollService } from '../services/payrollService'
@@ -636,3 +636,4 @@ const EditPayrollModal: React.FC<{
 }
 
 export default PayrollManagement
+

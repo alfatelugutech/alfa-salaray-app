@@ -71,3 +71,4 @@ export const leaveService = {
     return response.data
   }
 }
+

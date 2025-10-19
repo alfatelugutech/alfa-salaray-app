@@ -59,3 +59,4 @@ echo "4. Test your live application!"
 echo ""
 echo "🎉 Your Employee Management System is now live on Vercel!"
 echo "🔗 Check your Vercel dashboard for the deployment URL"
+
