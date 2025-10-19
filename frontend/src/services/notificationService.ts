@@ -37,33 +37,62 @@ export const notificationService = {
 
   // Get notifications
   getNotifications: async (query: NotificationQuery = {}) => {
-    const params = new URLSearchParams()
-    
-    if (query.type) params.append('type', query.type)
-    if (query.status) params.append('status', query.status)
-    if (query.page) params.append('page', query.page.toString())
-    if (query.limit) params.append('limit', query.limit.toString())
+    try {
+      const params = new URLSearchParams()
+      
+      if (query.type) params.append('type', query.type)
+      if (query.status) params.append('status', query.status)
+      if (query.page) params.append('page', query.page.toString())
+      if (query.limit) params.append('limit', query.limit.toString())
 
-    const response = await apiClient.get(`/notifications?${params.toString()}`)
-    return response.data
+      const response = await apiClient.get(`/notifications?${params.toString()}`)
+      return response.data
+    } catch (error) {
+      console.warn('Backend not available, returning empty notifications:', error)
+      return { success: true, data: [] }
+    }
   },
 
   // Get notification preferences
   getPreferences: async () => {
-    const response = await apiClient.get('/notifications/preferences')
-    return response.data
+    try {
+      const response = await apiClient.get('/notifications/preferences')
+      return response.data
+    } catch (error) {
+      console.warn('Backend not available, returning default preferences:', error)
+      return { 
+        success: true, 
+        data: {
+          emailEnabled: true,
+          smsEnabled: true,
+          pushEnabled: true,
+          whatsappEnabled: false,
+          quietHours: { enabled: false, start: '22:00', end: '08:00' }
+        }
+      }
+    }
   },
 
   // Update notification preferences
   updatePreferences: async (preferences: NotificationPreferences) => {
-    const response = await apiClient.put('/notifications/preferences', preferences)
-    return response.data
+    try {
+      const response = await apiClient.put('/notifications/preferences', preferences)
+      return response.data
+    } catch (error) {
+      console.warn('Backend not available, preferences not saved:', error)
+      return { success: false, error: 'Backend not available' }
+    }
   },
 
   // Mark notification as read
   markAsRead: async (notificationId: string) => {
-    const response = await apiClient.patch(`/notifications/${notificationId}/read`)
-    return response.data
+    try {
+      const response = await apiClient.patch(`/notifications/${notificationId}/read`)
+      return response.data
+    } catch (error) {
+      console.warn('Backend not available, notification not marked as read:', error)
+      return { success: false, error: 'Backend not available' }
+    }
   },
 
   // Request notification permission
