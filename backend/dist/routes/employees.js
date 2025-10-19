@@ -19,7 +19,7 @@ const createEmployeeSchema = joi_1.default.object({
     position: joi_1.default.string().optional(),
     hireDate: joi_1.default.date().required(),
     salary: joi_1.default.number().optional(),
-    workLocation: joi_1.default.string().optional()
+    workLocation: joi_1.default.string().required()
 });
 const updateEmployeeSchema = joi_1.default.object({
     department: joi_1.default.string().optional(),

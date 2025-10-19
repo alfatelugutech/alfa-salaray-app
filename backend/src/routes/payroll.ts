@@ -1,5 +1,5 @@
 import express, { Request, Response } from "express";
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import { authenticateToken, requireHR } from "../middleware/auth";
 import Joi from "joi";
 
@@ -195,11 +195,11 @@ router.post("/", requireHR, async (req: Request, res: Response) => {
         employeeId,
         month,
         year,
-        basicSalary,
-        overtimePay,
-        allowances,
-        deductions,
-        netSalary
+        basicSalary: new Prisma.Decimal(basicSalary),
+        overtimePay: new Prisma.Decimal(overtimePay),
+        allowances: new Prisma.Decimal(allowances),
+        deductions: new Prisma.Decimal(deductions),
+        netSalary: new Prisma.Decimal(netSalary)
       },
       include: {
         employee: {
@@ -263,22 +263,38 @@ router.put("/:id", requireHR, async (req: Request, res: Response) => {
 
     // Calculate new net salary if financial fields are updated
     let netSalary = currentPayroll.netSalary;
+    const updateData: any = {};
+    
+    if (value.basicSalary !== undefined) {
+      updateData.basicSalary = new Prisma.Decimal(value.basicSalary);
+    }
+    if (value.overtimePay !== undefined) {
+      updateData.overtimePay = new Prisma.Decimal(value.overtimePay);
+    }
+    if (value.allowances !== undefined) {
+      updateData.allowances = new Prisma.Decimal(value.allowances);
+    }
+    if (value.deductions !== undefined) {
+      updateData.deductions = new Prisma.Decimal(value.deductions);
+    }
+    if (value.status !== undefined) {
+      updateData.status = value.status;
+    }
+    
     if (value.basicSalary !== undefined || value.overtimePay !== undefined || 
         value.allowances !== undefined || value.deductions !== undefined) {
-      const basicSalary = value.basicSalary ?? currentPayroll.basicSalary;
-      const overtimePay = value.overtimePay ?? currentPayroll.overtimePay;
-      const allowances = value.allowances ?? currentPayroll.allowances;
-      const deductions = value.deductions ?? currentPayroll.deductions;
+      const basicSalary = value.basicSalary ?? Number(currentPayroll.basicSalary);
+      const overtimePay = value.overtimePay ?? Number(currentPayroll.overtimePay);
+      const allowances = value.allowances ?? Number(currentPayroll.allowances);
+      const deductions = value.deductions ?? Number(currentPayroll.deductions);
       
-      netSalary = basicSalary + overtimePay + allowances - deductions;
+      netSalary = new Prisma.Decimal(basicSalary + overtimePay + allowances - deductions);
+      updateData.netSalary = netSalary;
     }
 
     const payroll = await prisma.payroll.update({
       where: { id },
-      data: {
-        ...value,
-        netSalary
-      },
+      data: updateData,
       include: {
         employee: {
           include: {

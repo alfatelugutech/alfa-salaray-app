@@ -17,6 +17,9 @@ const auth_1 = __importDefault(require("./routes/auth"));
 const employees_1 = __importDefault(require("./routes/employees"));
 const attendance_1 = __importDefault(require("./routes/attendance"));
 const leave_1 = __importDefault(require("./routes/leave"));
+const shifts_1 = __importDefault(require("./routes/shifts"));
+const payroll_1 = __importDefault(require("./routes/payroll"));
+const settings_1 = __importDefault(require("./routes/settings"));
 // Import middleware
 const errorHandler_1 = require("./middleware/errorHandler");
 const notFound_1 = require("./middleware/notFound");
@@ -72,7 +75,7 @@ app.get('/health', (req, res) => {
         timestamp: new Date().toISOString(),
         uptime: process.uptime(),
         environment: process.env.NODE_ENV || 'development',
-        version: '1.0.0 - Phase 1'
+        version: '2.0.0 - Phase 2'
     });
 });
 // API routes
@@ -80,6 +83,9 @@ app.use('/api/auth', auth_1.default);
 app.use('/api/employees', employees_1.default);
 app.use('/api/attendance', attendance_1.default);
 app.use('/api/leave', leave_1.default);
+app.use('/api/shifts', shifts_1.default);
+app.use('/api/payroll', payroll_1.default);
+app.use('/api/settings', settings_1.default);
 // Error handling middleware
 app.use(notFound_1.notFound);
 app.use(errorHandler_1.errorHandler);

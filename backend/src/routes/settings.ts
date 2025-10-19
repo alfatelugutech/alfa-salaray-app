@@ -263,13 +263,20 @@ router.put("/bulk", requireHR, async (req: Request, res: Response) => {
     }
 
     const updatePromises = settings.map((setting: any) => {
+      const updateData: any = {
+        value: String(setting.value)
+      };
+      
+      if (setting.type !== undefined) {
+        updateData.type = setting.type;
+      }
+      if (setting.category !== undefined) {
+        updateData.category = setting.category;
+      }
+      
       return prisma.systemSetting.update({
         where: { key: setting.key },
-        data: {
-          value: setting.value,
-          type: setting.type,
-          category: setting.category
-        }
+        data: updateData
       });
     });
 
@@ -305,7 +312,7 @@ router.get("/config/system", async (req: Request, res: Response) => {
 
     // Convert settings to key-value pairs
     const config = settings.reduce((acc, setting) => {
-      let value = setting.value;
+      let value: any = setting.value;
       
       // Parse value based on type
       switch (setting.type) {
@@ -328,7 +335,7 @@ router.get("/config/system", async (req: Request, res: Response) => {
       
       acc[setting.key] = value;
       return acc;
-    }, {} as any);
+    }, {} as Record<string, any>);
 
     res.json({
       success: true,
