@@ -60,12 +60,11 @@ const Dashboard: React.FC = () => {
     () => attendanceService.getAttendance({ employeeId: user?.employeeId }),
     { 
       enabled: !!user?.employeeId,
-      retry: 2,
+      retry: 1,
       retryDelay: 1000,
       onError: (error: any) => {
-        if (error.code !== 'NETWORK_ERROR') {
-          console.error('Attendance data fetch error:', error)
-        }
+        console.error('Attendance data fetch error:', error)
+        // Don't throw the error, just log it
       }
     }
   )
@@ -75,12 +74,11 @@ const Dashboard: React.FC = () => {
     () => leaveService.getLeaveRequests({ employeeId: user?.employeeId }),
     { 
       enabled: !!user?.employeeId,
-      retry: 2,
+      retry: 1,
       retryDelay: 1000,
       onError: (error: any) => {
-        if (error.code !== 'NETWORK_ERROR') {
-          console.error('Leave data fetch error:', error)
-        }
+        console.error('Leave data fetch error:', error)
+        // Don't throw the error, just log it
       }
     }
   )

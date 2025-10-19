@@ -35,9 +35,13 @@ export const useAuth = () => {
     {
       enabled: !!user && authService.isAuthenticated(),
       retry: false,
-      onError: () => {
-        authService.logout()
-        setUser(null)
+      onError: (error: any) => {
+        console.error('Error fetching current user:', error)
+        // Only logout if it's an authentication error, not a network error
+        if (error.response?.status === 401 || error.response?.status === 403) {
+          authService.logout()
+          setUser(null)
+        }
       }
     }
   )
@@ -51,11 +55,16 @@ export const useAuth = () => {
 
   const loginMutation = useMutation(authService.login, {
     onSuccess: (data) => {
-      authService.storeUser(data.user, data.token)
-      setUser(data.user)
-      queryClient.invalidateQueries('currentUser')
-      toast.success('Login successful!')
-      navigate('/dashboard')
+      try {
+        authService.storeUser(data.user, data.token)
+        setUser(data.user)
+        queryClient.invalidateQueries('currentUser')
+        toast.success('Login successful!')
+        navigate('/dashboard')
+      } catch (error) {
+        console.error('Error after successful login:', error)
+        toast.error('Login successful but failed to initialize session')
+      }
     },
     onError: (error: any) => {
       console.error('Login error:', error)
