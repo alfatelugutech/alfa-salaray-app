@@ -1,7 +1,7 @@
 import axios from 'axios'
 import toast from 'react-hot-toast'
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://alfa-salaray-app.onrender.com/api'
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
 // Create axios instance
 const api = axios.create({
@@ -40,10 +40,17 @@ api.interceptors.response.use(
       return Promise.reject(error)
     }
     
+    // Handle timeout errors
+    if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+      console.error('Request timeout - backend is not responding')
+      toast.error('Cannot connect to server. Please ensure the backend is running at ' + API_BASE_URL.replace('/api', ''))
+      return Promise.reject(error)
+    }
+    
     // Handle network errors more gracefully
-    if (error.code === 'NETWORK_ERROR' || error.message === 'Network Error') {
-      console.warn('Network error - backend may be temporarily unavailable')
-      // Don't show toast for network errors to avoid spam
+    if (error.code === 'NETWORK_ERROR' || error.message === 'Network Error' || error.code === 'ERR_NETWORK') {
+      console.error('Network error - backend may be unavailable at:', API_BASE_URL)
+      toast.error('Cannot connect to server. Please check if the backend is running.')
       return Promise.reject(error)
     }
     
