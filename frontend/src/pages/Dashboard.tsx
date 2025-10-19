@@ -16,7 +16,7 @@ const Dashboard: React.FC = () => {
   const [showSelfAttendanceModal, setShowSelfAttendanceModal] = useState(false)
   const [selfAttendanceData, setSelfAttendanceData] = useState({
     date: new Date().toISOString().split('T')[0],
-    checkIn: '',
+    checkIn: new Date().toTimeString().slice(0, 5), // Auto-set current time
     checkOut: '',
     status: 'PRESENT',
     notes: '',
@@ -27,6 +27,7 @@ const Dashboard: React.FC = () => {
   const [isGettingLocation, setIsGettingLocation] = useState(false)
   const [selfie, setSelfie] = useState<string | null>(null)
   const [isCapturingSelfie, setIsCapturingSelfie] = useState(false)
+  const [isAutoCapturing, setIsAutoCapturing] = useState(false)
   const queryClient = useQueryClient()
   
   // Fetch data based on user role with better error handling
@@ -171,6 +172,45 @@ const Dashboard: React.FC = () => {
       toast.error(error.message || 'Failed to upload photo')
     }
   }
+
+  // Auto-capture selfie and location when modal opens
+  const handleAutoCapture = async () => {
+    setIsAutoCapturing(true)
+    
+    // Auto-capture selfie
+    try {
+      const photo = await captureSelfie()
+      const compressed = await compressImage(photo, 800)
+      setSelfie(compressed)
+      toast.success('📸 Selfie captured!')
+    } catch (error: any) {
+      toast('ℹ️ Camera not available. You can upload a photo instead.', { duration: 3000 })
+    }
+
+    // Auto-capture GPS location
+    try {
+      const loc = await getCompleteLocation()
+      setLocation(loc)
+      
+      // Auto-detect remote work based on location
+      // You can add your office coordinates here for auto-detection
+      const isRemoteWork = false // Will be enhanced with office location check
+      setSelfAttendanceData(prev => ({ ...prev, isRemote: isRemoteWork }))
+      
+      toast.success('📍 Location captured!')
+    } catch (error: any) {
+      toast('ℹ️ Location not available. Proceeding without GPS.', { duration: 3000 })
+    }
+
+    setIsAutoCapturing(false)
+  }
+
+  // Trigger auto-capture when modal opens
+  React.useEffect(() => {
+    if (showSelfAttendanceModal && !selfie && !location) {
+      handleAutoCapture()
+    }
+  }, [showSelfAttendanceModal])
 
   const handleMarkSelfAttendance = (e: React.FormEvent) => {
     e.preventDefault()
@@ -425,19 +465,31 @@ const Dashboard: React.FC = () => {
       {/* Self-Attendance Modal */}
       {showSelfAttendanceModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-lg w-full max-w-md mx-4">
-            <div className="flex items-center justify-between p-6 border-b">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-6 border-b sticky top-0 bg-white z-10">
               <h2 className="text-xl font-semibold text-gray-900 flex items-center">
                 <Clock className="w-5 h-5 mr-2" />
-                Mark Self Attendance
+                Mark Attendance
               </h2>
               <button
-                onClick={() => setShowSelfAttendanceModal(false)}
+                onClick={() => {
+                  setShowSelfAttendanceModal(false)
+                  setSelfie(null)
+                  setLocation(null)
+                }}
                 className="text-gray-400 hover:text-gray-600"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
+
+            {isAutoCapturing && (
+              <div className="p-6 text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <p className="text-gray-700 font-medium">Capturing selfie and location...</p>
+                <p className="text-sm text-gray-500 mt-2">Please allow camera and location permissions</p>
+              </div>
+            )}
             
             <form onSubmit={handleMarkSelfAttendance} className="p-6 space-y-4">
               <div>
