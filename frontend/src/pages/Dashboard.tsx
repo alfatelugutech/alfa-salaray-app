@@ -397,6 +397,50 @@ const Dashboard: React.FC = () => {
                   Manage Leaves
                 </button>
               </div>
+              
+              <div className="bg-cyan-50 p-4 rounded-lg border border-cyan-200">
+                <h3 className="font-semibold text-cyan-900 mb-2">Analytics & Reports</h3>
+                <p className="text-sm text-cyan-700 mb-3">View analytics and reports</p>
+                <button 
+                  onClick={() => navigate('/analytics')}
+                  className="w-full bg-cyan-600 text-white py-2 px-4 rounded hover:bg-cyan-700 text-sm transition-colors cursor-pointer"
+                >
+                  View Analytics
+                </button>
+              </div>
+              
+              <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-200">
+                <h3 className="font-semibold text-indigo-900 mb-2">Notifications</h3>
+                <p className="text-sm text-indigo-700 mb-3">Manage notifications and alerts</p>
+                <button 
+                  onClick={() => navigate('/notifications')}
+                  className="w-full bg-indigo-600 text-white py-2 px-4 rounded hover:bg-indigo-700 text-sm transition-colors cursor-pointer"
+                >
+                  Manage Notifications
+                </button>
+              </div>
+              
+              <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h3 className="font-semibold text-purple-900 mb-2">AI & Automation</h3>
+                <p className="text-sm text-purple-700 mb-3">Smart features and automation</p>
+                <button 
+                  onClick={() => navigate('/ai')}
+                  className="w-full bg-purple-600 text-white py-2 px-4 rounded hover:bg-purple-700 text-sm transition-colors cursor-pointer"
+                >
+                  AI Assistant
+                </button>
+              </div>
+              
+              <div className="bg-teal-50 p-4 rounded-lg border border-teal-200">
+                <h3 className="font-semibold text-teal-900 mb-2">HR Management</h3>
+                <p className="text-sm text-teal-700 mb-3">Performance reviews and goals</p>
+                <button 
+                  onClick={() => navigate('/hr')}
+                  className="w-full bg-teal-600 text-white py-2 px-4 rounded hover:bg-teal-700 text-sm transition-colors cursor-pointer"
+                >
+                  HR Management
+                </button>
+              </div>
             </div>
           </div>
         )}

@@ -13,6 +13,11 @@ import Profile from './pages/Profile'
 import ShiftManagement from './pages/ShiftManagement'
 import PayrollManagement from './pages/PayrollManagement'
 import SystemSettings from './pages/SystemSettings'
+// Phase 3 imports
+import Analytics from './pages/Analytics'
+import Notifications from './pages/Notifications'
+import AI from './pages/AI'
+import HRManagement from './pages/HRManagement'
 import LoadingSpinner from './components/LoadingSpinner'
 
 function App() {
@@ -51,6 +56,11 @@ function App() {
             <Route path="/shifts" element={<ShiftManagement />} />
             <Route path="/payroll" element={<PayrollManagement />} />
             <Route path="/settings" element={<SystemSettings />} />
+            {/* Phase 3 routes */}
+            <Route path="/analytics" element={<Analytics />} />
+            <Route path="/notifications" element={<Notifications />} />
+            <Route path="/ai" element={<AI />} />
+            <Route path="/hr" element={<HRManagement />} />
           </>
         ) : (
           <>
