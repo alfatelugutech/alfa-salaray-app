@@ -32,7 +32,21 @@ const markAttendanceSchema = Joi.object({
     userAgent: Joi.string().optional()
   }).optional(),
   isRemote: Joi.boolean().optional(),
-  overtimeHours: Joi.number().optional()
+  overtimeHours: Joi.number().optional(),
+  checkInSelfie: Joi.string().allow('').optional(), // Morning check-in selfie
+  checkOutSelfie: Joi.string().allow('').optional(), // Evening check-out selfie
+  checkInLocation: Joi.object({
+    latitude: Joi.number().optional(),
+    longitude: Joi.number().optional(),
+    address: Joi.string().optional(),
+    accuracy: Joi.number().optional()
+  }).optional(),
+  checkOutLocation: Joi.object({
+    latitude: Joi.number().optional(),
+    longitude: Joi.number().optional(),
+    address: Joi.string().optional(),
+    accuracy: Joi.number().optional()
+  }).optional()
 });
 
 const updateAttendanceSchema = Joi.object({
@@ -56,7 +70,20 @@ const updateAttendanceSchema = Joi.object({
   }).optional(),
   isRemote: Joi.boolean().optional(),
   overtimeHours: Joi.number().optional(),
-  selfieUrl: Joi.string().optional() // Selfie/photo for verification
+  checkInSelfie: Joi.string().allow('').optional(),
+  checkOutSelfie: Joi.string().allow('').optional(),
+  checkInLocation: Joi.object({
+    latitude: Joi.number().optional(),
+    longitude: Joi.number().optional(),
+    address: Joi.string().optional(),
+    accuracy: Joi.number().optional()
+  }).optional(),
+  checkOutLocation: Joi.object({
+    latitude: Joi.number().optional(),
+    longitude: Joi.number().optional(),
+    address: Joi.string().optional(),
+    accuracy: Joi.number().optional()
+  }).optional()
 });
 
 // Mark attendance (for employees and admins)
@@ -72,7 +99,7 @@ router.post("/mark", async (req: Request, res: Response) => {
       return;
     }
 
-    const { employeeId, date, checkIn, checkOut, status, notes, shiftId, location, deviceInfo, isRemote, overtimeHours, selfieUrl } = value;
+    const { employeeId, date, checkIn, checkOut, status, notes, shiftId, location, deviceInfo, isRemote, checkInSelfie, checkOutSelfie, checkInLocation, checkOutLocation } = value;
 
     // Check if attendance already exists for this date
     const existingAttendance = await prisma.attendance.findUnique({
@@ -93,12 +120,58 @@ router.post("/mark", async (req: Request, res: Response) => {
       return;
     }
 
-    // Calculate total hours if both check-in and check-out are provided
+    // Calculate working hours for salary calculation
     let totalHours: number | null = null;
+    let regularHours: number = 0;
+    let overtimeHours: number = 0;
+    let breakHours: number = 0;
+    
     if (checkIn && checkOut) {
       const checkInTime = new Date(checkIn);
       const checkOutTime = new Date(checkOut);
-      totalHours = (checkOutTime.getTime() - checkInTime.getTime()) / (1000 * 60 * 60); // Convert to hours
+      
+      // Calculate total time worked
+      const totalTimeMs = checkOutTime.getTime() - checkInTime.getTime();
+      totalHours = totalTimeMs / (1000 * 60 * 60); // Convert to hours
+      
+      // Standard working day is 8 hours
+      const standardWorkingHours = 8;
+      
+      // Calculate break time (1 hour lunch break if working more than 6 hours)
+      if (totalHours > 6) {
+        breakHours = 1; // 1 hour lunch break
+      }
+      
+      // Calculate actual working hours (excluding break)
+      const actualWorkingHours = totalHours - breakHours;
+      
+      // Calculate regular hours (up to 8 hours)
+      regularHours = Math.min(actualWorkingHours, standardWorkingHours);
+      
+      // Calculate overtime hours (anything over 8 hours)
+      if (actualWorkingHours > standardWorkingHours) {
+        overtimeHours = actualWorkingHours - standardWorkingHours;
+      }
+      
+      // If manual overtime hours provided in request, use that instead
+      const manualOvertimeHours = (value as any).overtimeHours;
+      if (manualOvertimeHours && manualOvertimeHours > 0) {
+        regularHours = Math.min(actualWorkingHours - manualOvertimeHours, standardWorkingHours);
+        overtimeHours = manualOvertimeHours;
+      }
+    }
+
+    // Auto-detect HALF_DAY if check-in is after 11:59 AM
+    let finalStatus = status;
+    if (checkIn) {
+      const checkInTime = new Date(checkIn);
+      const hours = checkInTime.getHours();
+      const minutes = checkInTime.getMinutes();
+      
+      // If check-in after 11:59 AM, mark as HALF_DAY
+      if (hours >= 12 || (hours === 11 && minutes >= 59)) {
+        finalStatus = "HALF_DAY";
+      }
     }
 
     // Get IP address from request
@@ -114,17 +187,22 @@ router.post("/mark", async (req: Request, res: Response) => {
         checkIn: checkIn ? new Date(checkIn) : null,
         checkOut: checkOut ? new Date(checkOut) : null,
         totalHours,
-        status,
+        regularHours: regularHours > 0 ? regularHours : null,
+        overtimeHours: overtimeHours > 0 ? overtimeHours : null,
+        breakHours: breakHours > 0 ? breakHours : null,
+        status: finalStatus, // Auto-detected status
         notes,
         // Phase 2 fields
         shiftId: shiftId || null,
-        location: location || null,
+        location: location || null, // Legacy support
         deviceInfo: deviceInfo || null,
         ipAddress: ipAddress as string || null,
         isRemote: isRemote || false,
-        overtimeHours: overtimeHours || null,
         createdBy: createdBy,
-        selfieUrl: selfieUrl || null
+        checkInSelfie: checkInSelfie || null,
+        checkOutSelfie: checkOutSelfie || null,
+        checkInLocation: checkInLocation || null,
+        checkOutLocation: checkOutLocation || null
       },
       include: {
         employee: {
