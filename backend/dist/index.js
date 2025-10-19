@@ -20,6 +20,9 @@ const leave_1 = __importDefault(require("./routes/leave"));
 const shifts_1 = __importDefault(require("./routes/shifts"));
 const payroll_1 = __importDefault(require("./routes/payroll"));
 const settings_1 = __importDefault(require("./routes/settings"));
+const analytics_1 = __importDefault(require("./routes/analytics"));
+const notifications_1 = __importDefault(require("./routes/notifications"));
+const ai_1 = __importDefault(require("./routes/ai"));
 // Import middleware
 const errorHandler_1 = require("./middleware/errorHandler");
 const notFound_1 = require("./middleware/notFound");
@@ -86,6 +89,9 @@ app.use('/api/leave', leave_1.default);
 app.use('/api/shifts', shifts_1.default);
 app.use('/api/payroll', payroll_1.default);
 app.use('/api/settings', settings_1.default);
+app.use('/api/analytics', analytics_1.default);
+app.use('/api/notifications', notifications_1.default);
+app.use('/api/ai', ai_1.default);
 // Error handling middleware
 app.use(notFound_1.notFound);
 app.use(errorHandler_1.errorHandler);

@@ -15,6 +15,10 @@ import leaveRoutes from './routes/leave';
 import shiftRoutes from './routes/shifts';
 import payrollRoutes from './routes/payroll';
 import settingsRoutes from './routes/settings';
+import analyticsRoutes from './routes/analytics';
+import notificationRoutes from './routes/notifications';
+import aiRoutes from './routes/ai';
+import hrRoutes from './routes/hr';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler';
@@ -90,6 +94,10 @@ app.use('/api/leave', leaveRoutes);
 app.use('/api/shifts', shiftRoutes);
 app.use('/api/payroll', payrollRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/ai', aiRoutes);
+app.use('/api/hr', hrRoutes);
 
 // Error handling middleware
 app.use(notFound);

@@ -25,6 +25,9 @@ model User {
 
   // Relations
   employee      Employee?
+  notifications Notification[]
+  notificationPreferences NotificationPreferences?
+  chatbotConversations ChatbotConversation[]
 
   @@map("users")
 }
@@ -237,4 +240,245 @@ enum SettingType {
   NUMBER
   BOOLEAN
   JSON
+}
+
+// Phase 3: Notification System
+model Notification {
+  id          String   @id @default(cuid())
+  userId      String
+  type        NotificationType
+  recipient   String
+  subject     String?
+  message     String
+  template    String?
+  data        Json?
+  status      NotificationStatus @default(PENDING)
+  sentAt      DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+model NotificationPreferences {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  emailEnabled    Boolean  @default(true)
+  smsEnabled      Boolean  @default(true)
+  pushEnabled     Boolean  @default(true)
+  whatsappEnabled Boolean  @default(false)
+  quietHours      Json?    // { enabled: boolean, start: string, end: string }
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notification_preferences")
+}
+
+enum NotificationType {
+  EMAIL
+  SMS
+  PUSH
+  WHATSAPP
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+  DELIVERED
+}
+
+// Phase 3: AI & Automation
+model ChatbotConversation {
+  id          String   @id @default(cuid())
+  userId      String
+  userMessage String
+  botResponse String
+  intent      String
+  confidence  Float
+  createdAt   DateTime @default(now())
+
+  // Relations
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("chatbot_conversations")
+}
+
+// Phase 3: Advanced HR Features
+model PerformanceReview {
+  id          String   @id @default(cuid())
+  employeeId  String
+  period      String
+  overallRating Int
+  overallScore Int
+  comments    String?
+  strengths   String[]
+  areasForImprovement String[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  employee    Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  goals       PerformanceGoal[]
+  competencies PerformanceCompetency[]
+
+  @@map("performance_reviews")
+}
+
+model PerformanceGoal {
+  id          String   @id @default(cuid())
+  reviewId    String
+  title       String
+  description String
+  targetValue Float
+  actualValue Float
+  weight      Float
+  achievement Int
+  createdAt   DateTime @default(now())
+
+  // Relations
+  review      PerformanceReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+
+  @@map("performance_goals")
+}
+
+model PerformanceCompetency {
+  id        String   @id @default(cuid())
+  reviewId  String
+  name      String
+  rating    Int
+  comments  String?
+  createdAt DateTime @default(now())
+
+  // Relations
+  review    PerformanceReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+
+  @@map("performance_competencies")
+}
+
+model Goal {
+  id          String   @id @default(cuid())
+  employeeId  String
+  title       String
+  description String
+  category    GoalCategory
+  targetValue Float
+  actualValue Float?
+  unit        String
+  startDate   DateTime
+  endDate     DateTime
+  priority    GoalPriority
+  status      GoalStatus @default(DRAFT)
+  comments    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  employee    Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@map("goals")
+}
+
+model Training {
+  id              String   @id @default(cuid())
+  title           String
+  description     String
+  category        String
+  duration        Int      // in hours
+  instructor      String
+  startDate       DateTime
+  endDate         DateTime
+  maxParticipants Int
+  requirements    String[]
+  status          TrainingStatus @default(SCHEDULED)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  participants    TrainingEnrollment[]
+
+  @@map("trainings")
+}
+
+model TrainingEnrollment {
+  id          String   @id @default(cuid())
+  trainingId  String
+  employeeId  String
+  status      EnrollmentStatus @default(ENROLLED)
+  score       Float?
+  feedback    String?
+  enrolledAt  DateTime @default(now())
+  completedAt DateTime?
+
+  // Relations
+  training    Training @relation(fields: [trainingId], references: [id], onDelete: Cascade)
+  employee    Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@map("training_enrollments")
+}
+
+model Document {
+  id          String   @id @default(cuid())
+  employeeId  String
+  title       String
+  description String?
+  category    String
+  documentType String
+  fileUrl     String
+  expiryDate  DateTime?
+  status      DocumentStatus @default(ACTIVE)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  employee    Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@map("documents")
+}
+
+enum GoalCategory {
+  PERFORMANCE
+  DEVELOPMENT
+  BEHAVIORAL
+  QUANTITATIVE
+}
+
+enum GoalPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum GoalStatus {
+  DRAFT
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum TrainingStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum EnrollmentStatus {
+  ENROLLED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum DocumentStatus {
+  ACTIVE
+  EXPIRED
+  ARCHIVED
 }
