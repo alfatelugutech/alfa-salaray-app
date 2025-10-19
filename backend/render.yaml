@@ -19,7 +19,7 @@ services:
       - key: PORT
         value: 10000
       - key: FRONTEND_URL
-        value: https://your-frontend-url.onrender.com
+        value: https://alfa-salaray-app.vercel.app
       - key: BCRYPT_ROUNDS
         value: 12
       - key: RATE_LIMIT_WINDOW_MS

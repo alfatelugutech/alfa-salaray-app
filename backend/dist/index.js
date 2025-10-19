@@ -59,8 +59,28 @@ const limiter = (0, express_rate_limit_1.default)({
 });
 app.use(limiter);
 // CORS configuration
+const allowedOrigins = [
+    process.env.FRONTEND_URL || "http://localhost:3000",
+    "https://alfa-salaray-app.vercel.app",
+    "https://alfa-salaray-app.vercel.app/",
+    "http://localhost:3000",
+    "http://localhost:5173"
+];
 app.use((0, cors_1.default)({
-    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    origin: (origin, callback) => {
+        // Allow requests with no origin (mobile apps, curl, etc.)
+        if (!origin)
+            return callback(null, true);
+        if (allowedOrigins.includes(origin)) {
+            return callback(null, true);
+        }
+        // For development, allow any localhost origin
+        if (origin.startsWith('http://localhost:') || origin.startsWith('https://localhost:')) {
+            return callback(null, true);
+        }
+        console.log('CORS blocked origin:', origin);
+        return callback(new Error('Not allowed by CORS'));
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
