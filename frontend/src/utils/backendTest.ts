@@ -30,7 +30,21 @@ export const testAPIEndpoint = async (endpoint: string) => {
   
   try {
     console.log(`🔍 Testing API endpoint: ${endpoint}`)
-    const response = await fetch(`${API_BASE_URL}${endpoint}`)
+    
+    // Get authentication token
+    const token = localStorage.getItem('token')
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json'
+    }
+    
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`
+    }
+    
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      method: 'GET',
+      headers
+    })
     console.log(`📊 Response status: ${response.status}`)
     
     if (response.ok) {
@@ -39,7 +53,9 @@ export const testAPIEndpoint = async (endpoint: string) => {
       return { success: true, data }
     } else {
       console.error('❌ API endpoint failed:', response.status)
-      return { success: false, error: `API failed: ${response.status}` }
+      const errorText = await response.text()
+      console.error('❌ Error details:', errorText)
+      return { success: false, error: `API failed: ${response.status} - ${errorText}` }
     }
   } catch (error) {
     console.error('❌ API endpoint error:', error)

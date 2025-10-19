@@ -575,21 +575,29 @@ const Dashboard: React.FC = () => {
               
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="label">Check In</label>
+                  <label className="label flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-blue-600" />
+                    Check In Time
+                  </label>
                   <input
                     type="time"
                     className="input"
                     value={selfAttendanceData.checkIn}
                     onChange={(e) => setSelfAttendanceData({...selfAttendanceData, checkIn: e.target.value})}
+                    placeholder="Select check-in time"
                   />
                 </div>
                 <div>
-                  <label className="label">Check Out</label>
+                  <label className="label flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-orange-600" />
+                    Check Out Time
+                  </label>
                   <input
                     type="time"
                     className="input"
                     value={selfAttendanceData.checkOut}
                     onChange={(e) => setSelfAttendanceData({...selfAttendanceData, checkOut: e.target.value})}
+                    placeholder="Select check-out time"
                   />
                 </div>
               </div>
@@ -747,13 +755,22 @@ const Dashboard: React.FC = () => {
                   {/* Show captured location */}
                   {location && (
                     <div>
-                      <label className="label">Your Location ✅</label>
-                      <div className="p-3 bg-green-50 border border-green-200 rounded">
-                        <div className="flex items-center gap-2">
-                          <MapPin className="w-4 h-4 text-green-600" />
+                      <label className="label flex items-center gap-2">
+                        <MapPin className="w-4 h-4 text-green-600" />
+                        Your Location ✅
+                      </label>
+                      <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <MapPin className="w-5 h-5 text-green-600" />
                           <div className="flex-1">
                             <p className="text-sm font-medium text-green-900">
                               {location.address || `${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`}
+                            </p>
+                            <p className="text-xs text-green-700 mt-1">
+                              📍 Coordinates: {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
+                            </p>
+                            <p className="text-xs text-green-700">
+                              🎯 Accuracy: ±{location.accuracy?.toFixed(0)}m
                             </p>
                           </div>
                         </div>
@@ -766,6 +783,59 @@ const Dashboard: React.FC = () => {
               {/* Show additional options only after selfie is captured */}
               {selfie && location && (
                 <>
+                  {/* Working Hours Preview */}
+                  {selfAttendanceData.checkIn && selfAttendanceData.checkOut && (
+                    <div className="border-t pt-4">
+                      <p className="text-sm font-medium text-gray-700 mb-3">Working Hours Preview</p>
+                      <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                          <div>
+                            <div className="text-lg font-bold text-blue-600">
+                              {(() => {
+                                const checkIn = new Date(`${selfAttendanceData.date}T${selfAttendanceData.checkIn}`)
+                                const checkOut = new Date(`${selfAttendanceData.date}T${selfAttendanceData.checkOut}`)
+                                const totalMs = checkOut.getTime() - checkIn.getTime()
+                                const totalHours = totalMs / (1000 * 60 * 60)
+                                return totalHours.toFixed(1)
+                              })()}h
+                            </div>
+                            <div className="text-xs text-blue-700">Total Hours</div>
+                          </div>
+                          <div>
+                            <div className="text-lg font-bold text-green-600">
+                              {(() => {
+                                const checkIn = new Date(`${selfAttendanceData.date}T${selfAttendanceData.checkIn}`)
+                                const checkOut = new Date(`${selfAttendanceData.date}T${selfAttendanceData.checkOut}`)
+                                const totalMs = checkOut.getTime() - checkIn.getTime()
+                                const totalHours = totalMs / (1000 * 60 * 60)
+                                const regularHours = Math.min(totalHours, 8)
+                                return regularHours.toFixed(1)
+                              })()}h
+                            </div>
+                            <div className="text-xs text-green-700">Regular</div>
+                          </div>
+                          <div>
+                            <div className="text-lg font-bold text-orange-600">
+                              {(() => {
+                                const checkIn = new Date(`${selfAttendanceData.date}T${selfAttendanceData.checkIn}`)
+                                const checkOut = new Date(`${selfAttendanceData.date}T${selfAttendanceData.checkOut}`)
+                                const totalMs = checkOut.getTime() - checkIn.getTime()
+                                const totalHours = totalMs / (1000 * 60 * 60)
+                                const overtimeHours = Math.max(0, totalHours - 8)
+                                return overtimeHours.toFixed(1)
+                              })()}h
+                            </div>
+                            <div className="text-xs text-orange-700">Overtime</div>
+                          </div>
+                          <div>
+                            <div className="text-lg font-bold text-gray-600">1.0h</div>
+                            <div className="text-xs text-gray-700">Break</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Optional: Remote Work & Overtime */}
                   <div className="border-t pt-4">
                     <p className="text-sm font-medium text-gray-700 mb-3">Additional Details (Optional)</p>
@@ -830,22 +900,55 @@ const Dashboard: React.FC = () => {
                 </>
               )}
               
-              <div className="flex space-x-3 pt-4">
+              <div className="flex space-x-3 pt-6 border-t">
                 <button
                   type="button"
-                  onClick={() => setShowSelfAttendanceModal(false)}
-                  className="flex-1 bg-gray-200 text-gray-800 py-2 px-4 rounded hover:bg-gray-300"
+                  onClick={() => {
+                    setShowSelfAttendanceModal(false)
+                    setSelfie(null)
+                    setLocation(null)
+                    setShowCameraPreview(false)
+                    if (cameraStream) {
+                      cameraStream.getTracks().forEach(track => track.stop())
+                      setCameraStream(null)
+                    }
+                  }}
+                  className="flex-1 bg-gray-200 text-gray-800 py-3 px-6 rounded-lg hover:bg-gray-300 font-medium transition-colors"
                 >
-                  Cancel
+                  ❌ Cancel
                 </button>
                 <button
                   type="submit"
-                  disabled={markSelfAttendanceMutation.isLoading}
-                  className="flex-1 bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700 disabled:opacity-50"
+                  disabled={markSelfAttendanceMutation.isLoading || !selfie || !location}
+                  className="flex-1 bg-green-600 text-white py-3 px-6 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors flex items-center justify-center gap-2"
                 >
-                  {markSelfAttendanceMutation.isLoading ? 'Marking...' : 'Mark Attendance'}
+                  {markSelfAttendanceMutation.isLoading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Marking Attendance...
+                    </>
+                  ) : (
+                    <>
+                      ✅ Mark Attendance
+                    </>
+                  )}
                 </button>
               </div>
+              
+              {/* Status indicator */}
+              {!selfie || !location ? (
+                <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <p className="text-sm text-yellow-800 text-center">
+                    ⚠️ Please capture selfie and location before marking attendance
+                  </p>
+                </div>
+              ) : (
+                <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <p className="text-sm text-green-800 text-center">
+                    ✅ Ready to mark attendance! All required data captured.
+                  </p>
+                </div>
+              )}
             </form>
           </div>
         </div>

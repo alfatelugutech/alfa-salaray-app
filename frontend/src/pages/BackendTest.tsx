@@ -5,6 +5,7 @@ import toast from 'react-hot-toast'
 const BackendTest: React.FC = () => {
   const [testResults, setTestResults] = useState<any>({})
   const [isLoading, setIsLoading] = useState(false)
+  const [authStatus, setAuthStatus] = useState<'checking' | 'authenticated' | 'not_authenticated'>('checking')
 
   const runTests = async () => {
     setIsLoading(true)
@@ -42,6 +43,14 @@ const BackendTest: React.FC = () => {
   }
 
   useEffect(() => {
+    // Check authentication status
+    const token = localStorage.getItem('token')
+    if (token) {
+      setAuthStatus('authenticated')
+    } else {
+      setAuthStatus('not_authenticated')
+    }
+    
     runTests()
   }, [])
 
@@ -49,13 +58,25 @@ const BackendTest: React.FC = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Backend Connection Test</h1>
-        <button
-          onClick={runTests}
-          disabled={isLoading}
-          className="btn btn-primary"
-        >
-          {isLoading ? 'Testing...' : 'Run Tests Again'}
-        </button>
+        <div className="flex items-center gap-4">
+          {authStatus === 'authenticated' && (
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+              ✅ Authenticated
+            </span>
+          )}
+          {authStatus === 'not_authenticated' && (
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+              ❌ Not Authenticated
+            </span>
+          )}
+          <button
+            onClick={runTests}
+            disabled={isLoading}
+            className="btn btn-primary"
+          >
+            {isLoading ? 'Testing...' : 'Run Tests Again'}
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
