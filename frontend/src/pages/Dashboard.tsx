@@ -21,7 +21,10 @@ const Dashboard: React.FC = () => {
     status: 'PRESENT',
     notes: '',
     isRemote: false,
-    overtimeHours: ''
+    overtimeHours: '',
+    checkOutReason: '', // New field for check-out reason
+    workSummary: '', // New field for work summary
+    nextDayTasks: '' // New field for next day tasks
   })
   const [location, setLocation] = useState<any>(null)
   const [selfie, setSelfie] = useState<string | null>(null)
@@ -123,7 +126,10 @@ const Dashboard: React.FC = () => {
           status: 'PRESENT',
           notes: '',
           isRemote: false,
-          overtimeHours: ''
+          overtimeHours: '',
+          checkOutReason: '',
+          workSummary: '',
+          nextDayTasks: ''
         })
       },
       onError: (error: any) => {
@@ -249,6 +255,10 @@ const Dashboard: React.FC = () => {
       isRemote: selfAttendanceData.isRemote,
       overtimeHours: selfAttendanceData.overtimeHours ? parseFloat(selfAttendanceData.overtimeHours) : undefined,
       deviceInfo,
+      // Enhanced check-out fields
+      checkOutReason: selfAttendanceData.checkOutReason || undefined,
+      workSummary: selfAttendanceData.workSummary || undefined,
+      nextDayTasks: selfAttendanceData.nextDayTasks || undefined,
       // Dual selfies: check-in selfie or check-out selfie
       checkInSelfie: !isCheckOut && selfie ? selfie : undefined,
       checkOutSelfie: isCheckOut && selfie ? selfie : undefined,
@@ -868,26 +878,117 @@ const Dashboard: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Optional: Check-out time */}
-                  <div>
-                    <label className="label">Check Out (if marking end of day)</label>
-                    <input
-                      type="time"
-                      className="input"
-                      value={selfAttendanceData.checkOut}
-                      onChange={(e) => setSelfAttendanceData({...selfAttendanceData, checkOut: e.target.value})}
-                    />
+                  {/* Enhanced Check-out Section */}
+                  <div className="border-t pt-6">
+                    <div className="bg-gradient-to-r from-orange-50 to-red-50 p-4 rounded-lg border border-orange-200">
+                      <h3 className="text-lg font-semibold text-orange-900 mb-3 flex items-center gap-2">
+                        <Clock className="w-5 h-5" />
+                        🏃 Check-Out Options
+                      </h3>
+                      
+                      {/* Check-out time */}
+                      <div className="mb-4">
+                        <label className="label flex items-center gap-2">
+                          <Clock className="w-4 h-4 text-orange-600" />
+                          Check Out Time
+                        </label>
+                        <input
+                          type="time"
+                          className="input"
+                          value={selfAttendanceData.checkOut}
+                          onChange={(e) => setSelfAttendanceData({...selfAttendanceData, checkOut: e.target.value})}
+                          placeholder="Select check-out time"
+                        />
+                      </div>
+
+                      {/* Check-out reason (required if checking out) */}
+                      {selfAttendanceData.checkOut && (
+                        <div className="mb-4">
+                          <label className="label flex items-center gap-2">
+                            <span className="text-red-500">*</span>
+                            Check-Out Reason
+                          </label>
+                          <select
+                            className="input"
+                            value={selfAttendanceData.checkOutReason}
+                            onChange={(e) => setSelfAttendanceData({...selfAttendanceData, checkOutReason: e.target.value})}
+                            required={!!selfAttendanceData.checkOut}
+                          >
+                            <option value="">Select reason for check-out</option>
+                            <option value="END_OF_DAY">End of work day</option>
+                            <option value="EARLY_LEAVE">Early leave (personal)</option>
+                            <option value="MEDICAL_APPOINTMENT">Medical appointment</option>
+                            <option value="FAMILY_EMERGENCY">Family emergency</option>
+                            <option value="OFFICIAL_MEETING">Official meeting outside office</option>
+                            <option value="FIELD_WORK">Field work</option>
+                            <option value="OTHER">Other (specify in notes)</option>
+                          </select>
+                        </div>
+                      )}
+
+                      {/* Work Summary (required for check-out) */}
+                      {selfAttendanceData.checkOut && (
+                        <div className="mb-4">
+                          <label className="label flex items-center gap-2">
+                            <span className="text-red-500">*</span>
+                            Today's Work Summary
+                          </label>
+                          <textarea
+                            className="input"
+                            rows={3}
+                            value={selfAttendanceData.workSummary}
+                            onChange={(e) => setSelfAttendanceData({...selfAttendanceData, workSummary: e.target.value})}
+                            placeholder="Briefly describe what you accomplished today..."
+                            required={!!selfAttendanceData.checkOut}
+                          />
+                        </div>
+                      )}
+
+                      {/* Next Day Tasks (optional but recommended) */}
+                      {selfAttendanceData.checkOut && (
+                        <div className="mb-4">
+                          <label className="label flex items-center gap-2">
+                            <span className="text-blue-500">💡</span>
+                            Tomorrow's Priority Tasks
+                          </label>
+                          <textarea
+                            className="input"
+                            rows={2}
+                            value={selfAttendanceData.nextDayTasks}
+                            onChange={(e) => setSelfAttendanceData({...selfAttendanceData, nextDayTasks: e.target.value})}
+                            placeholder="What are your main tasks for tomorrow? (Optional but helpful)"
+                          />
+                        </div>
+                      )}
+
+                      {/* Check-out status indicator */}
+                      {selfAttendanceData.checkOut && (
+                        <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                          <div className="flex items-center gap-2 text-green-800">
+                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                            <span className="text-sm font-medium">
+                              Check-out time: {selfAttendanceData.checkOut}
+                            </span>
+                          </div>
+                          {selfAttendanceData.checkOutReason && (
+                            <div className="mt-2 text-sm text-green-700">
+                              Reason: {selfAttendanceData.checkOutReason.replace('_', ' ')}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
                   
-                  {/* Optional: Notes */}
+                  {/* General Notes */}
                   <div>
-                    <label className="label">Notes</label>
+                    <label className="label">Additional Notes</label>
                     <textarea
                       className="input"
                       rows={2}
                       value={selfAttendanceData.notes}
                       onChange={(e) => setSelfAttendanceData({...selfAttendanceData, notes: e.target.value})}
-                      placeholder="Any additional notes..."
+                      placeholder="Any additional notes or comments..."
                     />
                   </div>
 
@@ -919,7 +1020,8 @@ const Dashboard: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  disabled={markSelfAttendanceMutation.isLoading || !selfie || !location}
+                  disabled={markSelfAttendanceMutation.isLoading || !selfie || !location || 
+                    (!!selfAttendanceData.checkOut && (!selfAttendanceData.checkOutReason || !selfAttendanceData.workSummary))}
                   className="flex-1 bg-green-600 text-white py-3 px-6 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors flex items-center justify-center gap-2"
                 >
                   {markSelfAttendanceMutation.isLoading ? (
@@ -940,6 +1042,12 @@ const Dashboard: React.FC = () => {
                 <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                   <p className="text-sm text-yellow-800 text-center">
                     ⚠️ Please capture selfie and location before marking attendance
+                  </p>
+                </div>
+              ) : selfAttendanceData.checkOut && (!selfAttendanceData.checkOutReason || !selfAttendanceData.workSummary) ? (
+                <div className="mt-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                  <p className="text-sm text-orange-800 text-center">
+                    ⚠️ For check-out: Please provide reason and work summary
                   </p>
                 </div>
               ) : (
