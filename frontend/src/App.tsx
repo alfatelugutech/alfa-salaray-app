@@ -20,6 +20,7 @@ import AI from './pages/AI'
 import HRManagement from './pages/HRManagement'
 import BackendTest from './pages/BackendTest'
 import LoadingSpinner from './components/LoadingSpinner'
+import { Toaster } from 'react-hot-toast'
 
 function App() {
   const { user, isLoading } = useAuth()
@@ -41,43 +42,55 @@ function App() {
   const isAdmin = user?.role === 'SUPER_ADMIN' || user?.role === 'HR_MANAGER'
 
   return (
-    <Layout>
-      <Routes>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/profile" element={<Profile />} />
-        
-        {/* Admin/HR only routes */}
-        {isAdmin ? (
-          <>
-            <Route path="/employees" element={<Employees />} />
-            <Route path="/attendance" element={<Attendance />} />
-            <Route path="/leave" element={<LeaveRequests />} />
-            {/* Phase 2 routes */}
-            <Route path="/shifts" element={<ShiftManagement />} />
-            <Route path="/payroll" element={<PayrollManagement />} />
-            <Route path="/settings" element={<SystemSettings />} />
-            {/* Phase 3 routes */}
-        <Route path="/analytics" element={<Analytics />} />
-        <Route path="/notifications" element={<Notifications />} />
-        <Route path="/ai" element={<AI />} />
-        <Route path="/hr" element={<HRManagement />} />
-          </>
-        ) : (
-          <>
-            {/* Employee routes */}
-            <Route path="/my-attendance" element={<MyAttendance />} />
-            <Route path="/my-leave" element={<MyLeave />} />
-            <Route path="/attendance" element={<Navigate to="/my-attendance" replace />} />
-            <Route path="/leave" element={<Navigate to="/my-leave" replace />} />
-          </>
-        )}
-        
-        <Route path="/login" element={<Navigate to="/" replace />} />
-        <Route path="/backend-test" element={<BackendTest />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </Layout>
+    <>
+      <Layout>
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/profile" element={<Profile />} />
+          
+          {/* Admin/HR only routes */}
+          {isAdmin ? (
+            <>
+              <Route path="/employees" element={<Employees />} />
+              <Route path="/attendance" element={<Attendance />} />
+              <Route path="/leave" element={<LeaveRequests />} />
+              {/* Phase 2 routes */}
+              <Route path="/shifts" element={<ShiftManagement />} />
+              <Route path="/payroll" element={<PayrollManagement />} />
+              <Route path="/settings" element={<SystemSettings />} />
+              {/* Phase 3 routes */}
+          <Route path="/analytics" element={<Analytics />} />
+          <Route path="/notifications" element={<Notifications />} />
+          <Route path="/ai" element={<AI />} />
+          <Route path="/hr" element={<HRManagement />} />
+            </>
+          ) : (
+            <>
+              {/* Employee routes */}
+              <Route path="/my-attendance" element={<MyAttendance />} />
+              <Route path="/my-leave" element={<MyLeave />} />
+              <Route path="/attendance" element={<Navigate to="/my-attendance" replace />} />
+              <Route path="/leave" element={<Navigate to="/my-leave" replace />} />
+            </>
+          )}
+          
+          <Route path="/login" element={<Navigate to="/" replace />} />
+          <Route path="/backend-test" element={<BackendTest />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Layout>
+      <Toaster 
+        position="top-right"
+        toastOptions={{
+          duration: 4000,
+          style: {
+            background: '#363636',
+            color: '#fff',
+          },
+        }}
+      />
+    </>
   )
 }
 
