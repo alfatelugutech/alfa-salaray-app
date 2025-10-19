@@ -12,6 +12,9 @@ import authRoutes from './routes/auth';
 import employeeRoutes from './routes/employees';
 import attendanceRoutes from './routes/attendance';
 import leaveRoutes from './routes/leave';
+import shiftRoutes from './routes/shifts';
+import payrollRoutes from './routes/payroll';
+import settingsRoutes from './routes/settings';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler';
@@ -75,7 +78,7 @@ app.get('/health', (req, res) => {
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     environment: process.env.NODE_ENV || 'development',
-    version: '1.0.0 - Phase 1'
+    version: '2.0.0 - Phase 2'
   });
 });
 
@@ -84,6 +87,9 @@ app.use('/api/auth', authRoutes);
 app.use('/api/employees', employeeRoutes);
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/leave', leaveRoutes);
+app.use('/api/shifts', shiftRoutes);
+app.use('/api/payroll', payrollRoutes);
+app.use('/api/settings', settingsRoutes);
 
 // Error handling middleware
 app.use(notFound);

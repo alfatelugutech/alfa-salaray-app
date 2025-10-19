@@ -1,4 +1,4 @@
-// Employee Attendance System - Phase 1 Schema
+// Employee Attendance System - Phase 2 Schema
 generator client {
   provider = "prisma-client-js"
 }
@@ -47,11 +47,13 @@ model Employee {
   user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   attendances     Attendance[]
   leaveRequests   LeaveRequest[]
+  shifts          EmployeeShift[]
+  payrolls        Payroll[]
 
   @@map("employees")
 }
 
-// Attendance Management
+// Attendance Management - Phase 2 Enhanced
 model Attendance {
   id          String   @id @default(cuid())
   employeeId  String
@@ -61,11 +63,22 @@ model Attendance {
   totalHours  Decimal?
   status      AttendanceStatus @default(PRESENT)
   notes       String?
+  
+  // Phase 2 Enhancements
+  shiftId     String?  // Reference to shift
+  location    Json?    // GPS coordinates and address
+  deviceInfo  Json?    // Device information for biometric
+  ipAddress   String?  // IP address for security
+  isRemote    Boolean  @default(false) // Remote work flag
+  overtimeHours Decimal? // Overtime hours worked
+  createdBy   String?  // User ID who marked the attendance
+  
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   // Relations
   employee    Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  shift       Shift?   @relation(fields: [shiftId], references: [id])
 
   @@unique([employeeId, date])
   @@map("attendance")
@@ -91,6 +104,79 @@ model LeaveRequest {
   employee    Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
   @@map("leave_requests")
+}
+
+// Phase 2: Shift Management
+model Shift {
+  id          String   @id @default(cuid())
+  name        String
+  startTime   String   // Format: "09:00"
+  endTime     String   // Format: "17:00"
+  breakDuration Int    @default(60) // Break duration in minutes
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  attendances Attendance[]
+  employees   EmployeeShift[]
+
+  @@map("shifts")
+}
+
+// Phase 2: Employee Shift Assignment
+model EmployeeShift {
+  id        String   @id @default(cuid())
+  employeeId String
+  shiftId   String
+  startDate DateTime
+  endDate   DateTime?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  employee  Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  shift     Shift    @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, shiftId, startDate])
+  @@map("employee_shifts")
+}
+
+// Phase 2: Payroll Management
+model Payroll {
+  id            String   @id @default(cuid())
+  employeeId    String
+  month         Int      // 1-12
+  year          Int
+  basicSalary   Decimal
+  overtimePay   Decimal  @default(0)
+  allowances    Decimal  @default(0)
+  deductions    Decimal  @default(0)
+  netSalary     Decimal
+  status        PayrollStatus @default(PENDING)
+  paidAt        DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  employee      Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, month, year])
+  @@map("payroll")
+}
+
+// Phase 2: System Settings
+model SystemSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  type      SettingType @default(STRING)
+  category  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("system_settings")
 }
 
 // Enums
@@ -130,4 +216,19 @@ enum LeaveStatus {
   APPROVED
   REJECTED
   CANCELLED
+}
+
+// Phase 2 Enums
+enum PayrollStatus {
+  PENDING
+  PROCESSED
+  PAID
+  CANCELLED
+}
+
+enum SettingType {
+  STRING
+  NUMBER
+  BOOLEAN
+  JSON
 }

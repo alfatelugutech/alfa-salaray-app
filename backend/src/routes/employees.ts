@@ -17,7 +17,7 @@ const createEmployeeSchema = Joi.object({
   position: Joi.string().optional(),
   hireDate: Joi.date().required(),
   salary: Joi.number().optional(),
-  workLocation: Joi.string().optional()
+  workLocation: Joi.string().required()
 });
 
 const updateEmployeeSchema = Joi.object({
