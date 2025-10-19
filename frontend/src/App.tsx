@@ -9,6 +9,10 @@ import LeaveRequests from './pages/LeaveRequests'
 import MyAttendance from './pages/MyAttendance'
 import MyLeave from './pages/MyLeave'
 import Profile from './pages/Profile'
+// Phase 2 imports
+import ShiftManagement from './pages/ShiftManagement'
+import PayrollManagement from './pages/PayrollManagement'
+import SystemSettings from './pages/SystemSettings'
 import LoadingSpinner from './components/LoadingSpinner'
 
 function App() {
@@ -42,6 +46,10 @@ function App() {
             <Route path="/employees" element={<Employees />} />
             <Route path="/attendance" element={<Attendance />} />
             <Route path="/leave" element={<LeaveRequests />} />
+            {/* Phase 2 routes */}
+            <Route path="/shifts" element={<ShiftManagement />} />
+            <Route path="/payroll" element={<PayrollManagement />} />
+            <Route path="/settings" element={<SystemSettings />} />
           </>
         )}
         

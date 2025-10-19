@@ -137,6 +137,90 @@ export interface CreateEmployeeData {
   emergencyContact?: any
 }
 
+// Phase 2 Types
+export interface Shift {
+  id: string
+  name: string
+  startTime: string
+  endTime: string
+  breakDuration: number
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+  employees?: EmployeeShift[]
+}
+
+export interface EmployeeShift {
+  id: string
+  employeeId: string
+  shiftId: string
+  startDate: string
+  endDate?: string
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+  employee?: Employee
+  shift?: Shift
+}
+
+export interface CreateShiftData {
+  name: string
+  startTime: string
+  endTime: string
+  breakDuration?: number
+}
+
+export interface AssignShiftData {
+  employeeId: string
+  shiftId: string
+  startDate: string
+  endDate?: string
+}
+
+export interface Payroll {
+  id: string
+  employeeId: string
+  month: number
+  year: number
+  basicSalary: number
+  overtimePay: number
+  allowances: number
+  deductions: number
+  netSalary: number
+  status: 'PENDING' | 'PROCESSED' | 'PAID' | 'CANCELLED'
+  paidAt?: string
+  createdAt: string
+  updatedAt: string
+  employee?: Employee
+}
+
+export interface CreatePayrollData {
+  employeeId: string
+  month: number
+  year: number
+  basicSalary: number
+  overtimePay?: number
+  allowances?: number
+  deductions?: number
+}
+
+export interface SystemSetting {
+  id: string
+  key: string
+  value: string
+  type: 'STRING' | 'NUMBER' | 'BOOLEAN' | 'JSON'
+  category?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CreateSettingData {
+  key: string
+  value: string
+  type?: 'STRING' | 'NUMBER' | 'BOOLEAN' | 'JSON'
+  category?: string
+}
+
 export interface MarkAttendanceData {
   employeeId: string
   date: string

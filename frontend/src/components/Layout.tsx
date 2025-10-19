@@ -47,11 +47,14 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 <a href="/employees" className="text-gray-600 hover:text-gray-900">Employees</a>
                 <a href="/attendance" className="text-gray-600 hover:text-gray-900">Attendance</a>
                 <a href="/leave" className="text-gray-600 hover:text-gray-900">Leave</a>
+                {/* Phase 2 navigation */}
+                <a href="/shifts" className="text-gray-600 hover:text-gray-900">Shifts</a>
+                <a href="/payroll" className="text-gray-600 hover:text-gray-900">Payroll</a>
                 {user?.role === 'SUPER_ADMIN' && (
                   <>
+                    <a href="/settings" className="text-gray-600 hover:text-gray-900">Settings</a>
                     <a href="/admin/roles" className="text-purple-600 hover:text-purple-900">Role Management</a>
                     <a href="/admin/features" className="text-orange-600 hover:text-orange-900">Features Control</a>
-                    <a href="/admin/settings" className="text-red-600 hover:text-red-900">System Settings</a>
                   </>
                 )}
               </>
