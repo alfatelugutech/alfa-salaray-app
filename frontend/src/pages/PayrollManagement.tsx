@@ -1,8 +1,9 @@
 import React, { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from 'react-query'
-import { Plus, Edit, Trash2, DollarSign, Calendar, User, CheckCircle } from 'lucide-react'
+import { Plus, Edit, Trash2, DollarSign, Calendar, User, CheckCircle, Clock, Calculator } from 'lucide-react'
 import { payrollService } from '../services/payrollService'
 import { employeeService } from '../services/employeeService'
+import { attendanceService } from '../services/attendanceService'
 import { Payroll, CreatePayrollData, Employee } from '../types'
 import toast from 'react-hot-toast'
 
@@ -13,8 +14,53 @@ const PayrollManagement: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState('')
   const [monthFilter, setMonthFilter] = useState('')
   const [yearFilter, setYearFilter] = useState('')
+  const [selectedEmployee, setSelectedEmployee] = useState('')
+  const [workingHoursData, setWorkingHoursData] = useState<any>(null)
 
   const queryClient = useQueryClient()
+
+  // Calculate working hours for selected employee
+  const calculateWorkingHours = async () => {
+    if (!selectedEmployee || !monthFilter || !yearFilter) {
+      toast.error('Please select employee, month, and year')
+      return
+    }
+
+    try {
+      const response = await attendanceService.getAttendance({
+        employeeId: selectedEmployee,
+        startDate: `${yearFilter}-${monthFilter.toString().padStart(2, '0')}-01`,
+        endDate: `${yearFilter}-${monthFilter.toString().padStart(2, '0')}-31`,
+        limit: 100
+      })
+
+      if (response.data.attendances) {
+        let totalRegularHours = 0
+        let totalOvertimeHours = 0
+        let totalBreakHours = 0
+        let totalWorkingDays = 0
+
+        response.data.attendances.forEach((attendance: any) => {
+          if (attendance.regularHours) totalRegularHours += Number(attendance.regularHours)
+          if (attendance.overtimeHours) totalOvertimeHours += Number(attendance.overtimeHours)
+          if (attendance.breakHours) totalBreakHours += Number(attendance.breakHours)
+          if (attendance.status === 'PRESENT' || attendance.status === 'HALF_DAY') totalWorkingDays++
+        })
+
+        setWorkingHoursData({
+          totalRegularHours,
+          totalOvertimeHours,
+          totalBreakHours,
+          totalWorkingDays,
+          totalHours: totalRegularHours + totalOvertimeHours
+        })
+
+        toast.success('Working hours calculated successfully!')
+      }
+    } catch (error) {
+      toast.error('Failed to calculate working hours')
+    }
+  }
 
   // Fetch payroll records
   const { data: payrollData, isLoading: payrollLoading } = useQuery({
@@ -224,6 +270,106 @@ const PayrollManagement: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Working Hours Calculation */}
+      <div className="card p-6">
+        <div className="flex items-center mb-4">
+          <Calculator className="w-5 h-5 text-blue-600 mr-2" />
+          <h3 className="text-lg font-semibold text-gray-900">Working Hours Calculator</h3>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Employee</label>
+            <select
+              value={selectedEmployee}
+              onChange={(e) => setSelectedEmployee(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">Select Employee</option>
+              {employeesData?.data?.employees?.map((employee: any) => (
+                <option key={employee.id} value={employee.id}>
+                  {employee.name} - {employee.department}
+                </option>
+              ))}
+            </select>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Month</label>
+            <select
+              value={monthFilter}
+              onChange={(e) => setMonthFilter(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">Select Month</option>
+              {Array.from({ length: 12 }, (_, i) => (
+                <option key={i + 1} value={i + 1}>
+                  {getMonthName(i + 1)}
+                </option>
+              ))}
+            </select>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Year</label>
+            <select
+              value={yearFilter}
+              onChange={(e) => setYearFilter(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">Select Year</option>
+              {Array.from({ length: 5 }, (_, i) => {
+                const year = new Date().getFullYear() - 2 + i
+                return (
+                  <option key={year} value={year}>
+                    {year}
+                  </option>
+                )
+              })}
+            </select>
+          </div>
+          
+          <div className="flex items-end">
+            <button
+              onClick={calculateWorkingHours}
+              className="w-full btn btn-primary flex items-center justify-center"
+            >
+              <Clock className="w-4 h-4 mr-2" />
+              Calculate Hours
+            </button>
+          </div>
+        </div>
+
+        {/* Working Hours Results */}
+        {workingHoursData && (
+          <div className="bg-gray-50 rounded-lg p-4">
+            <h4 className="text-md font-semibold text-gray-900 mb-3">Working Hours Summary</h4>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-blue-600">{workingHoursData.totalWorkingDays}</div>
+                <div className="text-sm text-gray-600">Working Days</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-green-600">{workingHoursData.totalRegularHours.toFixed(1)}h</div>
+                <div className="text-sm text-gray-600">Regular Hours</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-orange-600">{workingHoursData.totalOvertimeHours.toFixed(1)}h</div>
+                <div className="text-sm text-gray-600">Overtime Hours</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-gray-600">{workingHoursData.totalBreakHours.toFixed(1)}h</div>
+                <div className="text-sm text-gray-600">Break Hours</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-purple-600">{workingHoursData.totalHours.toFixed(1)}h</div>
+                <div className="text-sm text-gray-600">Total Hours</div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Filters */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">

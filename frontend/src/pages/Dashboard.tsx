@@ -164,6 +164,9 @@ const Dashboard: React.FC = () => {
     // Get device info
     const deviceInfo = getDeviceInfo()
     
+    // Determine if this is check-in or check-out
+    const isCheckOut = !!selfAttendanceData.checkOut
+    
     // Prepare submit data
     const submitData: any = {
       employeeId: user?.employeeId,
@@ -174,9 +177,12 @@ const Dashboard: React.FC = () => {
       notes: selfAttendanceData.notes || undefined,
       isRemote: selfAttendanceData.isRemote,
       overtimeHours: selfAttendanceData.overtimeHours ? parseFloat(selfAttendanceData.overtimeHours) : undefined,
-      location: location || undefined,
       deviceInfo,
-      selfieUrl: selfie || undefined
+      // Dual selfies: check-in selfie or check-out selfie
+      checkInSelfie: !isCheckOut && selfie ? selfie : undefined,
+      checkOutSelfie: isCheckOut && selfie ? selfie : undefined,
+      checkInLocation: !isCheckOut && location ? location : undefined,
+      checkOutLocation: isCheckOut && location ? location : undefined
     }
     
     markSelfAttendanceMutation.mutate(submitData)
@@ -410,8 +416,8 @@ const Dashboard: React.FC = () => {
 
       {/* Self-Attendance Modal */}
       {showSelfAttendanceModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-lg w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-lg mx-auto max-h-[95vh] overflow-y-auto">
             <div className="flex items-center justify-between p-6 border-b sticky top-0 bg-white z-10">
               <h2 className="text-xl font-semibold text-gray-900 flex items-center">
                 <Clock className="w-5 h-5 mr-2" />
@@ -479,32 +485,47 @@ const Dashboard: React.FC = () => {
 
               {/* Phase 2: Selfie & Location Capture */}
               {!selfie && !location ? (
-                <div className="p-6 bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-300 rounded-lg">
-                  <div className="text-center mb-4">
-                    <Camera className="w-12 h-12 text-blue-600 mx-auto mb-2" />
-                    <h3 className="text-lg font-semibold text-gray-900">Take Your Selfie</h3>
-                    <p className="text-sm text-gray-600 mt-1">We'll capture your photo and location</p>
+                <div className="p-8 bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 border-2 border-blue-400 rounded-xl shadow-md">
+                  <div className="text-center mb-6">
+                    <div className="bg-blue-600 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+                      <Camera className="w-10 h-10 text-white" />
+                    </div>
+                    <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                      {selfAttendanceData.checkOut ? '📸 Check-Out Selfie' : '📸 Check-In Selfie'}
+                    </h3>
+                    <p className="text-base text-gray-700">
+                      {selfAttendanceData.checkOut 
+                        ? '🏃 Leaving office? Take your check-out selfie'
+                        : '🌅 Good morning! Take your check-in selfie'}
+                    </p>
+                    <p className="text-sm text-gray-600 mt-2">
+                      {selfAttendanceData.checkOut 
+                        ? 'Evening selfie + location will be captured'
+                        : 'Morning selfie + location will be captured'}
+                    </p>
                   </div>
                   <button
                     type="button"
                     onClick={handleTakeSelfieAndLocation}
                     disabled={isAutoCapturing}
-                    className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white text-lg font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+                    className="w-full flex items-center justify-center gap-3 px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white text-xl font-bold rounded-xl hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 disabled:cursor-not-allowed shadow-xl transform transition hover:scale-105"
                   >
                     {isAutoCapturing ? (
                       <>
-                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                        Capturing...
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+                        Opening Camera...
                       </>
                     ) : (
                       <>
-                        <Camera className="w-5 h-5" />
-                        📸 Take Selfie & Mark Attendance
+                        <Camera className="w-6 h-6" />
+                        {selfAttendanceData.checkOut ? '📸 Take Evening Selfie' : '📸 Take Morning Selfie'}
                       </>
                     )}
                   </button>
-                  <p className="text-xs text-gray-500 mt-3 text-center">
-                    Camera and location permissions will be requested
+                  <p className="text-xs text-gray-600 mt-4 text-center bg-white/50 p-3 rounded-lg">
+                    {selfAttendanceData.checkOut 
+                      ? 'ℹ️ Auto-marked as HALF_DAY if after 11:59 AM'
+                      : 'ℹ️ Camera and location permissions will be requested'}
                   </p>
                 </div>
               ) : (
@@ -512,12 +533,14 @@ const Dashboard: React.FC = () => {
                   {/* Show captured selfie */}
                   {selfie && (
                     <div>
-                      <label className="label">Your Selfie ✅</label>
+                      <label className="label text-lg font-semibold">
+                        {selfAttendanceData.checkOut ? '📸 Evening Selfie ✅' : '🌅 Morning Selfie ✅'}
+                      </label>
                       <div className="relative">
                         <img 
                           src={selfie} 
-                          alt="Your Selfie" 
-                          className="w-full h-48 object-cover rounded-lg border-2 border-green-500"
+                          alt={selfAttendanceData.checkOut ? 'Check-Out Selfie' : 'Check-In Selfie'} 
+                          className="w-full h-80 object-cover rounded-xl border-4 border-green-500 shadow-lg"
                         />
                         <button
                           type="button"
@@ -525,9 +548,9 @@ const Dashboard: React.FC = () => {
                             setSelfie(null)
                             setLocation(null)
                           }}
-                          className="absolute top-2 right-2 bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 flex items-center gap-1"
+                          className="absolute top-3 right-3 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-2 shadow-lg"
                         >
-                          <Camera className="w-4 h-4" />
+                          <Camera className="w-5 h-5" />
                           Retake
                         </button>
                       </div>

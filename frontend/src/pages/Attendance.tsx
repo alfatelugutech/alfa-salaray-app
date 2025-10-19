@@ -226,10 +226,13 @@ const Attendance: React.FC = () => {
                       Status
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Selfie
+                      Selfies
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Location
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Working Hours
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Details
@@ -288,17 +291,35 @@ const Attendance: React.FC = () => {
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        {(attendance as any).selfieUrl ? (
-                          <img 
-                            src={(attendance as any).selfieUrl} 
-                            alt="Attendance Selfie" 
-                            className="w-12 h-12 object-cover rounded-full border-2 border-blue-500 cursor-pointer hover:scale-110 transition-transform"
-                            onClick={() => window.open((attendance as any).selfieUrl, '_blank')}
-                            title="Click to view full size"
-                          />
-                        ) : (
-                          <span className="text-gray-400 text-xs">No photo</span>
-                        )}
+                        <div className="flex gap-2">
+                          {(attendance as any).checkInSelfie ? (
+                            <div className="flex flex-col items-center">
+                              <img 
+                                src={(attendance as any).checkInSelfie} 
+                                alt="Check-In" 
+                                className="w-16 h-16 object-cover rounded-lg border-2 border-green-500 cursor-pointer hover:scale-110 transition-transform shadow-md"
+                                onClick={() => window.open((attendance as any).checkInSelfie, '_blank')}
+                                title="Morning check-in selfie"
+                              />
+                              <span className="text-xs text-green-700 mt-1">🌅 In</span>
+                            </div>
+                          ) : null}
+                          {(attendance as any).checkOutSelfie ? (
+                            <div className="flex flex-col items-center">
+                              <img 
+                                src={(attendance as any).checkOutSelfie} 
+                                alt="Check-Out" 
+                                className="w-16 h-16 object-cover rounded-lg border-2 border-orange-500 cursor-pointer hover:scale-110 transition-transform shadow-md"
+                                onClick={() => window.open((attendance as any).checkOutSelfie, '_blank')}
+                                title="Evening check-out selfie"
+                              />
+                              <span className="text-xs text-orange-700 mt-1">🌆 Out</span>
+                            </div>
+                          ) : null}
+                          {!(attendance as any).checkInSelfie && !(attendance as any).checkOutSelfie && (
+                            <span className="text-gray-400 text-xs">No photos</span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-900">
                         {(attendance as any).location ? (
@@ -318,11 +339,30 @@ const Attendance: React.FC = () => {
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-900">
                         <div className="flex flex-col gap-1">
-                          {(attendance as any).overtimeHours > 0 && (
-                            <span className="text-xs text-orange-600 font-medium">
-                              ⏰ +{(attendance as any).overtimeHours}h
-                            </span>
+                          {attendance.totalHours && (
+                            <div className="text-sm font-medium text-gray-900">
+                              ⏱️ Total: {attendance.totalHours}h
+                            </div>
                           )}
+                          {(attendance as any).regularHours && (
+                            <div className="text-xs text-blue-600">
+                              📊 Regular: {(attendance as any).regularHours}h
+                            </div>
+                          )}
+                          {(attendance as any).overtimeHours && (attendance as any).overtimeHours > 0 && (
+                            <div className="text-xs text-orange-600 font-medium">
+                              ⏰ OT: +{(attendance as any).overtimeHours}h
+                            </div>
+                          )}
+                          {(attendance as any).breakHours && (attendance as any).breakHours > 0 && (
+                            <div className="text-xs text-gray-500">
+                              🍽️ Break: {(attendance as any).breakHours}h
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-900">
+                        <div className="flex flex-col gap-1">
                           {(attendance as any).shift && (
                             <span className="text-xs text-purple-600">
                               🔄 {(attendance as any).shift.name}
