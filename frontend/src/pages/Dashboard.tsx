@@ -208,7 +208,6 @@ const Dashboard: React.FC = () => {
     // Automatically capture current date and time
     const now = new Date()
     const today = now.toISOString().split('T')[0]
-    const currentTime = now.toTimeString().split(' ')[0]
     
     // Auto-detect status based on current time
     const hours = now.getHours()
