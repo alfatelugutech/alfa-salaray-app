@@ -99,9 +99,12 @@ router.post("/self/check-in", async (req, res) => {
         console.log('🔍 Self check-in received data:', {
             hasCheckInSelfie: !!checkInSelfie,
             checkInSelfieLength: checkInSelfie?.length || 0,
+            checkInSelfiePreview: checkInSelfie?.substring(0, 50) + '...',
             hasCheckInLocation: !!checkInLocation,
+            checkInLocationData: checkInLocation,
             isRemote,
-            notes: notes?.length || 0
+            notes: notes?.length || 0,
+            fullRequestBody: req.body
         });
         // Find employee by userId
         const employee = await prisma.employee.findUnique({ where: { userId: authUser.id } });
@@ -135,21 +138,28 @@ router.post("/self/check-in", async (req, res) => {
         }
         const ipAddress = req.headers['x-forwarded-for'] || req.socket.remoteAddress || null;
         const now = new Date();
+        const attendanceData = {
+            employeeId: employee.id,
+            date: dateOnly,
+            checkIn: now,
+            status: (now.getHours() > 9 ? "LATE" : "PRESENT"),
+            notes,
+            shiftId,
+            deviceInfo,
+            ipAddress,
+            isRemote,
+            createdBy: authUser.id,
+            checkInSelfie: checkInSelfie || null,
+            checkInLocation: checkInLocation || null
+        };
+        console.log('💾 Creating attendance with data:', {
+            hasCheckInSelfie: !!attendanceData.checkInSelfie,
+            checkInSelfieLength: attendanceData.checkInSelfie?.length || 0,
+            hasCheckInLocation: !!attendanceData.checkInLocation,
+            checkInLocationData: attendanceData.checkInLocation
+        });
         const attendance = await prisma.attendance.create({
-            data: {
-                employeeId: employee.id,
-                date: dateOnly,
-                checkIn: now,
-                status: now.getHours() > 9 ? "LATE" : "PRESENT",
-                notes,
-                shiftId,
-                deviceInfo,
-                ipAddress,
-                isRemote,
-                createdBy: authUser.id,
-                checkInSelfie: checkInSelfie || null,
-                checkInLocation: checkInLocation || null
-            },
+            data: attendanceData,
             include: {
                 employee: {
                     include: { user: { select: { firstName: true, lastName: true, email: true } } }
@@ -221,8 +231,11 @@ router.post("/self/check-out", async (req, res) => {
         console.log('🔍 Self check-out received data:', {
             hasCheckOutSelfie: !!checkOutSelfie,
             checkOutSelfieLength: checkOutSelfie?.length || 0,
+            checkOutSelfiePreview: checkOutSelfie?.substring(0, 50) + '...',
             hasCheckOutLocation: !!checkOutLocation,
-            notes: notes?.length || 0
+            checkOutLocationData: checkOutLocation,
+            notes: notes?.length || 0,
+            fullRequestBody: req.body
         });
         const employee = await prisma.employee.findUnique({ where: { userId: authUser.id } });
         if (!employee) {
@@ -252,18 +265,25 @@ router.post("/self/check-out", async (req, res) => {
         const actualWorkingHours = totalHours - breakHours;
         const regularHours = Math.min(actualWorkingHours, standardWorkingHours);
         const overtimeHours = actualWorkingHours > standardWorkingHours ? (actualWorkingHours - standardWorkingHours) : 0;
+        const updateData = {
+            checkOut: now,
+            totalHours,
+            regularHours: regularHours > 0 ? regularHours : null,
+            overtimeHours: overtimeHours > 0 ? overtimeHours : null,
+            breakHours: breakHours > 0 ? breakHours : null,
+            notes: notes || existing.notes,
+            checkOutSelfie: checkOutSelfie || null,
+            checkOutLocation: checkOutLocation || null
+        };
+        console.log('💾 Updating attendance with check-out data:', {
+            hasCheckOutSelfie: !!updateData.checkOutSelfie,
+            checkOutSelfieLength: updateData.checkOutSelfie?.length || 0,
+            hasCheckOutLocation: !!updateData.checkOutLocation,
+            checkOutLocationData: updateData.checkOutLocation
+        });
         const attendance = await prisma.attendance.update({
             where: { id: existing.id },
-            data: {
-                checkOut: now,
-                totalHours,
-                regularHours: regularHours > 0 ? regularHours : null,
-                overtimeHours: overtimeHours > 0 ? overtimeHours : null,
-                breakHours: breakHours > 0 ? breakHours : null,
-                notes: notes || existing.notes,
-                checkOutSelfie: checkOutSelfie || null,
-                checkOutLocation: checkOutLocation || null
-            },
+            data: updateData,
             include: {
                 employee: {
                     include: { user: { select: { firstName: true, lastName: true, email: true } } }
