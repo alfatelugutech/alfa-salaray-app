@@ -6,119 +6,6 @@ import Joi from "joi";
 const router = express.Router();
 const prisma = new PrismaClient();
 
-// Helper function to update attendance with check-out
-async function updateAttendanceWithCheckOut(existingAttendance: any, value: any, req: Request) {
-  const { checkOut, checkOutSelfie, checkOutLocation, notes, overtimeHours } = value;
-  
-  // Calculate working hours
-  let totalHours: number | null = null;
-  let regularHours: number = 0;
-  let overtimeHoursCalc: number = 0;
-  let breakHours: number = 0;
-  
-  if (existingAttendance.checkIn && checkOut) {
-    const checkInTime = new Date(existingAttendance.checkIn);
-    const checkOutTime = new Date(checkOut);
-    
-    const totalTimeMs = checkOutTime.getTime() - checkInTime.getTime();
-    totalHours = totalTimeMs / (1000 * 60 * 60);
-    
-    const standardWorkingHours = 8;
-    
-    if (totalHours > 6) {
-      breakHours = 1;
-    }
-    
-    const actualWorkingHours = totalHours - breakHours;
-    regularHours = Math.min(actualWorkingHours, standardWorkingHours);
-    
-    if (actualWorkingHours > standardWorkingHours) {
-      overtimeHoursCalc = actualWorkingHours - standardWorkingHours;
-    }
-    
-    // Use manual overtime if provided
-    if (overtimeHours && overtimeHours > 0) {
-      regularHours = Math.min(actualWorkingHours - overtimeHours, standardWorkingHours);
-      overtimeHoursCalc = overtimeHours;
-    }
-  }
-
-  return await prisma.attendance.update({
-    where: { id: existingAttendance.id },
-    data: {
-      checkOut: checkOut ? new Date(checkOut) : null,
-      checkOutSelfie: checkOutSelfie || null,
-      checkOutLocation: checkOutLocation || null,
-      totalHours,
-      regularHours: regularHours > 0 ? regularHours : null,
-      overtimeHours: overtimeHoursCalc > 0 ? overtimeHoursCalc : null,
-      breakHours: breakHours > 0 ? breakHours : null,
-      notes: notes || existingAttendance.notes,
-    },
-    include: {
-      employee: {
-        include: {
-          user: {
-            select: {
-              firstName: true,
-              lastName: true,
-              email: true
-            }
-          }
-        }
-      }
-    }
-  });
-}
-
-// Helper function to update attendance with check-in
-async function updateAttendanceWithCheckIn(existingAttendance: any, value: any, req: Request) {
-  const { checkIn, checkInSelfie, checkInLocation, status, deviceInfo, isRemote } = value;
-  
-  // Get IP address from request
-  const ipAddress = req.headers['x-forwarded-for'] || req.socket.remoteAddress || null;
-  const createdBy = (req as any).user?.userId || null;
-
-  // Auto-detect HALF_DAY if check-in is after 11:59 AM
-  let finalStatus = status;
-  if (checkIn) {
-    const checkInTime = new Date(checkIn);
-    const hours = checkInTime.getHours();
-    const minutes = checkInTime.getMinutes();
-    
-    if (hours >= 12 || (hours === 11 && minutes >= 59)) {
-      finalStatus = "HALF_DAY";
-    }
-  }
-
-  return await prisma.attendance.update({
-    where: { id: existingAttendance.id },
-    data: {
-      checkIn: checkIn ? new Date(checkIn) : null,
-      checkInSelfie: checkInSelfie || null,
-      checkInLocation: checkInLocation || null,
-      status: finalStatus,
-      deviceInfo: deviceInfo || null,
-      ipAddress: ipAddress as string || null,
-      isRemote: isRemote || false,
-      createdBy: createdBy,
-    },
-    include: {
-      employee: {
-        include: {
-          user: {
-            select: {
-              firstName: true,
-              lastName: true,
-              email: true
-            }
-          }
-        }
-      }
-    }
-  });
-}
-
 // Apply authentication to all routes
 router.use(authenticateToken);
 
@@ -224,35 +111,13 @@ router.post("/mark", async (req: Request, res: Response) => {
       }
     });
 
-    // Smart attendance logic: If attendance exists and we're adding check-out, update it
     if (existingAttendance) {
-      // If we have check-out data and existing attendance has check-in but no check-out, update it
-      if (checkOut && existingAttendance.checkIn && !existingAttendance.checkOut) {
-        // Update existing attendance with check-out information
-        const updatedAttendance = await updateAttendanceWithCheckOut(existingAttendance, value, req);
-        res.status(200).json({
-          success: true,
-          message: "Check-out recorded successfully",
-          data: { attendance: updatedAttendance }
-        });
-        return;
-      } else if (checkIn && !existingAttendance.checkIn) {
-        // If we have check-in data and existing attendance has no check-in, update it
-        const updatedAttendance = await updateAttendanceWithCheckIn(existingAttendance, value, req);
-        res.status(200).json({
-          success: true,
-          message: "Check-in recorded successfully",
-          data: { attendance: updatedAttendance }
-        });
-        return;
-      } else {
-        res.status(400).json({
-          success: false,
-          error: "Attendance already marked for this date",
-          code: "ATTENDANCE_EXISTS"
-        });
-        return;
-      }
+      res.status(400).json({
+        success: false,
+        error: "Attendance already marked for this date",
+        code: "ATTENDANCE_EXISTS"
+      });
+      return;
     }
 
     // Calculate working hours for salary calculation
