@@ -62,6 +62,45 @@ export const attendanceService = {
   }): Promise<PaginatedResponse<Attendance>> {
     const response = await api.get<PaginatedResponse<Attendance>>(`/attendance/employee/${employeeId}`, { params })
     return response.data
+  },
+
+  // Self check-in (employee marks own attendance)
+  async selfCheckIn(payload: {
+    isRemote?: boolean
+    notes?: string
+    checkInSelfie?: string
+    checkInLocation?: {
+      latitude?: number
+      longitude?: number
+      address?: string
+      accuracy?: number
+    } | null
+    deviceInfo?: any
+    shiftId?: string | null
+  }): Promise<Attendance> {
+    const response = await api.post<{ success: boolean; data: { attendance: Attendance } }>(
+      '/attendance/self/check-in',
+      payload
+    )
+    return response.data.data.attendance
+  },
+
+  // Self check-out
+  async selfCheckOut(payload: {
+    notes?: string
+    checkOutSelfie?: string
+    checkOutLocation?: {
+      latitude?: number
+      longitude?: number
+      address?: string
+      accuracy?: number
+    } | null
+  }): Promise<Attendance> {
+    const response = await api.post<{ success: boolean; data: { attendance: Attendance } }>(
+      '/attendance/self/check-out',
+      payload
+    )
+    return response.data.data.attendance
   }
 }
 
