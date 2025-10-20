@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Clock, Plus, Search, Filter, CheckCircle, XCircle, Edit, Trash2, Eye, MapPin, Smartphone, Home, X, Camera, Upload } from 'lucide-react'
+import { Clock, Plus, Search, Filter, CheckCircle, XCircle, Edit, Trash2, Eye, MapPin, Smartphone, Home, X, Camera, Upload, TrendingUp } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from 'react-query'
 import { attendanceService } from '../services/attendanceService'
 import { employeeService } from '../services/employeeService'
@@ -13,11 +13,18 @@ import { captureSelfie, selectImageFile, compressImage } from '../utils/camera'
 const Attendance: React.FC = () => {
   const [showMarkModal, setShowMarkModal] = useState(false)
   const [showViewModal, setShowViewModal] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
   const [selectedAttendance, setSelectedAttendance] = useState<Attendance | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [dateFilter, setDateFilter] = useState(new Date().toISOString().split('T')[0])
   const [statusFilter, setStatusFilter] = useState('')
   const [locationHistory, setLocationHistory] = useState<any[]>([])
+  const [editFormData, setEditFormData] = useState({
+    checkIn: '',
+    checkOut: '',
+    status: 'PRESENT',
+    notes: ''
+  })
   const queryClient = useQueryClient()
 
   // Fetch attendance records
@@ -53,6 +60,22 @@ const Attendance: React.FC = () => {
     }
   })
 
+  // Update attendance mutation
+  const updateAttendanceMutation = useMutation(
+    ({ id, data }: { id: string; data: any }) => attendanceService.updateAttendance(id, data),
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries('attendance')
+        toast.success('Attendance record updated successfully')
+        setShowEditModal(false)
+        setSelectedAttendance(null)
+      },
+      onError: (error: any) => {
+        toast.error(error.response?.data?.error || 'Failed to update attendance record')
+      }
+    }
+  )
+
   const handleDeleteAttendance = (id: string) => {
     if (window.confirm('Are you sure you want to delete this attendance record?')) {
       deleteAttendanceMutation.mutate(id)
@@ -80,82 +103,106 @@ const Attendance: React.FC = () => {
 
   // Edit attendance handler
   const handleEditAttendance = (id: string) => {
-    // TODO: Implement edit attendance modal
-    console.log('Edit attendance for ID:', id)
-    toast.success('Edit attendance feature coming soon')
+    const attendance = attendanceData?.data?.attendances?.find((att: Attendance) => att.id === id)
+    if (attendance) {
+      setSelectedAttendance(attendance)
+      setEditFormData({
+        checkIn: attendance.checkIn ? new Date(attendance.checkIn).toISOString().slice(0, 16) : '',
+        checkOut: attendance.checkOut ? new Date(attendance.checkOut).toISOString().slice(0, 16) : '',
+        status: attendance.status,
+        notes: attendance.notes || ''
+      })
+      setShowEditModal(true)
+    }
   }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Attendance</h1>
-          <p className="text-gray-600">Track employee attendance and working hours</p>
-        </div>
-        <div className="flex gap-2">
-          <button 
-            onClick={() => setShowMarkModal(true)}
-            className="btn btn-primary btn-md"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Mark Attendance
-          </button>
+      {/* Enhanced Header */}
+      <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg shadow-lg p-6 text-white">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold">Attendance Management</h1>
+            <p className="text-blue-100 mt-2">Comprehensive attendance tracking and management system</p>
+            <div className="flex items-center gap-4 mt-4 text-sm">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-green-400 rounded-full"></div>
+                <span>Present</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-red-400 rounded-full"></div>
+                <span>Absent</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-yellow-400 rounded-full"></div>
+                <span>Late</span>
+              </div>
+            </div>
+          </div>
+          <div className="flex gap-3">
+            <button 
+              onClick={() => setShowMarkModal(true)}
+              className="bg-white text-blue-600 px-6 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-colors flex items-center gap-2"
+            >
+              <Plus className="h-5 w-5" />
+              Mark Attendance
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="card p-4">
-          <div className="flex items-center">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <CheckCircle className="h-5 w-5 text-green-600" />
-            </div>
-            <div className="ml-3">
+      {/* Enhanced Quick Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="bg-white rounded-lg shadow-sm border p-6 hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between">
+            <div>
               <p className="text-sm font-medium text-gray-600">Present Today</p>
-              <p className="text-xl font-bold text-gray-900">
+              <p className="text-2xl font-bold text-green-600">
                 {attendanceData?.data?.attendances?.filter((att: any) => att.status === 'PRESENT').length || 0}
               </p>
             </div>
+            <div className="p-3 bg-green-100 rounded-full">
+              <CheckCircle className="h-6 w-6 text-green-600" />
+            </div>
           </div>
         </div>
-        <div className="card p-4">
-          <div className="flex items-center">
-            <div className="p-2 bg-red-100 rounded-lg">
-              <XCircle className="h-5 w-5 text-red-600" />
-            </div>
-            <div className="ml-3">
+        <div className="bg-white rounded-lg shadow-sm border p-6 hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between">
+            <div>
               <p className="text-sm font-medium text-gray-600">Absent Today</p>
-              <p className="text-xl font-bold text-gray-900">
+              <p className="text-2xl font-bold text-red-600">
                 {attendanceData?.data?.attendances?.filter((att: any) => att.status === 'ABSENT').length || 0}
               </p>
             </div>
+            <div className="p-3 bg-red-100 rounded-full">
+              <XCircle className="h-6 w-6 text-red-600" />
+            </div>
           </div>
         </div>
-        <div className="card p-4">
-          <div className="flex items-center">
-            <div className="p-2 bg-yellow-100 rounded-lg">
-              <Clock className="h-5 w-5 text-yellow-600" />
-            </div>
-            <div className="ml-3">
+        <div className="bg-white rounded-lg shadow-sm border p-6 hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between">
+            <div>
               <p className="text-sm font-medium text-gray-600">Late Today</p>
-              <p className="text-xl font-bold text-gray-900">
+              <p className="text-2xl font-bold text-yellow-600">
                 {attendanceData?.data?.attendances?.filter((att: any) => att.status === 'LATE').length || 0}
               </p>
             </div>
+            <div className="p-3 bg-yellow-100 rounded-full">
+              <Clock className="h-6 w-6 text-yellow-600" />
+            </div>
           </div>
         </div>
-        <div className="card p-4">
-          <div className="flex items-center">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <Clock className="h-5 w-5 text-blue-600" />
-            </div>
-            <div className="ml-3">
+        <div className="bg-white rounded-lg shadow-sm border p-6 hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between">
+            <div>
               <p className="text-sm font-medium text-gray-600">Attendance Rate</p>
-              <p className="text-xl font-bold text-gray-900">
+              <p className="text-2xl font-bold text-blue-600">
                 {attendanceData?.data?.attendances?.length ? 
                   `${Math.round((attendanceData.data.attendances.filter((att: any) => att.status === 'PRESENT').length / attendanceData.data.attendances.length) * 100)}%` : '0%'}
               </p>
+            </div>
+            <div className="p-3 bg-blue-100 rounded-full">
+              <TrendingUp className="h-6 w-6 text-blue-600" />
             </div>
           </div>
         </div>
@@ -362,41 +409,59 @@ const Attendance: React.FC = () => {
                         </div>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-900">
-                        {(attendance as any).location ? (
-                          <a
-                            href={`https://www.google.com/maps?q=${(attendance as any).location.latitude},${(attendance as any).location.longitude}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-1 text-blue-600 hover:text-blue-800"
-                            title={(attendance as any).location.address}
-                          >
-                            <MapPin className="w-3 h-3" />
-                            <span className="text-xs">Map</span>
-                          </a>
+                        {(attendance as any).checkInLocation || (attendance as any).checkOutLocation ? (
+                          <div className="flex flex-col gap-1">
+                            {(attendance as any).checkInLocation && (
+                              <a
+                                href={`https://www.google.com/maps?q=${(attendance as any).checkInLocation.latitude},${(attendance as any).checkInLocation.longitude}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1 text-green-600 hover:text-green-800 text-xs"
+                                title={`Check-in: ${(attendance as any).checkInLocation.address || 'Location'}`}
+                              >
+                                <MapPin className="w-3 h-3" />
+                                <span>In</span>
+                              </a>
+                            )}
+                            {(attendance as any).checkOutLocation && (
+                              <a
+                                href={`https://www.google.com/maps?q=${(attendance as any).checkOutLocation.latitude},${(attendance as any).checkOutLocation.longitude}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1 text-orange-600 hover:text-orange-800 text-xs"
+                                title={`Check-out: ${(attendance as any).checkOutLocation.address || 'Location'}`}
+                              >
+                                <MapPin className="w-3 h-3" />
+                                <span>Out</span>
+                              </a>
+                            )}
+                          </div>
                         ) : (
                           <span className="text-gray-400 text-xs">-</span>
                         )}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-900">
                         <div className="flex flex-col gap-1">
-                          {attendance.totalHours && (
+                          {attendance.totalHours ? (
                             <div className="text-sm font-medium text-gray-900">
-                              ⏱️ Total: {attendance.totalHours}h
+                              ⏱️ Total: {parseFloat(attendance.totalHours.toString()).toFixed(2)}h
                             </div>
+                          ) : (
+                            <div className="text-xs text-gray-400">No hours recorded</div>
                           )}
                           {(attendance as any).regularHours && (
                             <div className="text-xs text-blue-600">
-                              📊 Regular: {(attendance as any).regularHours}h
+                              📊 Regular: {parseFloat((attendance as any).regularHours.toString()).toFixed(2)}h
                             </div>
                           )}
-                          {(attendance as any).overtimeHours && (attendance as any).overtimeHours > 0 && (
+                          {(attendance as any).overtimeHours && parseFloat((attendance as any).overtimeHours.toString()) > 0 && (
                             <div className="text-xs text-orange-600 font-medium">
-                              ⏰ OT: +{(attendance as any).overtimeHours}h
+                              ⏰ OT: +{parseFloat((attendance as any).overtimeHours.toString()).toFixed(2)}h
                             </div>
                           )}
-                          {(attendance as any).breakHours && (attendance as any).breakHours > 0 && (
+                          {(attendance as any).breakHours && parseFloat((attendance as any).breakHours.toString()) > 0 && (
                             <div className="text-xs text-gray-500">
-                              🍽️ Break: {(attendance as any).breakHours}h
+                              🍽️ Break: {parseFloat((attendance as any).breakHours.toString()).toFixed(2)}h
                             </div>
                           )}
                         </div>
@@ -472,6 +537,26 @@ const Attendance: React.FC = () => {
             setSelectedAttendance(null)
             setLocationHistory([])
           }}
+        />
+      )}
+
+      {/* Edit Attendance Modal */}
+      {showEditModal && selectedAttendance && (
+        <EditAttendanceModal
+          attendance={selectedAttendance}
+          formData={editFormData}
+          setFormData={setEditFormData}
+          onClose={() => {
+            setShowEditModal(false)
+            setSelectedAttendance(null)
+          }}
+          onSave={(data) => {
+            updateAttendanceMutation.mutate({
+              id: selectedAttendance.id,
+              ...data
+            })
+          }}
+          isLoading={updateAttendanceMutation.isLoading}
         />
       )}
     </div>
@@ -1178,6 +1263,155 @@ const ViewAttendanceModal: React.FC<{
             Close
           </button>
         </div>
+      </div>
+    </div>
+  )
+}
+
+// Edit Attendance Modal Component
+const EditAttendanceModal: React.FC<{
+  attendance: Attendance
+  formData: {
+    checkIn: string
+    checkOut: string
+    status: string
+    notes: string
+  }
+  setFormData: (data: any) => void
+  onClose: () => void
+  onSave: (data: any) => void
+  isLoading: boolean
+}> = ({ attendance, formData, setFormData, onClose, onSave, isLoading }) => {
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    onSave(formData)
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">Edit Attendance</h2>
+            <p className="text-gray-600">
+              {attendance.employee?.user?.firstName} {attendance.employee?.user?.lastName} - {new Date(attendance.date).toLocaleDateString()}
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            <X className="h-6 w-6" />
+          </button>
+        </div>
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Check-in Time */}
+            <div>
+              <label className="label">Check-in Time</label>
+              <input
+                type="datetime-local"
+                className="input"
+                value={formData.checkIn}
+                onChange={(e) => setFormData({...formData, checkIn: e.target.value})}
+                required
+              />
+            </div>
+
+            {/* Check-out Time */}
+            <div>
+              <label className="label">Check-out Time</label>
+              <input
+                type="datetime-local"
+                className="input"
+                value={formData.checkOut}
+                onChange={(e) => setFormData({...formData, checkOut: e.target.value})}
+              />
+            </div>
+
+            {/* Status */}
+            <div>
+              <label className="label">Status</label>
+              <select
+                className="input"
+                value={formData.status}
+                onChange={(e) => setFormData({...formData, status: e.target.value})}
+                required
+              >
+                <option value="PRESENT">Present</option>
+                <option value="LATE">Late</option>
+                <option value="ABSENT">Absent</option>
+                <option value="HALF_DAY">Half Day</option>
+                <option value="EARLY_LEAVE">Early Leave</option>
+              </select>
+            </div>
+
+            {/* Notes */}
+            <div>
+              <label className="label">Notes</label>
+              <textarea
+                className="input"
+                rows={3}
+                value={formData.notes}
+                onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                placeholder="Additional notes..."
+              />
+            </div>
+          </div>
+
+          {/* Current Data Display */}
+          <div className="bg-gray-50 rounded-lg p-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-3">Current Data</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+              <div>
+                <span className="font-medium text-gray-700">Employee:</span>
+                <span className="ml-2 text-gray-900">
+                  {attendance.employee?.user?.firstName} {attendance.employee?.user?.lastName}
+                </span>
+              </div>
+              <div>
+                <span className="font-medium text-gray-700">Date:</span>
+                <span className="ml-2 text-gray-900">
+                  {new Date(attendance.date).toLocaleDateString()}
+                </span>
+              </div>
+              <div>
+                <span className="font-medium text-gray-700">Current Check-in:</span>
+                <span className="ml-2 text-gray-900">
+                  {attendance.checkIn ? new Date(attendance.checkIn).toLocaleString() : 'Not set'}
+                </span>
+              </div>
+              <div>
+                <span className="font-medium text-gray-700">Current Check-out:</span>
+                <span className="ml-2 text-gray-900">
+                  {attendance.checkOut ? new Date(attendance.checkOut).toLocaleString() : 'Not set'}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+            <button
+              type="button"
+              onClick={onClose}
+              className="btn btn-outline btn-md"
+              disabled={isLoading}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="btn btn-primary btn-md"
+              disabled={isLoading}
+            >
+              {isLoading ? 'Updating...' : 'Update Attendance'}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   )

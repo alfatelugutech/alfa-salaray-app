@@ -47,6 +47,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               <>
                 <Link to="/employees" className="text-gray-600 hover:text-gray-900">Employees</Link>
                 <Link to="/attendance" className="text-gray-600 hover:text-gray-900">Attendance</Link>
+                <Link to="/attendance-calendar" className="text-gray-600 hover:text-gray-900">Calendar</Link>
+                <Link to="/attendance-reports" className="text-gray-600 hover:text-gray-900">Reports</Link>
                 <Link to="/leave" className="text-gray-600 hover:text-gray-900">Leave</Link>
                 {/* Phase 2 navigation */}
                 <Link to="/shifts" className="text-gray-600 hover:text-gray-900">Shifts</Link>

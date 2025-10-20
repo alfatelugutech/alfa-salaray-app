@@ -5,6 +5,8 @@ import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Employees from './pages/Employees'
 import Attendance from './pages/Attendance'
+import AttendanceCalendar from './pages/AttendanceCalendar'
+import AttendanceReports from './pages/AttendanceReports'
 import LeaveRequests from './pages/LeaveRequests'
 import MyAttendance from './pages/MyAttendance'
 import MyLeave from './pages/MyLeave'
@@ -46,6 +48,8 @@ function App() {
           <>
             <Route path="/employees" element={<Employees />} />
             <Route path="/attendance" element={<Attendance />} />
+            <Route path="/attendance-calendar" element={<AttendanceCalendar />} />
+            <Route path="/attendance-reports" element={<AttendanceReports />} />
             <Route path="/leave" element={<LeaveRequests />} />
             {/* Phase 2 routes */}
             <Route path="/shifts" element={<ShiftManagement />} />
