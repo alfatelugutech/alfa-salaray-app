@@ -11,6 +11,8 @@ import { captureSelfie, selectImageFile, compressImage } from '../utils/camera'
 
 const Attendance: React.FC = () => {
   const [showMarkModal, setShowMarkModal] = useState(false)
+  const [showViewModal, setShowViewModal] = useState(false)
+  const [selectedAttendance, setSelectedAttendance] = useState<Attendance | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [dateFilter, setDateFilter] = useState(new Date().toISOString().split('T')[0])
   const [statusFilter, setStatusFilter] = useState('')
@@ -53,6 +55,21 @@ const Attendance: React.FC = () => {
     if (window.confirm('Are you sure you want to delete this attendance record?')) {
       deleteAttendanceMutation.mutate(id)
     }
+  }
+
+  // View attendance handler
+  const handleViewAttendance = (id: string) => {
+    const attendance = attendanceData?.data?.attendances?.find((att: Attendance) => att.id === id)
+    if (attendance) {
+      setSelectedAttendance(attendance)
+      setShowViewModal(true)
+    }
+  }
+
+  // Edit attendance handler
+  const handleEditAttendance = (id: string) => {
+    // TODO: Implement edit attendance modal
+    toast.success('Edit attendance feature coming soon')
   }
 
   return (
@@ -265,8 +282,18 @@ const Attendance: React.FC = () => {
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-900">
                         <div className="flex flex-col gap-1">
-                          <span>{attendance.checkIn ? new Date(attendance.checkIn).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'N/A'}</span>
-                          <span className="text-gray-500">{attendance.checkOut ? new Date(attendance.checkOut).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'N/A'}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-green-600 font-medium">
+                              {attendance.checkIn ? new Date(attendance.checkIn).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'N/A'}
+                            </span>
+                            <span className="text-xs text-green-600">IN</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className={attendance.checkOut ? "text-orange-600 font-medium" : "text-gray-400"}>
+                              {attendance.checkOut ? new Date(attendance.checkOut).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'Not checked out'}
+                            </span>
+                            <span className={`text-xs ${attendance.checkOut ? "text-orange-600" : "text-gray-400"}`}>OUT</span>
+                          </div>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -377,15 +404,24 @@ const Attendance: React.FC = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <div className="flex space-x-2">
-                          <button className="text-blue-600 hover:text-blue-900">
+                          <button 
+                            onClick={() => handleViewAttendance(attendance.id)}
+                            className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50 transition-colors"
+                            title="View Details"
+                          >
                             <Eye className="h-4 w-4" />
                           </button>
-                          <button className="text-indigo-600 hover:text-indigo-900">
+                          <button 
+                            onClick={() => handleEditAttendance(attendance.id)}
+                            className="text-indigo-600 hover:text-indigo-900 p-1 rounded hover:bg-indigo-50 transition-colors"
+                            title="Edit Attendance"
+                          >
                             <Edit className="h-4 w-4" />
                           </button>
                           <button 
                             onClick={() => handleDeleteAttendance(attendance.id)}
-                            className="text-red-600 hover:text-red-900"
+                            className="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50 transition-colors"
+                            title="Delete Attendance"
                           >
                             <Trash2 className="h-4 w-4" />
                           </button>
@@ -402,7 +438,7 @@ const Attendance: React.FC = () => {
 
       {/* Mark Attendance Modal */}
       {showMarkModal && (
-        <MarkAttendanceModal 
+        <MarkAttendanceModal
           onClose={() => setShowMarkModal(false)}
           onSuccess={() => {
             setShowMarkModal(false)
@@ -410,6 +446,17 @@ const Attendance: React.FC = () => {
           }}
           employees={employeesData?.data?.employees || []}
           shifts={shiftsData?.data?.shifts || []}
+        />
+      )}
+
+      {/* View Attendance Modal */}
+      {showViewModal && selectedAttendance && (
+        <ViewAttendanceModal
+          attendance={selectedAttendance}
+          onClose={() => {
+            setShowViewModal(false)
+            setSelectedAttendance(null)
+          }}
         />
       )}
     </div>
@@ -748,6 +795,314 @@ const MarkAttendanceModal: React.FC<{
             </button>
           </div>
         </form>
+      </div>
+    </div>
+  )
+}
+
+// View Attendance Modal Component
+const ViewAttendanceModal: React.FC<{
+  attendance: Attendance
+  onClose: () => void
+}> = ({ attendance, onClose }) => {
+  const formatTime = (dateString: string | null) => {
+    if (!dateString) return 'N/A'
+    return new Date(dateString).toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true
+    })
+  }
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      weekday: 'long'
+    })
+  }
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'PRESENT': return 'bg-green-100 text-green-800'
+      case 'ABSENT': return 'bg-red-100 text-red-800'
+      case 'LATE': return 'bg-yellow-100 text-yellow-800'
+      case 'EARLY_LEAVE': return 'bg-orange-100 text-orange-800'
+      case 'HALF_DAY': return 'bg-blue-100 text-blue-800'
+      default: return 'bg-gray-100 text-gray-800'
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">Attendance Details</h2>
+            <p className="text-gray-600">
+              {attendance.employee?.user?.firstName} {attendance.employee?.user?.lastName} - {formatDate(attendance.date)}
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            <X className="h-6 w-6" />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="p-6 space-y-6">
+          {/* Basic Information */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <Clock className="h-5 w-5" />
+                Time Information
+              </h3>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
+                  <span className="font-medium text-green-800">Check In:</span>
+                  <span className="text-green-700 font-semibold">
+                    {attendance.checkIn ? formatTime(attendance.checkIn) : 'Not recorded'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center p-3 bg-orange-50 rounded-lg">
+                  <span className="font-medium text-orange-800">Check Out:</span>
+                  <span className="text-orange-700 font-semibold">
+                    {attendance.checkOut ? formatTime(attendance.checkOut) : 'Not recorded'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
+                  <span className="font-medium text-blue-800">Status:</span>
+                  <span className={`px-3 py-1 rounded-full text-sm font-semibold ${getStatusColor(attendance.status)}`}>
+                    {attendance.status.replace('_', ' ')}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <Smartphone className="h-5 w-5" />
+                Employee Information
+              </h3>
+              <div className="space-y-3">
+                <div className="p-3 bg-gray-50 rounded-lg">
+                  <div className="text-sm text-gray-600">Name</div>
+                  <div className="font-semibold text-gray-900">
+                    {attendance.employee?.user?.firstName} {attendance.employee?.user?.lastName}
+                  </div>
+                </div>
+                <div className="p-3 bg-gray-50 rounded-lg">
+                  <div className="text-sm text-gray-600">Email</div>
+                  <div className="font-semibold text-gray-900">{attendance.employee?.user?.email}</div>
+                </div>
+                <div className="p-3 bg-gray-50 rounded-lg">
+                  <div className="text-sm text-gray-600">Employee ID</div>
+                  <div className="font-semibold text-gray-900">{(attendance.employee as any)?.employeeId || 'N/A'}</div>
+                </div>
+                <div className="p-3 bg-gray-50 rounded-lg">
+                  <div className="text-sm text-gray-600">Department</div>
+                  <div className="font-semibold text-gray-900">{(attendance.employee as any)?.department || 'N/A'}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Selfie Images */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <Camera className="h-5 w-5" />
+              Selfie Images
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Check-in Selfie */}
+              <div className="space-y-2">
+                <h4 className="font-medium text-green-700 flex items-center gap-2">
+                  <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                  Check-in Selfie
+                </h4>
+                {(attendance as any).checkInSelfie ? (
+                  <div className="relative">
+                    <img
+                      src={(attendance as any).checkInSelfie}
+                      alt="Check-in Selfie"
+                      className="w-full h-48 object-cover rounded-lg border-2 border-green-500 shadow-md"
+                    />
+                    <div className="absolute top-2 right-2 bg-green-500 text-white px-2 py-1 rounded text-xs font-semibold">
+                      IN
+                    </div>
+                  </div>
+                ) : (
+                  <div className="w-full h-48 bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center">
+                    <span className="text-gray-500">No check-in selfie</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Check-out Selfie */}
+              <div className="space-y-2">
+                <h4 className="font-medium text-orange-700 flex items-center gap-2">
+                  <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
+                  Check-out Selfie
+                </h4>
+                {(attendance as any).checkOutSelfie ? (
+                  <div className="relative">
+                    <img
+                      src={(attendance as any).checkOutSelfie}
+                      alt="Check-out Selfie"
+                      className="w-full h-48 object-cover rounded-lg border-2 border-orange-500 shadow-md"
+                    />
+                    <div className="absolute top-2 right-2 bg-orange-500 text-white px-2 py-1 rounded text-xs font-semibold">
+                      OUT
+                    </div>
+                  </div>
+                ) : (
+                  <div className="w-full h-48 bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center">
+                    <span className="text-gray-500">No check-out selfie</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Location Information */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <MapPin className="h-5 w-5" />
+              Location Information
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Check-in Location */}
+              <div className="space-y-2">
+                <h4 className="font-medium text-green-700">Check-in Location</h4>
+                {(attendance as any).checkInLocation ? (
+                  <div className="p-4 bg-green-50 rounded-lg">
+                    <div className="text-sm text-green-800">
+                      <div className="font-semibold">Address:</div>
+                      <div>{(attendance as any).checkInLocation.address || 'Address not available'}</div>
+                    </div>
+                    <div className="text-xs text-green-600 mt-2">
+                      <div>Lat: {(attendance as any).checkInLocation.latitude?.toFixed(6)}</div>
+                      <div>Lng: {(attendance as any).checkInLocation.longitude?.toFixed(6)}</div>
+                      <div>Accuracy: {(attendance as any).checkInLocation.accuracy?.toFixed(2)}m</div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-4 bg-gray-50 rounded-lg text-gray-500">No check-in location</div>
+                )}
+              </div>
+
+              {/* Check-out Location */}
+              <div className="space-y-2">
+                <h4 className="font-medium text-orange-700">Check-out Location</h4>
+                {(attendance as any).checkOutLocation ? (
+                  <div className="p-4 bg-orange-50 rounded-lg">
+                    <div className="text-sm text-orange-800">
+                      <div className="font-semibold">Address:</div>
+                      <div>{(attendance as any).checkOutLocation.address || 'Address not available'}</div>
+                    </div>
+                    <div className="text-xs text-orange-600 mt-2">
+                      <div>Lat: {(attendance as any).checkOutLocation.latitude?.toFixed(6)}</div>
+                      <div>Lng: {(attendance as any).checkOutLocation.longitude?.toFixed(6)}</div>
+                      <div>Accuracy: {(attendance as any).checkOutLocation.accuracy?.toFixed(2)}m</div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-4 bg-gray-50 rounded-lg text-gray-500">No check-out location</div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Device Information */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <Smartphone className="h-5 w-5" />
+              Device & Browser Information
+            </h3>
+            {(attendance as any).deviceInfo ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-4 bg-blue-50 rounded-lg">
+                  <h4 className="font-semibold text-blue-800 mb-2">Device Details</h4>
+                  <div className="space-y-1 text-sm">
+                    <div><span className="font-medium">Type:</span> {(attendance as any).deviceInfo.deviceType || 'N/A'}</div>
+                    <div><span className="font-medium">OS:</span> {(attendance as any).deviceInfo.os || 'N/A'}</div>
+                    <div><span className="font-medium">Browser:</span> {(attendance as any).deviceInfo.browser || 'N/A'}</div>
+                  </div>
+                </div>
+                <div className="p-4 bg-purple-50 rounded-lg">
+                  <h4 className="font-semibold text-purple-800 mb-2">Technical Details</h4>
+                  <div className="space-y-1 text-sm">
+                    <div><span className="font-medium">IP Address:</span> {(attendance as any).ipAddress || 'N/A'}</div>
+                    <div><span className="font-medium">Remote Work:</span> {(attendance as any).isRemote ? 'Yes' : 'No'}</div>
+                    <div><span className="font-medium">Overtime:</span> {(attendance as any).overtimeHours || 0} hours</div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="p-4 bg-gray-50 rounded-lg text-gray-500">No device information available</div>
+            )}
+          </div>
+
+          {/* Working Hours */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <Clock className="h-5 w-5" />
+              Working Hours
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="p-4 bg-green-50 rounded-lg text-center">
+                <div className="text-2xl font-bold text-green-700">
+                  {(attendance as any).totalHours || 0}h
+                </div>
+                <div className="text-sm text-green-600">Total Hours</div>
+              </div>
+              <div className="p-4 bg-blue-50 rounded-lg text-center">
+                <div className="text-2xl font-bold text-blue-700">
+                  {(attendance as any).regularHours || 0}h
+                </div>
+                <div className="text-sm text-blue-600">Regular Hours</div>
+              </div>
+              <div className="p-4 bg-orange-50 rounded-lg text-center">
+                <div className="text-2xl font-bold text-orange-700">
+                  {(attendance as any).overtimeHours || 0}h
+                </div>
+                <div className="text-sm text-orange-600">Overtime Hours</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Notes */}
+          {attendance.notes && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <span className="text-xl">📝</span>
+                Notes
+              </h3>
+              <div className="p-4 bg-yellow-50 rounded-lg">
+                <p className="text-gray-800">{attendance.notes}</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex justify-end p-6 border-t border-gray-200">
+          <button
+            onClick={onClose}
+            className="btn btn-outline btn-md"
+          >
+            Close
+          </button>
+        </div>
       </div>
     </div>
   )
