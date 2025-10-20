@@ -3,7 +3,7 @@ import { Clock, Search, Filter, CheckCircle, XCircle, MapPin, Home, Camera, LogI
 import { useQuery, useMutation, useQueryClient } from 'react-query'
 import { attendanceService } from '../services/attendanceService'
 import { useAuth } from '../hooks/useAuth'
-import { isCameraAvailable, captureSelfie, getImageThumbnail } from '../utils/camera'
+import { isCameraAvailable, getImageThumbnail } from '../utils/camera'
 import { getCompleteLocation, getDeviceInfo } from '../utils/geolocation'
 import toast from 'react-hot-toast'
 
