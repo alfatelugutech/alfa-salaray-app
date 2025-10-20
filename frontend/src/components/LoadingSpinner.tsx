@@ -1,11 +1,11 @@
-import React from 'react'
+import React, { memo } from 'react'
 
 interface LoadingSpinnerProps {
   size?: 'sm' | 'md' | 'lg'
   className?: string
 }
 
-const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({ size = 'md', className = '' }) => {
+const LoadingSpinner: React.FC<LoadingSpinnerProps> = memo(({ size = 'md', className = '' }) => {
   const sizeClasses = {
     sm: 'w-4 h-4',
     md: 'w-8 h-8',
@@ -17,7 +17,9 @@ const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({ size = 'md', className 
       <div className={`animate-spin rounded-full border-2 border-primary-200 border-t-primary-600 ${sizeClasses[size]}`}></div>
     </div>
   )
-}
+})
+
+LoadingSpinner.displayName = 'LoadingSpinner'
 
 export default LoadingSpinner
 

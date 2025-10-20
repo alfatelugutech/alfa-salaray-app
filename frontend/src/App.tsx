@@ -1,22 +1,24 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
+import { Suspense, lazy } from 'react'
 import { useAuth } from './hooks/useAuth'
 import Layout from './components/Layout'
-import Login from './pages/Login'
-import Dashboard from './pages/Dashboard'
-import Employees from './pages/Employees'
-import Attendance from './pages/Attendance'
-import AttendanceCalendar from './pages/AttendanceCalendar'
-import AttendanceReports from './pages/AttendanceReports'
-import LeaveRequests from './pages/LeaveRequests'
-import MyAttendance from './pages/MyAttendance'
-import MyLeave from './pages/MyLeave'
-import Profile from './pages/Profile'
-// Phase 2 imports
-import ShiftManagement from './pages/ShiftManagement'
-import PayrollManagement from './pages/PayrollManagement'
-import PaymentReports from './pages/PaymentReports'
-import SystemSettings from './pages/SystemSettings'
 import LoadingSpinner from './components/LoadingSpinner'
+
+// Lazy load pages for better performance
+const Login = lazy(() => import('./pages/Login'))
+const Dashboard = lazy(() => import('./pages/Dashboard'))
+const Employees = lazy(() => import('./pages/Employees'))
+const Attendance = lazy(() => import('./pages/Attendance'))
+const AttendanceCalendar = lazy(() => import('./pages/AttendanceCalendar'))
+const AttendanceReports = lazy(() => import('./pages/AttendanceReports'))
+const LeaveRequests = lazy(() => import('./pages/LeaveRequests'))
+const MyAttendance = lazy(() => import('./pages/MyAttendance'))
+const MyLeave = lazy(() => import('./pages/MyLeave'))
+const Profile = lazy(() => import('./pages/Profile'))
+const ShiftManagement = lazy(() => import('./pages/ShiftManagement'))
+const PayrollManagement = lazy(() => import('./pages/PayrollManagement'))
+const PaymentReports = lazy(() => import('./pages/PaymentReports'))
+const SystemSettings = lazy(() => import('./pages/SystemSettings'))
 
 function App() {
   const { user, isLoading } = useAuth()
@@ -27,10 +29,12 @@ function App() {
 
   if (!user) {
     return (
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="*" element={<Navigate to="/login" replace />} />
-      </Routes>
+      <Suspense fallback={<LoadingSpinner />}>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
+      </Suspense>
     )
   }
 
@@ -39,7 +43,8 @@ function App() {
 
   return (
     <Layout>
-      <Routes>
+      <Suspense fallback={<LoadingSpinner />}>
+        <Routes>
         <Route path="/" element={<Dashboard />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/profile" element={<Profile />} />
@@ -70,7 +75,8 @@ function App() {
         
         <Route path="/login" element={<Navigate to="/" replace />} />
         <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+        </Routes>
+      </Suspense>
     </Layout>
   )
 }
