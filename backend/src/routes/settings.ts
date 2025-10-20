@@ -299,7 +299,7 @@ router.put("/bulk", requireHR, async (req: Request, res: Response) => {
 });
 
 // Get system configuration
-router.get("/config/system", async (_req: Request, res: Response) => {
+router.get("/config/system", async (req: Request, res: Response) => {
   try {
     const settings = await prisma.systemSetting.findMany({
       where: {
@@ -311,7 +311,7 @@ router.get("/config/system", async (_req: Request, res: Response) => {
     });
 
     // Convert settings to key-value pairs
-    const config = settings.reduce((acc: any, setting: any) => {
+    const config = settings.reduce((acc, setting) => {
       let value: any = setting.value;
       
       // Parse value based on type

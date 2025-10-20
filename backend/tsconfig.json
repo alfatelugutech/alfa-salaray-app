@@ -17,21 +17,6 @@
     "allowSyntheticDefaultImports": true,
     "noImplicitAny": false
   },
-  "include": [
-    "src/index.ts",
-    "src/middleware/**/*.ts",
-    "src/routes/**/*.ts",
-    "src/types/**/*.ts"
-  ],
-  "exclude": [
-    "node_modules", 
-    "dist", 
-    "../frontend", 
-    "../**/*.tsx", 
-    "../**/*.jsx",
-    "**/hooks/**",
-    "**/services/api.ts",
-    "**/pages/**",
-    "**/components/**"
-  ]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
 }

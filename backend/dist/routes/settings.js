@@ -265,7 +265,7 @@ router.put("/bulk", auth_1.requireHR, async (req, res) => {
     }
 });
 // Get system configuration
-router.get("/config/system", async (_req, res) => {
+router.get("/config/system", async (req, res) => {
     try {
         const settings = await prisma.systemSetting.findMany({
             where: {

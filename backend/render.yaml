@@ -3,7 +3,7 @@ services:
     name: employee-attendance-backend
     env: node
     plan: free
-    buildCommand: bash scripts/deploy.sh
+    buildCommand: npm install && npm run build
     startCommand: npm start
     envVars:
       - key: NODE_ENV
@@ -19,13 +19,7 @@ services:
       - key: PORT
         value: 10000
       - key: FRONTEND_URL
-        value: https://alfa-salaray-app.vercel.app
-      - key: BCRYPT_ROUNDS
-        value: 12
-      - key: RATE_LIMIT_WINDOW_MS
-        value: 60000
-      - key: RATE_LIMIT_MAX_REQUESTS
-        value: 1000
+        value: https://your-frontend-url.onrender.com
 
 databases:
   - name: attendance-db

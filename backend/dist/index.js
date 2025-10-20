@@ -20,10 +20,6 @@ const leave_1 = __importDefault(require("./routes/leave"));
 const shifts_1 = __importDefault(require("./routes/shifts"));
 const payroll_1 = __importDefault(require("./routes/payroll"));
 const settings_1 = __importDefault(require("./routes/settings"));
-const analytics_1 = __importDefault(require("./routes/analytics"));
-const notifications_1 = __importDefault(require("./routes/notifications"));
-const ai_1 = __importDefault(require("./routes/ai"));
-const hr_1 = __importDefault(require("./routes/hr"));
 // Import middleware
 const errorHandler_1 = require("./middleware/errorHandler");
 const notFound_1 = require("./middleware/notFound");
@@ -45,42 +41,18 @@ app.use((0, helmet_1.default)({
         },
     },
 }));
-// Rate limiting - More permissive for development
+// Rate limiting
 const limiter = (0, express_rate_limit_1.default)({
-    windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '60000'), // 1 minute
-    max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '1000'), // 1000 requests per minute
+    windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'), // 15 minutes
+    max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100'),
     message: 'Too many requests from this IP, please try again later.',
     standardHeaders: true,
     legacyHeaders: false,
-    skip: (req) => {
-        // Skip rate limiting for health checks
-        return req.path === '/health' || req.path === '/api/health';
-    }
 });
 app.use(limiter);
 // CORS configuration
-const allowedOrigins = [
-    process.env.FRONTEND_URL || "http://localhost:3000",
-    "https://alfa-salaray-app.vercel.app",
-    "https://alfa-salaray-app.vercel.app/",
-    "http://localhost:3000",
-    "http://localhost:5173"
-];
 app.use((0, cors_1.default)({
-    origin: (origin, callback) => {
-        // Allow requests with no origin (mobile apps, curl, etc.)
-        if (!origin)
-            return callback(null, true);
-        if (allowedOrigins.includes(origin)) {
-            return callback(null, true);
-        }
-        // For development, allow any localhost origin
-        if (origin.startsWith('http://localhost:') || origin.startsWith('https://localhost:')) {
-            return callback(null, true);
-        }
-        console.log('CORS blocked origin:', origin);
-        return callback(new Error('Not allowed by CORS'));
-    },
+    origin: process.env.FRONTEND_URL || "http://localhost:3000",
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
@@ -106,16 +78,6 @@ app.get('/health', (req, res) => {
         version: '2.0.0 - Phase 2'
     });
 });
-// API health check endpoint
-app.get('/api/health', (req, res) => {
-    res.status(200).json({
-        status: 'OK',
-        timestamp: new Date().toISOString(),
-        uptime: process.uptime(),
-        environment: process.env.NODE_ENV || 'development',
-        version: '2.0.0 - Phase 2'
-    });
-});
 // API routes
 app.use('/api/auth', auth_1.default);
 app.use('/api/employees', employees_1.default);
@@ -124,10 +86,6 @@ app.use('/api/leave', leave_1.default);
 app.use('/api/shifts', shifts_1.default);
 app.use('/api/payroll', payroll_1.default);
 app.use('/api/settings', settings_1.default);
-app.use('/api/analytics', analytics_1.default);
-app.use('/api/notifications', notifications_1.default);
-app.use('/api/ai', ai_1.default);
-app.use('/api/hr', hr_1.default);
 // Error handling middleware
 app.use(notFound_1.notFound);
 app.use(errorHandler_1.errorHandler);

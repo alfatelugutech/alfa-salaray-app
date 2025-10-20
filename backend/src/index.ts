@@ -15,10 +15,6 @@ import leaveRoutes from './routes/leave';
 import shiftRoutes from './routes/shifts';
 import payrollRoutes from './routes/payroll';
 import settingsRoutes from './routes/settings';
-import analyticsRoutes from './routes/analytics';
-import notificationRoutes from './routes/notifications';
-import aiRoutes from './routes/ai';
-import hrRoutes from './routes/hr';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler';
@@ -45,46 +41,19 @@ app.use(helmet({
   },
 }));
 
-// Rate limiting - More permissive for development
+// Rate limiting
 const limiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '60000'), // 1 minute
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '1000'), // 1000 requests per minute
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'), // 15 minutes
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100'),
   message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
-  skip: (req) => {
-    // Skip rate limiting for health checks
-    return req.path === '/health' || req.path === '/api/health';
-  }
 });
 app.use(limiter);
 
 // CORS configuration
-const allowedOrigins = [
-  process.env.FRONTEND_URL || "http://localhost:3000",
-  "https://alfa-salaray-app.vercel.app",
-  "https://alfa-salaray-app.vercel.app/",
-  "http://localhost:3000",
-  "http://localhost:5173"
-];
-
 app.use(cors({
-  origin: (origin, callback) => {
-    // Allow requests with no origin (mobile apps, curl, etc.)
-    if (!origin) return callback(null, true);
-    
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-    
-    // For development, allow any localhost origin
-    if (origin.startsWith('http://localhost:') || origin.startsWith('https://localhost:')) {
-      return callback(null, true);
-    }
-    
-    console.log('CORS blocked origin:', origin);
-    return callback(new Error('Not allowed by CORS'));
-  },
+  origin: process.env.FRONTEND_URL || "http://localhost:3000",
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
@@ -113,17 +82,6 @@ app.get('/health', (req, res) => {
   });
 });
 
-// API health check endpoint
-app.get('/api/health', (req, res) => {
-  res.status(200).json({
-    status: 'OK',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    environment: process.env.NODE_ENV || 'development',
-    version: '2.0.0 - Phase 2'
-  });
-});
-
 // API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/employees', employeeRoutes);
@@ -132,10 +90,6 @@ app.use('/api/leave', leaveRoutes);
 app.use('/api/shifts', shiftRoutes);
 app.use('/api/payroll', payrollRoutes);
 app.use('/api/settings', settingsRoutes);
-app.use('/api/analytics', analyticsRoutes);
-app.use('/api/notifications', notificationRoutes);
-app.use('/api/ai', aiRoutes);
-app.use('/api/hr', hrRoutes);
 
 // Error handling middleware
 app.use(notFound);
