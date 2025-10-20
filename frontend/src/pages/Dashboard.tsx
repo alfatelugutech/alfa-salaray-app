@@ -15,7 +15,6 @@ const Dashboard: React.FC = () => {
   const { user } = useAuth()
   const navigate = useNavigate()
   const [showSelfAttendanceModal, setShowSelfAttendanceModal] = useState(false)
-  const [selfAttendanceData, setSelfAttendanceData] = useState({})
   const [location, setLocation] = useState<any>(null)
   const [selfie, setSelfie] = useState<string | null>(null)
   const [isAutoCapturing, setIsAutoCapturing] = useState(false)
@@ -115,7 +114,6 @@ const Dashboard: React.FC = () => {
         setShowSelfAttendanceModal(false)
         setLocation(null)
         setSelfie(null)
-        setSelfAttendanceData({})
       },
       onError: (error: any) => {
         const errorMessage = error.response?.data?.error || 'Failed to check in'
@@ -146,7 +144,6 @@ const Dashboard: React.FC = () => {
         setShowSelfAttendanceModal(false)
         setLocation(null)
         setSelfie(null)
-        setSelfAttendanceData({})
       },
       onError: (error: any) => {
         const errorMessage = error.response?.data?.error || 'Failed to check out'
