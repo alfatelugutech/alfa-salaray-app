@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useQuery } from 'react-query'
-import { Calendar, CheckCircle, XCircle, Clock, AlertCircle, Home, TrendingUp, Users, BarChart3 } from 'lucide-react'
+import { Calendar, CheckCircle, XCircle, Clock, AlertCircle, Home, BarChart3 } from 'lucide-react'
 import { attendanceService } from '../services/attendanceService'
 import { employeeService } from '../services/employeeService'
 

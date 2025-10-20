@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from 'react-query'
-import { Calendar, Clock, User, MapPin, Camera, CheckCircle, XCircle, AlertCircle, Home } from 'lucide-react'
+import { Calendar, Clock, User, CheckCircle, XCircle, AlertCircle, Home } from 'lucide-react'
 import { attendanceService } from '../services/attendanceService'
 import { employeeService } from '../services/employeeService'
 import toast from 'react-hot-toast'
