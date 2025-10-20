@@ -198,7 +198,7 @@ const MyAttendance: React.FC = () => {
       )}
 
       {/* Current Status */}
-      {attendanceData?.data?.attendances?.length > 0 && (
+      {attendanceData?.data?.attendances && attendanceData.data.attendances.length > 0 && (
         <div className="card p-4 bg-blue-50 border-blue-200">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -210,7 +210,7 @@ const MyAttendance: React.FC = () => {
                 <p className="text-sm text-blue-700">
                   {(() => {
                     const today = new Date().toISOString().split('T')[0]
-                    const todayAttendance = attendanceData.data.attendances.find((att: any) => 
+                    const todayAttendance = attendanceData?.data?.attendances?.find((att: any) => 
                       new Date(att.date).toISOString().split('T')[0] === today
                     )
                     if (!todayAttendance) return "Not checked in yet"
@@ -234,7 +234,7 @@ const MyAttendance: React.FC = () => {
             const todayAttendance = attendanceData?.data?.attendances?.find((att: any) => 
               new Date(att.date).toISOString().split('T')[0] === today
             )
-            return todayAttendance?.checkIn && !todayAttendance?.checkOut
+            return Boolean(todayAttendance?.checkIn && !todayAttendance?.checkOut)
           })()}
           className="card p-4 flex items-center justify-center gap-3 hover:bg-green-50 disabled:opacity-60 disabled:cursor-not-allowed"
         >
@@ -257,7 +257,7 @@ const MyAttendance: React.FC = () => {
             const todayAttendance = attendanceData?.data?.attendances?.find((att: any) => 
               new Date(att.date).toISOString().split('T')[0] === today
             )
-            return !todayAttendance?.checkIn || todayAttendance?.checkOut
+            return Boolean(!todayAttendance?.checkIn || todayAttendance?.checkOut)
           })()}
           className="card p-4 flex items-center justify-center gap-3 hover:bg-orange-50 disabled:opacity-60 disabled:cursor-not-allowed"
         >
