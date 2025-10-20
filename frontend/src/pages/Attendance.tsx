@@ -474,8 +474,6 @@ const MarkAttendanceModal: React.FC<{
   const [formData, setFormData] = useState({
     employeeId: '',
     date: new Date().toISOString().split('T')[0],
-    checkIn: '',
-    checkOut: '',
     status: 'PRESENT',
     notes: '',
     shiftId: '',
@@ -493,7 +491,12 @@ const MarkAttendanceModal: React.FC<{
       onSuccess()
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.error || 'Failed to mark attendance')
+      const errorMessage = error.response?.data?.error || 'Failed to mark attendance'
+      if (errorMessage.includes('already marked')) {
+        toast.error('Attendance already marked for this date. Please use check-out option.')
+      } else {
+        toast.error(errorMessage)
+      }
     }
   })
 
@@ -558,13 +561,23 @@ const MarkAttendanceModal: React.FC<{
       selfieUrl: selfie || undefined
     }
     
-    // Convert time to ISO datetime if provided
-    if (formData.checkIn) {
-      submitData.checkIn = new Date(`${formData.date}T${formData.checkIn}`).toISOString()
-    }
+    // Automatically capture current time for check-in/out
+    const now = new Date()
+    const today = new Date().toISOString().split('T')[0]
     
-    if (formData.checkOut) {
-      submitData.checkOut = new Date(`${formData.date}T${formData.checkOut}`).toISOString()
+    // If it's the same date, use current time, otherwise use the selected date
+    if (formData.date === today) {
+      submitData.checkIn = now.toISOString()
+      // For check-out, we'll let the backend handle the logic
+      if (formData.status === 'PRESENT' || formData.status === 'LATE') {
+        submitData.checkOut = now.toISOString()
+      }
+    } else {
+      // For past dates, use the date with current time
+      submitData.checkIn = new Date(`${formData.date}T${now.toTimeString().split(' ')[0]}`).toISOString()
+      if (formData.status === 'PRESENT' || formData.status === 'LATE') {
+        submitData.checkOut = new Date(`${formData.date}T${now.toTimeString().split(' ')[0]}`).toISOString()
+      }
     }
     
     markAttendanceMutation.mutate(submitData)
@@ -601,25 +614,14 @@ const MarkAttendanceModal: React.FC<{
               required
             />
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="label">Check In</label>
-              <input
-                type="time"
-                className="input"
-                value={formData.checkIn}
-                onChange={(e) => setFormData({...formData, checkIn: e.target.value})}
-              />
+          <div className="p-4 bg-blue-50 rounded-lg">
+            <div className="flex items-center gap-2 mb-2">
+              <Clock className="h-5 w-5 text-blue-600" />
+              <span className="font-medium text-blue-800">Automatic Time Capture</span>
             </div>
-            <div>
-              <label className="label">Check Out</label>
-              <input
-                type="time"
-                className="input"
-                value={formData.checkOut}
-                onChange={(e) => setFormData({...formData, checkOut: e.target.value})}
-              />
-            </div>
+            <p className="text-sm text-blue-700">
+              Check-in and check-out times will be automatically captured when you submit the form.
+            </p>
           </div>
           <div>
             <label className="label">Status *</label>
