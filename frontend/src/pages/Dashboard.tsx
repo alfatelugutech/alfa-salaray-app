@@ -382,7 +382,7 @@ const Dashboard: React.FC = () => {
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Pending Leaves</h3>
               <p className="text-3xl font-bold text-gray-900">
-                {leaveStats?.pendingCount || 0}
+                {leaveStats?.pendingRequests || 0}
               </p>
             </div>
           </>
