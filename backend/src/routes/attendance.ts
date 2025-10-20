@@ -104,6 +104,15 @@ router.post("/self/check-in", async (req: Request, res: Response) => {
       shiftId = null
     } = req.body || {};
 
+    // Debug logging
+    console.log('🔍 Self check-in received data:', {
+      hasCheckInSelfie: !!checkInSelfie,
+      checkInSelfieLength: checkInSelfie?.length || 0,
+      hasCheckInLocation: !!checkInLocation,
+      isRemote,
+      notes: notes?.length || 0
+    });
+
     // Find employee by userId
     const employee = await prisma.employee.findUnique({ where: { userId: authUser.id } });
     if (!employee) {
@@ -236,6 +245,14 @@ router.post("/self/check-out", async (req: Request, res: Response) => {
       checkOutLocation = null
     } = req.body || {};
 
+    // Debug logging
+    console.log('🔍 Self check-out received data:', {
+      hasCheckOutSelfie: !!checkOutSelfie,
+      checkOutSelfieLength: checkOutSelfie?.length || 0,
+      hasCheckOutLocation: !!checkOutLocation,
+      notes: notes?.length || 0
+    });
+
     const employee = await prisma.employee.findUnique({ where: { userId: authUser.id } });
     if (!employee) {
       res.status(404).json({ success: false, error: "Employee profile not found", code: "EMPLOYEE_NOT_FOUND" });
@@ -310,6 +327,11 @@ router.post("/mark", async (req: Request, res: Response) => {
     }
 
     const { employeeId, date, checkIn, checkOut, status, notes, shiftId, location, deviceInfo, isRemote, checkInSelfie, checkOutSelfie, checkInLocation, checkOutLocation } = value;
+    
+    // Auto-capture current time if not provided
+    const now = new Date();
+    const finalCheckIn = checkIn || now;
+    const finalCheckOut = checkOut || (status === 'PRESENT' || status === 'LATE' ? now : null);
 
     // Check if attendance already exists for this date
     const existingAttendance = await prisma.attendance.findUnique({
@@ -321,13 +343,60 @@ router.post("/mark", async (req: Request, res: Response) => {
       }
     });
 
+    // If attendance exists, update it instead of creating new
     if (existingAttendance) {
-      res.status(400).json({
-        success: false,
-        error: "Attendance already marked for this date",
-        code: "ATTENDANCE_EXISTS"
-      });
-      return;
+      // Check if we're trying to update check-out time
+      if (finalCheckOut && !existingAttendance.checkOut) {
+        // Update existing attendance with check-out
+        const checkInTime = new Date(existingAttendance.checkIn!);
+        const checkOutTime = new Date(finalCheckOut);
+        
+        // Calculate total time worked
+        const totalTimeMs = checkOutTime.getTime() - checkInTime.getTime();
+        const totalHours = totalTimeMs / (1000 * 60 * 60);
+        
+        // Calculate break time (1 hour lunch break if working more than 6 hours)
+        let breakHours = 0;
+        if (totalHours > 6) {
+          breakHours = 1;
+        }
+        
+        // Calculate actual working hours (excluding break)
+        const actualWorkingHours = totalHours - breakHours;
+        const standardWorkingHours = 8;
+        const regularHours = Math.min(actualWorkingHours, standardWorkingHours);
+        const overtimeHours = actualWorkingHours > standardWorkingHours ? (actualWorkingHours - standardWorkingHours) : 0;
+        
+        const updatedAttendance = await prisma.attendance.update({
+          where: { id: existingAttendance.id },
+          data: {
+            checkOut: new Date(finalCheckOut),
+            status: status,
+            notes: notes || existingAttendance.notes,
+            totalHours,
+            regularHours,
+            overtimeHours,
+            breakHours,
+            checkOutSelfie: checkOutSelfie || existingAttendance.checkOutSelfie,
+            checkOutLocation: checkOutLocation || existingAttendance.checkOutLocation,
+            updatedAt: new Date()
+          }
+        });
+        
+        res.json({
+          success: true,
+          message: "Attendance updated successfully",
+          data: updatedAttendance
+        });
+        return;
+      } else {
+        res.status(400).json({
+          success: false,
+          error: "Attendance already marked for this date. Use update endpoint to modify.",
+          code: "ATTENDANCE_EXISTS"
+        });
+        return;
+      }
     }
 
     // Calculate working hours for salary calculation
@@ -336,9 +405,9 @@ router.post("/mark", async (req: Request, res: Response) => {
     let overtimeHours: number = 0;
     let breakHours: number = 0;
     
-    if (checkIn && checkOut) {
-      const checkInTime = new Date(checkIn);
-      const checkOutTime = new Date(checkOut);
+    if (finalCheckIn && finalCheckOut) {
+      const checkInTime = new Date(finalCheckIn);
+      const checkOutTime = new Date(finalCheckOut);
       
       // Calculate total time worked
       const totalTimeMs = checkOutTime.getTime() - checkInTime.getTime();
@@ -373,8 +442,8 @@ router.post("/mark", async (req: Request, res: Response) => {
 
     // Auto-detect HALF_DAY if check-in is after 11:59 AM
     let finalStatus = status;
-    if (checkIn) {
-      const checkInTime = new Date(checkIn);
+    if (finalCheckIn) {
+      const checkInTime = new Date(finalCheckIn);
       const hours = checkInTime.getHours();
       const minutes = checkInTime.getMinutes();
       
@@ -394,8 +463,8 @@ router.post("/mark", async (req: Request, res: Response) => {
       data: {
         employeeId,
         date: new Date(date),
-        checkIn: checkIn ? new Date(checkIn) : null,
-        checkOut: checkOut ? new Date(checkOut) : null,
+        checkIn: finalCheckIn ? new Date(finalCheckIn) : null,
+        checkOut: finalCheckOut ? new Date(finalCheckOut) : null,
         totalHours,
         regularHours: regularHours > 0 ? regularHours : null,
         overtimeHours: overtimeHours > 0 ? overtimeHours : null,

@@ -19,7 +19,16 @@ const authenticateToken = async (req, res, next) => {
             });
             return;
         }
-        const decoded = jsonwebtoken_1.default.verify(token, process.env.JWT_SECRET || "default-secret");
+        const jwtSecret = process.env.JWT_SECRET || (process.env.NODE_ENV === "production" ? "" : "dev-secret");
+        if (!jwtSecret) {
+            res.status(500).json({
+                success: false,
+                error: "Server configuration error: JWT secret not set",
+                code: "CONFIG_ERROR"
+            });
+            return;
+        }
+        const decoded = jsonwebtoken_1.default.verify(token, jwtSecret);
         const user = await prisma.user.findUnique({
             where: { id: decoded.userId }
         });

@@ -49,6 +49,7 @@ model Employee {
   leaveRequests   LeaveRequest[]
   shifts          EmployeeShift[]
   payrolls        Payroll[]
+  locationTracking LocationTracking[] // Location tracking history
 
   @@map("employees")
 }
@@ -85,9 +86,29 @@ model Attendance {
   // Relations
   employee    Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   shift       Shift?   @relation(fields: [shiftId], references: [id])
+  locationTracking LocationTracking[] // Location tracking history
 
   @@unique([employeeId, date])
   @@map("attendance")
+}
+
+// Location Tracking - Continuous tracking from check-in to check-out
+model LocationTracking {
+  id          String   @id @default(cuid())
+  attendanceId String  // Reference to attendance record
+  employeeId  String   // Reference to employee
+  latitude    Float    // GPS latitude
+  longitude   Float    // GPS longitude
+  accuracy    Float?   // GPS accuracy in meters
+  address     String?  // Reverse geocoded address
+  timestamp   DateTime @default(now()) // When location was recorded
+  isActive    Boolean  @default(true) // Whether employee is still active
+  
+  // Relations
+  attendance  Attendance @relation(fields: [attendanceId], references: [id], onDelete: Cascade)
+  employee    Employee   @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  
+  @@map("location_tracking")
 }
 
 // Leave Management
