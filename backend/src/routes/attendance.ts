@@ -120,12 +120,22 @@ router.post("/self/check-in", async (req: Request, res: Response) => {
     });
 
     if (existing?.checkIn && !existing?.checkOut) {
-      res.status(400).json({ success: false, error: "Already checked in today. Please check out first.", code: "ALREADY_CHECKED_IN" });
+      res.status(400).json({ 
+        success: false, 
+        error: "Attendance already marked for this date. You can only check out now.", 
+        code: "ALREADY_CHECKED_IN",
+        data: { canCheckOut: true, canCheckIn: false }
+      });
       return;
     }
 
     if (existing?.checkIn && existing?.checkOut) {
-      res.status(400).json({ success: false, error: "Already completed attendance for today", code: "ATTENDANCE_COMPLETED" });
+      res.status(400).json({ 
+        success: false, 
+        error: "Attendance already completed for today", 
+        code: "ATTENDANCE_COMPLETED",
+        data: { canCheckOut: false, canCheckIn: false }
+      });
       return;
     }
 
@@ -158,6 +168,56 @@ router.post("/self/check-in", async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Self check-in error:", error);
     res.status(500).json({ success: false, error: "Failed to check in", code: "SELF_CHECKIN_ERROR" });
+  }
+});
+
+// Get current attendance status for today
+router.get("/self/status", async (req: Request, res: Response) => {
+  try {
+    const authUser = (req as any).user;
+    if (!authUser?.id) {
+      res.status(401).json({ success: false, error: "Authentication required", code: "AUTH_REQUIRED" });
+      return;
+    }
+
+    // Find employee by userId
+    const employee = await prisma.employee.findUnique({ where: { userId: authUser.id } });
+    if (!employee) {
+      res.status(404).json({ success: false, error: "Employee profile not found", code: "EMPLOYEE_NOT_FOUND" });
+      return;
+    }
+
+    const today = new Date();
+    const dateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+    // Check existing attendance for today
+    const existing = await prisma.attendance.findUnique({
+      where: { employeeId_date: { employeeId: employee.id, date: dateOnly } },
+      include: {
+        employee: {
+          include: { user: { select: { firstName: true, lastName: true, email: true } } }
+        }
+      }
+    });
+
+    const status = {
+      canCheckIn: !existing?.checkIn,
+      canCheckOut: existing?.checkIn && !existing?.checkOut,
+      isCompleted: existing?.checkIn && existing?.checkOut,
+      currentTime: new Date(),
+      today: dateOnly
+    };
+
+    res.json({ 
+      success: true, 
+      data: { 
+        status,
+        attendance: existing 
+      } 
+    });
+  } catch (error) {
+    console.error("Get attendance status error:", error);
+    res.status(500).json({ success: false, error: "Failed to get attendance status", code: "GET_STATUS_ERROR" });
   }
 });
 
