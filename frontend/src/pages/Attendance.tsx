@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Plus, Search, Filter, Edit, Trash2, Eye, MapPin, Smartphone, Home, X, Camera, RefreshCw, Globe, Monitor, Clock } from 'lucide-react'
+import { Plus, Search, Filter, Trash2, Eye, MapPin, Smartphone, Home, X, RefreshCw, Globe, Monitor, Clock } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from 'react-query'
 import { attendanceService } from '../services/attendanceService'
 import { employeeService } from '../services/employeeService'
@@ -8,7 +8,6 @@ import type { Attendance } from '../types'
 import toast from 'react-hot-toast'
 
 const Attendance: React.FC = () => {
-  const [showMarkModal, setShowMarkModal] = useState(false)
   const [showDetailsModal, setShowDetailsModal] = useState(false)
   const [selectedAttendance, setSelectedAttendance] = useState<any>(null)
   const [searchTerm, setSearchTerm] = useState('')
@@ -26,18 +25,6 @@ const Attendance: React.FC = () => {
     })
   )
 
-  // Fetch employees for marking attendance
-  const { data: employeesData } = useQuery(
-    'employees',
-    () => employeeService.getEmployees()
-  )
-
-  // Fetch shifts for shift selection
-  const { data: shiftsData } = useQuery(
-    'shifts',
-    () => shiftService.getShifts()
-  )
-
   // Delete attendance mutation
   const deleteAttendanceMutation = useMutation(attendanceService.deleteAttendance, {
     onSuccess: () => {
@@ -49,17 +36,6 @@ const Attendance: React.FC = () => {
     }
   })
 
-  // Mark attendance mutation
-  const markAttendanceMutation = useMutation(attendanceService.markAttendance, {
-    onSuccess: () => {
-      queryClient.invalidateQueries('attendance')
-      toast.success('Attendance marked successfully')
-      setShowMarkModal(false)
-    },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.error || 'Failed to mark attendance')
-    }
-  })
 
   const handleDeleteAttendance = (id: string) => {
     if (window.confirm('Are you sure you want to delete this attendance record?')) {
@@ -83,17 +59,6 @@ const Attendance: React.FC = () => {
     }
   }
 
-  const formatDeviceInfo = (deviceInfo: any) => {
-    if (!deviceInfo) return 'No device info'
-    
-    const parts = []
-    if (deviceInfo.browser) parts.push(`Browser: ${deviceInfo.browser}`)
-    if (deviceInfo.os) parts.push(`OS: ${deviceInfo.os}`)
-    if (deviceInfo.device) parts.push(`Device: ${deviceInfo.device}`)
-    if (deviceInfo.screenResolution) parts.push(`Screen: ${deviceInfo.screenResolution}`)
-    
-    return parts.join(', ')
-  }
 
   return (
     <div className="space-y-6">
@@ -103,13 +68,6 @@ const Attendance: React.FC = () => {
           <h1 className="text-2xl font-bold text-gray-900">Attendance Management</h1>
           <p className="text-gray-600">Manage employee attendance records</p>
         </div>
-        <button
-          onClick={() => setShowMarkModal(true)}
-          className="btn btn-primary"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Mark Attendance
-        </button>
       </div>
 
       {/* Filters */}

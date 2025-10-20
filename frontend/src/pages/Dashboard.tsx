@@ -8,7 +8,7 @@ import { employeeService } from '../services/employeeService'
 import { Clock, X, MapPin, Camera, CheckCircle, XCircle } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { getCompleteLocation, getDeviceInfo } from '../utils/geolocation'
-import { captureSelfie, compressImage } from '../utils/camera'
+import { compressImage } from '../utils/camera'
 
 const Dashboard: React.FC = () => {
   const { user, isLoading } = useAuth()
@@ -50,7 +50,7 @@ const Dashboard: React.FC = () => {
   const queryClient = useQueryClient()
 
   // Fetch today's attendance to determine status
-  const { data: todayAttendanceData } = useQuery(
+  useQuery(
     'today-attendance',
     () => attendanceService.getAttendance({ 
       employeeId: user?.employeeId,
@@ -358,7 +358,7 @@ const Dashboard: React.FC = () => {
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Total Employees</h3>
               <p className="text-3xl font-bold text-gray-900">
-                {employeeStats?.data?.totalEmployees || 0}
+                {employeeStats?.totalEmployees || 0}
               </p>
             </div>
 
@@ -370,7 +370,7 @@ const Dashboard: React.FC = () => {
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Present Today</h3>
               <p className="text-3xl font-bold text-gray-900">
-                {attendanceStats?.data?.presentToday || 0}
+                {attendanceStats?.presentToday || 0}
               </p>
             </div>
 
@@ -382,7 +382,7 @@ const Dashboard: React.FC = () => {
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Pending Leaves</h3>
               <p className="text-3xl font-bold text-gray-900">
-                {leaveStats?.data?.pendingLeaves || 0}
+                {leaveStats?.pendingLeaves || 0}
               </p>
             </div>
           </>
