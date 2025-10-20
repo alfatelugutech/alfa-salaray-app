@@ -1,9 +1,7 @@
 import React, { useState } from 'react'
-import { Plus, Search, Filter, Trash2, Eye, MapPin, Smartphone, Home, X, RefreshCw, Globe, Monitor, Clock } from 'lucide-react'
+import { Search, Filter, Trash2, Eye, MapPin, Smartphone, Home, X, RefreshCw, Globe, Monitor, Clock } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from 'react-query'
 import { attendanceService } from '../services/attendanceService'
-import { employeeService } from '../services/employeeService'
-import { shiftService } from '../services/shiftService'
 import type { Attendance } from '../types'
 import toast from 'react-hot-toast'
 

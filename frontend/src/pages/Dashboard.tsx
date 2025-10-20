@@ -370,7 +370,7 @@ const Dashboard: React.FC = () => {
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Present Today</h3>
               <p className="text-3xl font-bold text-gray-900">
-                {attendanceStats?.presentToday || 0}
+                {attendanceStats?.presentCount || 0}
               </p>
             </div>
 
@@ -382,7 +382,7 @@ const Dashboard: React.FC = () => {
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Pending Leaves</h3>
               <p className="text-3xl font-bold text-gray-900">
-                {leaveStats?.pendingLeaves || 0}
+                {leaveStats?.pendingCount || 0}
               </p>
             </div>
           </>
