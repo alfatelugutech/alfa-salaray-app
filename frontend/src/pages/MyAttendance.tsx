@@ -141,6 +141,48 @@ const MyAttendance: React.FC = () => {
         </div>
       </div>
 
+      {/* Live Camera Modal */}
+      {showCamera && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">
+                {showCamera === 'checkin' ? 'Check In Selfie' : 'Check Out Selfie'}
+              </h3>
+              <button
+                onClick={closeCamera}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div className="relative">
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className="w-full h-64 bg-gray-900 rounded-lg"
+              />
+              <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
+                <button
+                  onClick={handleConfirmCapture}
+                  className="bg-blue-600 text-white px-6 py-2 rounded-full hover:bg-blue-700 flex items-center gap-2"
+                >
+                  <Camera className="w-4 h-4" />
+                  Capture Photo
+                </button>
+              </div>
+            </div>
+            
+            <div className="mt-4 text-sm text-gray-600 text-center">
+              Position your face in the camera frame and click "Capture Photo"
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <button
@@ -436,16 +478,4 @@ const MyAttendance: React.FC = () => {
 }
 
 export default MyAttendance
-
-// Live Camera Modal
-// Rendered inline within the page when showCamera is truthy
-{/* Modal UI */}
-{false as unknown as React.ReactNode}
-{(function LiveCameraModal() { return null })()}
-
-{/** Modal Render **/}
-{/* Placed at end of file to avoid layout shift */}
-{/* eslint-disable-next-line */}
-// @ts-ignore
-export const CameraModalRenderer = ({ show, onClose, onCapture, videoRef }: any) => null
 
