@@ -32,7 +32,14 @@ const MyAttendance: React.FC = () => {
       queryClient.invalidateQueries('my-attendance')
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.error || 'Failed to check in')
+      const errorMessage = error.response?.data?.error || 'Failed to check in'
+      if (errorMessage.includes('Already checked in')) {
+        toast.error('You have already checked in today. Please check out first.')
+      } else if (errorMessage.includes('Already completed attendance')) {
+        toast.error('You have already completed attendance for today')
+      } else {
+        toast.error(errorMessage)
+      }
     }
   })
 
@@ -42,7 +49,14 @@ const MyAttendance: React.FC = () => {
       queryClient.invalidateQueries('my-attendance')
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.error || 'Failed to check out')
+      const errorMessage = error.response?.data?.error || 'Failed to check out'
+      if (errorMessage.includes('No active check-in')) {
+        toast.error('Please check in first before checking out')
+      } else if (errorMessage.includes('Already checked out')) {
+        toast.error('You have already checked out today')
+      } else {
+        toast.error(errorMessage)
+      }
     }
   })
 
@@ -183,23 +197,82 @@ const MyAttendance: React.FC = () => {
         </div>
       )}
 
+      {/* Current Status */}
+      {attendanceData?.data?.attendances?.length > 0 && (
+        <div className="card p-4 bg-blue-50 border-blue-200">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <Clock className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <h3 className="font-medium text-blue-900">Today's Status</h3>
+                <p className="text-sm text-blue-700">
+                  {(() => {
+                    const today = new Date().toISOString().split('T')[0]
+                    const todayAttendance = attendanceData.data.attendances.find((att: any) => 
+                      new Date(att.date).toISOString().split('T')[0] === today
+                    )
+                    if (!todayAttendance) return "Not checked in yet"
+                    if (todayAttendance.checkIn && !todayAttendance.checkOut) return "Checked in - Ready to check out"
+                    if (todayAttendance.checkIn && todayAttendance.checkOut) return "Completed for today"
+                    return "No attendance recorded"
+                  })()}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <button
           onClick={handleOpenCheckIn}
-          disabled={selfCheckInMutation.isLoading}
-          className="card p-4 flex items-center justify-center gap-3 hover:bg-green-50 disabled:opacity-60"
+          disabled={selfCheckInMutation.isLoading || (() => {
+            const today = new Date().toISOString().split('T')[0]
+            const todayAttendance = attendanceData?.data?.attendances?.find((att: any) => 
+              new Date(att.date).toISOString().split('T')[0] === today
+            )
+            return todayAttendance?.checkIn && !todayAttendance?.checkOut
+          })()}
+          className="card p-4 flex items-center justify-center gap-3 hover:bg-green-50 disabled:opacity-60 disabled:cursor-not-allowed"
         >
           <LogIn className="h-5 w-5 text-green-600" />
-          <span className="font-medium text-green-700">Check In (Selfie + Location)</span>
+          <span className="font-medium text-green-700">
+            {(() => {
+              const today = new Date().toISOString().split('T')[0]
+              const todayAttendance = attendanceData?.data?.attendances?.find((att: any) => 
+                new Date(att.date).toISOString().split('T')[0] === today
+              )
+              if (todayAttendance?.checkIn && !todayAttendance?.checkOut) return "Already Checked In"
+              return "Check In (Selfie + Location)"
+            })()}
+          </span>
         </button>
         <button
           onClick={handleOpenCheckOut}
-          disabled={selfCheckOutMutation.isLoading}
-          className="card p-4 flex items-center justify-center gap-3 hover:bg-orange-50 disabled:opacity-60"
+          disabled={selfCheckOutMutation.isLoading || (() => {
+            const today = new Date().toISOString().split('T')[0]
+            const todayAttendance = attendanceData?.data?.attendances?.find((att: any) => 
+              new Date(att.date).toISOString().split('T')[0] === today
+            )
+            return !todayAttendance?.checkIn || todayAttendance?.checkOut
+          })()}
+          className="card p-4 flex items-center justify-center gap-3 hover:bg-orange-50 disabled:opacity-60 disabled:cursor-not-allowed"
         >
           <LogOut className="h-5 w-5 text-orange-600" />
-          <span className="font-medium text-orange-700">Check Out (Selfie + Location)</span>
+          <span className="font-medium text-orange-700">
+            {(() => {
+              const today = new Date().toISOString().split('T')[0]
+              const todayAttendance = attendanceData?.data?.attendances?.find((att: any) => 
+                new Date(att.date).toISOString().split('T')[0] === today
+              )
+              if (!todayAttendance?.checkIn) return "Check In First"
+              if (todayAttendance?.checkOut) return "Already Checked Out"
+              return "Check Out (Selfie + Location)"
+            })()}
+          </span>
         </button>
       </div>
 
