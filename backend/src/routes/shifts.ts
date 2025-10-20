@@ -32,6 +32,36 @@ const assignShiftSchema = Joi.object({
   endDate: Joi.date().optional()
 });
 
+// Get shift statistics
+router.get("/stats/overview", requireHR, async (req: Request, res: Response) => {
+  try {
+    const [totalShifts, activeShifts, totalAssignments, activeAssignments] = await Promise.all([
+      prisma.shift.count(),
+      prisma.shift.count({ where: { isActive: true } }),
+      prisma.employeeShift.count(),
+      prisma.employeeShift.count({ where: { isActive: true } })
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        totalShifts,
+        activeShifts,
+        totalAssignments,
+        activeAssignments
+      }
+    });
+
+  } catch (error) {
+    console.error("Get shift stats error:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to fetch shift statistics",
+      code: "FETCH_SHIFT_STATS_ERROR"
+    });
+  }
+});
+
 // Get all shifts
 router.get("/", requireHR, async (req: Request, res: Response) => {
   try {
