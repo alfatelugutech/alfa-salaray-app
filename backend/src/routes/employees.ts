@@ -110,6 +110,37 @@ router.get("/", requireHR, async (req: Request, res: Response) => {
 });
 
 // Get employee by ID
+// Get employee statistics (moved above dynamic :id route to avoid shadowing)
+router.get("/stats/overview", requireHR, async (req: Request, res: Response) => {
+  try {
+    const [totalEmployees, activeEmployees, inactiveEmployees, onLeaveEmployees] = await Promise.all([
+      prisma.employee.count(),
+      prisma.employee.count({ where: { status: "ACTIVE" } }),
+      prisma.employee.count({ where: { status: "INACTIVE" } }),
+      prisma.employee.count({ where: { status: "ON_LEAVE" } })
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        totalEmployees,
+        activeEmployees,
+        inactiveEmployees,
+        onLeaveEmployees
+      }
+    });
+
+  } catch (error) {
+    console.error("Get employee stats error:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to fetch employee statistics",
+      code: "FETCH_STATS_ERROR"
+    });
+  }
+});
+
+// Get employee by ID
 router.get("/:id", async (req: Request, res: Response) => {
   try {
     const { id } = req.params;

@@ -86,6 +86,164 @@ const updateAttendanceSchema = Joi.object({
   }).optional()
 });
 
+// Self Check-In (employee marks their own check-in)
+router.post("/self/check-in", async (req: Request, res: Response) => {
+  try {
+    const authUser = (req as any).user;
+    if (!authUser?.id) {
+      res.status(401).json({ success: false, error: "Authentication required", code: "AUTH_REQUIRED" });
+      return;
+    }
+
+    const { 
+      isRemote = false,
+      notes = "",
+      checkInSelfie = "",
+      checkInLocation = null,
+      deviceInfo = null,
+      shiftId = null
+    } = req.body || {};
+
+    // Find employee by userId
+    const employee = await prisma.employee.findUnique({ where: { userId: authUser.id } });
+    if (!employee) {
+      res.status(404).json({ success: false, error: "Employee profile not found", code: "EMPLOYEE_NOT_FOUND" });
+      return;
+    }
+
+    const today = new Date();
+    const dateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+    // Check existing attendance for today
+    const existing = await prisma.attendance.findUnique({
+      where: { employeeId_date: { employeeId: employee.id, date: dateOnly } }
+    });
+
+    if (existing?.checkIn) {
+      res.status(400).json({ success: false, error: "Already checked in today", code: "ALREADY_CHECKED_IN" });
+      return;
+    }
+
+    const ipAddress = (req.headers['x-forwarded-for'] as string) || (req.socket.remoteAddress as string) || null;
+
+    const now = new Date();
+    const attendance = await prisma.attendance.upsert({
+      where: { employeeId_date: { employeeId: employee.id, date: dateOnly } },
+      create: {
+        employeeId: employee.id,
+        date: dateOnly,
+        checkIn: now,
+        status: now.getHours() > 9 ? "LATE" : "PRESENT",
+        notes,
+        shiftId,
+        deviceInfo,
+        ipAddress,
+        isRemote,
+        createdBy: authUser.id,
+        checkInSelfie: checkInSelfie || null,
+        checkInLocation: checkInLocation || null
+      },
+      update: {
+        checkIn: now,
+        status: now.getHours() > 9 ? "LATE" : "PRESENT",
+        notes,
+        shiftId,
+        deviceInfo,
+        ipAddress,
+        isRemote,
+        createdBy: authUser.id,
+        checkInSelfie: checkInSelfie || null,
+        checkInLocation: checkInLocation || null
+      },
+      include: {
+        employee: {
+          include: { user: { select: { firstName: true, lastName: true, email: true } } }
+        }
+      }
+    });
+
+    res.status(201).json({ success: true, message: "Check-in recorded", data: { attendance } });
+  } catch (error) {
+    console.error("Self check-in error:", error);
+    res.status(500).json({ success: false, error: "Failed to check in", code: "SELF_CHECKIN_ERROR" });
+  }
+});
+
+// Self Check-Out (employee marks their own check-out)
+router.post("/self/check-out", async (req: Request, res: Response) => {
+  try {
+    const authUser = (req as any).user;
+    if (!authUser?.id) {
+      res.status(401).json({ success: false, error: "Authentication required", code: "AUTH_REQUIRED" });
+      return;
+    }
+
+    const { 
+      notes = "",
+      checkOutSelfie = "",
+      checkOutLocation = null
+    } = req.body || {};
+
+    const employee = await prisma.employee.findUnique({ where: { userId: authUser.id } });
+    if (!employee) {
+      res.status(404).json({ success: false, error: "Employee profile not found", code: "EMPLOYEE_NOT_FOUND" });
+      return;
+    }
+
+    const today = new Date();
+    const dateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+    const existing = await prisma.attendance.findUnique({
+      where: { employeeId_date: { employeeId: employee.id, date: dateOnly } }
+    });
+
+    if (!existing || !existing.checkIn) {
+      res.status(400).json({ success: false, error: "No active check-in for today", code: "NO_CHECKIN" });
+      return;
+    }
+
+    if (existing.checkOut) {
+      res.status(400).json({ success: false, error: "Already checked out today", code: "ALREADY_CHECKED_OUT" });
+      return;
+    }
+
+    // Compute total hours, regular and overtime similar to create logic
+    const now = new Date();
+    const checkInTime = new Date(existing.checkIn);
+    const totalTimeMs = now.getTime() - checkInTime.getTime();
+    let totalHours = totalTimeMs / (1000 * 60 * 60);
+    let breakHours = totalHours > 6 ? 1 : 0;
+    const standardWorkingHours = 8;
+    const actualWorkingHours = totalHours - breakHours;
+    const regularHours = Math.min(actualWorkingHours, standardWorkingHours);
+    const overtimeHours = actualWorkingHours > standardWorkingHours ? (actualWorkingHours - standardWorkingHours) : 0;
+
+    const attendance = await prisma.attendance.update({
+      where: { id: existing.id },
+      data: {
+        checkOut: now,
+        totalHours,
+        regularHours: regularHours > 0 ? regularHours : null,
+        overtimeHours: overtimeHours > 0 ? overtimeHours : null,
+        breakHours: breakHours > 0 ? breakHours : null,
+        notes: notes || existing.notes,
+        checkOutSelfie: checkOutSelfie || null,
+        checkOutLocation: checkOutLocation || null
+      },
+      include: {
+        employee: {
+          include: { user: { select: { firstName: true, lastName: true, email: true } } }
+        }
+      }
+    });
+
+    res.json({ success: true, message: "Check-out recorded", data: { attendance } });
+  } catch (error) {
+    console.error("Self check-out error:", error);
+    res.status(500).json({ success: false, error: "Failed to check out", code: "SELF_CHECKOUT_ERROR" });
+  }
+});
+
 // Mark attendance (for employees and admins)
 router.post("/mark", async (req: Request, res: Response) => {
   try {
@@ -178,7 +336,7 @@ router.post("/mark", async (req: Request, res: Response) => {
     const ipAddress = req.headers['x-forwarded-for'] || req.socket.remoteAddress || null;
 
     // Get user ID from token for createdBy
-    const createdBy = (req as any).user?.userId || null;
+    const createdBy = (req as any).user?.id || null;
 
     const attendance = await prisma.attendance.create({
       data: {

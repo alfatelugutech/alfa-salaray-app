@@ -68,9 +68,18 @@ router.post("/register", async (req: Request, res: Response) => {
     });
 
     // Generate JWT token
+    const jwtSecret = process.env.JWT_SECRET || (process.env.NODE_ENV === "production" ? "" : "dev-secret");
+    if (!jwtSecret) {
+      res.status(500).json({
+        success: false,
+        error: "Server configuration error: JWT secret not set",
+        code: "CONFIG_ERROR"
+      });
+      return;
+    }
     const token = jwt.sign(
       { userId: user.id, email: user.email, role: user.role },
-      process.env.JWT_SECRET || "default-secret",
+      jwtSecret,
       { expiresIn: process.env.JWT_EXPIRES_IN || "7d" } as jwt.SignOptions
     );
 
@@ -149,9 +158,18 @@ router.post("/login", async (req: Request, res: Response) => {
     });
 
     // Generate JWT token
+    const jwtSecret = process.env.JWT_SECRET || (process.env.NODE_ENV === "production" ? "" : "dev-secret");
+    if (!jwtSecret) {
+      res.status(500).json({
+        success: false,
+        error: "Server configuration error: JWT secret not set",
+        code: "CONFIG_ERROR"
+      });
+      return;
+    }
     const token = jwt.sign(
       { userId: user.id, email: user.email, role: user.role },
-      process.env.JWT_SECRET || "default-secret",
+      jwtSecret,
       { expiresIn: process.env.JWT_EXPIRES_IN || "7d" } as jwt.SignOptions
     );
 
@@ -196,7 +214,16 @@ router.get("/me", async (req: Request, res: Response) => {
       return;
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || "default-secret") as any;
+    const jwtSecret = process.env.JWT_SECRET || (process.env.NODE_ENV === "production" ? "" : "dev-secret");
+    if (!jwtSecret) {
+      res.status(500).json({
+        success: false,
+        error: "Server configuration error: JWT secret not set",
+        code: "CONFIG_ERROR"
+      });
+      return;
+    }
+    const decoded = jwt.verify(token, jwtSecret) as any;
     
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
