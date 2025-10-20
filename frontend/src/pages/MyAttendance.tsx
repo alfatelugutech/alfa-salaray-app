@@ -27,7 +27,7 @@ const MyAttendance: React.FC = () => {
   )
 
   // Get current attendance status for today
-  const { data: attendanceStatus, isLoading: statusLoading } = useQuery(
+  const { data: attendanceStatus } = useQuery(
     'attendance-status',
     () => attendanceService.getAttendanceStatus(),
     {
@@ -227,7 +227,9 @@ const MyAttendance: React.FC = () => {
                 </p>
                 {attendanceStatus.attendance && (
                   <div className="mt-2 text-xs text-gray-600">
-                    <div>Check In: {new Date(attendanceStatus.attendance.checkIn).toLocaleTimeString()}</div>
+                    {attendanceStatus.attendance.checkIn && (
+                      <div>Check In: {new Date(attendanceStatus.attendance.checkIn).toLocaleTimeString()}</div>
+                    )}
                     {attendanceStatus.attendance.checkOut && (
                       <div>Check Out: {new Date(attendanceStatus.attendance.checkOut).toLocaleTimeString()}</div>
                     )}
