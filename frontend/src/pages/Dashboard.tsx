@@ -9,6 +9,7 @@ import { Clock, X, MapPin, Camera } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { getCompleteLocation, getDeviceInfo } from '../utils/geolocation'
 import { captureSelfie, compressImage } from '../utils/camera'
+import { locationTracker } from '../utils/locationTracker'
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth()
@@ -104,9 +105,17 @@ const Dashboard: React.FC = () => {
   const selfCheckInMutation = useMutation(
     attendanceService.selfCheckIn,
     {
-      onSuccess: () => {
+      onSuccess: (data) => {
         queryClient.invalidateQueries('my-attendance')
-        toast.success('✅ Check-in completed successfully!')
+        queryClient.invalidateQueries('attendance-status')
+        
+        // Start location tracking after successful check-in
+        if (data?.id) {
+          locationTracker.startTracking(data.id)
+          console.log('🚀 Location tracking started for attendance:', data.id)
+        }
+        
+        toast.success('✅ Check-in completed successfully! Location tracking started.')
         setShowSelfAttendanceModal(false)
         setLocation(null)
         setSelfie(null)
@@ -136,7 +145,12 @@ const Dashboard: React.FC = () => {
       onSuccess: () => {
         queryClient.invalidateQueries('my-attendance')
         queryClient.invalidateQueries('attendance-status')
-        toast.success('✅ Check-out completed successfully!')
+        
+        // Stop location tracking after successful check-out
+        locationTracker.stopTracking()
+        console.log('🛑 Location tracking stopped after check-out')
+        
+        toast.success('✅ Check-out completed successfully! Location tracking stopped.')
         setShowSelfAttendanceModal(false)
         setLocation(null)
         setSelfie(null)

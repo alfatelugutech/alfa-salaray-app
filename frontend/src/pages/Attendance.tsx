@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from 'react-query'
 import { attendanceService } from '../services/attendanceService'
 import { employeeService } from '../services/employeeService'
 import { shiftService } from '../services/shiftService'
+import { locationTrackingService } from '../services/locationTrackingService'
 import type { Attendance } from '../types'
 import toast from 'react-hot-toast'
 import { getCompleteLocation, getDeviceInfo } from '../utils/geolocation'
@@ -16,6 +17,7 @@ const Attendance: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('')
   const [dateFilter, setDateFilter] = useState(new Date().toISOString().split('T')[0])
   const [statusFilter, setStatusFilter] = useState('')
+  const [locationHistory, setLocationHistory] = useState<any[]>([])
   const queryClient = useQueryClient()
 
   // Fetch attendance records
@@ -58,11 +60,21 @@ const Attendance: React.FC = () => {
   }
 
   // View attendance handler
-  const handleViewAttendance = (id: string) => {
+  const handleViewAttendance = async (id: string) => {
     const attendance = attendanceData?.data?.attendances?.find((att: Attendance) => att.id === id)
     if (attendance) {
       setSelectedAttendance(attendance)
       setShowViewModal(true)
+      
+      // Fetch location history for this attendance
+      try {
+        const locationData = await locationTrackingService.getAdminLocationHistory(id)
+        setLocationHistory(locationData.data.locationHistory)
+        console.log('📍 Location history loaded:', locationData.data.locationHistory)
+      } catch (error) {
+        console.error('❌ Error fetching location history:', error)
+        setLocationHistory([])
+      }
     }
   }
 
@@ -454,9 +466,11 @@ const Attendance: React.FC = () => {
       {showViewModal && selectedAttendance && (
         <ViewAttendanceModal
           attendance={selectedAttendance}
+          locationHistory={locationHistory}
           onClose={() => {
             setShowViewModal(false)
             setSelectedAttendance(null)
+            setLocationHistory([])
           }}
         />
       )}
@@ -806,8 +820,9 @@ const MarkAttendanceModal: React.FC<{
 // View Attendance Modal Component
 const ViewAttendanceModal: React.FC<{
   attendance: Attendance
+  locationHistory: any[]
   onClose: () => void
-}> = ({ attendance, onClose }) => {
+}> = ({ attendance, locationHistory, onClose }) => {
   const formatTime = (dateString: string | null) => {
     if (!dateString) return 'N/A'
     return new Date(dateString).toLocaleString('en-US', {
@@ -1023,6 +1038,63 @@ const ViewAttendanceModal: React.FC<{
                 )}
               </div>
             </div>
+          </div>
+
+          {/* Location Tracking History */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <MapPin className="h-5 w-5" />
+              Location Tracking History
+            </h3>
+            {locationHistory && locationHistory.length > 0 ? (
+              <div className="space-y-3">
+                <div className="text-sm text-gray-600 mb-3">
+                  📍 {locationHistory.length} location points tracked during work hours
+                </div>
+                <div className="max-h-64 overflow-y-auto space-y-2">
+                  {locationHistory.map((location: any, index: number) => (
+                    <div key={location.id} className="p-3 bg-gray-50 rounded-lg border">
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <div className="text-sm font-medium text-gray-900">
+                            Point #{index + 1}
+                          </div>
+                          <div className="text-xs text-gray-600 mt-1">
+                            {new Date(location.timestamp).toLocaleString('en-US', {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                              second: '2-digit',
+                              hour12: true
+                            })}
+                          </div>
+                          {location.address && (
+                            <div className="text-xs text-blue-600 mt-1">
+                              📍 {location.address}
+                            </div>
+                          )}
+                        </div>
+                        <div className="text-xs text-gray-500 text-right">
+                          <div>Lat: {location.latitude?.toFixed(6)}</div>
+                          <div>Lng: {location.longitude?.toFixed(6)}</div>
+                          {location.accuracy && (
+                            <div>Acc: {location.accuracy?.toFixed(1)}m</div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="p-4 bg-gray-50 rounded-lg text-gray-500 text-center">
+                <MapPin className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                <div>No location tracking data available</div>
+                <div className="text-xs mt-1">Location tracking starts after check-in and stops at check-out</div>
+              </div>
+            )}
           </div>
 
           {/* Device Information */}
