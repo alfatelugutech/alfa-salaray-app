@@ -196,11 +196,6 @@ const PayrollManagement: React.FC = () => {
     }
   }
 
-  const handleMarkAsPaid = (id: string) => {
-    if (window.confirm('Are you sure you want to mark this payroll as paid?')) {
-      markPaidMutation.mutate(id)
-    }
-  }
 
   const handleDeletePayroll = (id: string) => {
     if (window.confirm('Are you sure you want to delete this payroll record?')) {
@@ -246,16 +241,6 @@ const PayrollManagement: React.FC = () => {
     }
   }
 
-  const getPaymentMethodIcon = (method: string) => {
-    switch (method) {
-      case 'BANK_TRANSFER': return <CreditCard className="w-4 h-4" />
-      case 'CASH': return <Banknote className="w-4 h-4" />
-      case 'CHECK': return <FileText className="w-4 h-4" />
-      case 'MOBILE_MONEY': return <Smartphone className="w-4 h-4" />
-      case 'CRYPTOCURRENCY': return <Coins className="w-4 h-4" />
-      default: return <MoreHorizontal className="w-4 h-4" />
-    }
-  }
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', {
