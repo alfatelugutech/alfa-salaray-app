@@ -216,9 +216,18 @@ const Dashboard: React.FC = () => {
     } catch (error: any) {
       console.log('❌ Location capture failed:', error)
       toast.error(error.message || 'Failed to get location')
+      setIsAutoCapturing(false)
+      return
     }
 
     setIsAutoCapturing(false)
+    
+    // Verify both selfie and location are captured before proceeding
+    if (!selfie || !location) {
+      console.error('❌ Missing data for submission:', { hasSelfie: !!selfie, hasLocation: !!location })
+      toast.error('Failed to capture required data. Please try again.')
+      return
+    }
     
     // Automatically submit attendance after capturing selfie and location
     setTimeout(() => {
@@ -254,8 +263,15 @@ const Dashboard: React.FC = () => {
       console.log('🔍 Check-out data being sent:', {
         hasSelfie: !!selfie,
         selfieLength: selfie?.length || 0,
+        selfiePreview: selfie?.substring(0, 50) + '...',
         hasLocation: !!location,
-        checkOutData
+        locationData: location,
+        checkOutData,
+        fullPayload: {
+          notes: selfAttendanceData.notes || undefined,
+          checkOutSelfie: selfie || undefined,
+          checkOutLocation: location || undefined
+        }
       })
       
       toast.loading('🎯 Automatically checking out...', { duration: 2000 })
@@ -275,8 +291,18 @@ const Dashboard: React.FC = () => {
       console.log('🔍 Check-in data being sent:', {
         hasSelfie: !!selfie,
         selfieLength: selfie?.length || 0,
+        selfiePreview: selfie?.substring(0, 50) + '...',
         hasLocation: !!location,
-        checkInData
+        locationData: location,
+        checkInData,
+        fullPayload: {
+          isRemote: selfAttendanceData.isRemote,
+          notes: selfAttendanceData.notes || undefined,
+          checkInSelfie: selfie || undefined,
+          checkInLocation: location || undefined,
+          deviceInfo: deviceInfo || undefined,
+          shiftId: null
+        }
       })
       
       toast.loading('🎯 Automatically checking in...', { duration: 2000 })
