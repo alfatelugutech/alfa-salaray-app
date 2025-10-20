@@ -69,6 +69,7 @@ const Attendance: React.FC = () => {
   // Edit attendance handler
   const handleEditAttendance = (id: string) => {
     // TODO: Implement edit attendance modal
+    console.log('Edit attendance for ID:', id)
     toast.success('Edit attendance feature coming soon')
   }
 
