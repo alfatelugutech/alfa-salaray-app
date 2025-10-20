@@ -303,13 +303,24 @@ const PayrollManagement: React.FC = () => {
           <h1 className="text-2xl font-bold text-gray-900">Payroll Management</h1>
           <p className="text-gray-600">Manage employee salaries and payroll processing</p>
         </div>
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="btn btn-primary mt-4 sm:mt-0"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Create Payroll
-        </button>
+        <div className="flex gap-3 mt-4 sm:mt-0">
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="btn btn-primary"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Create Payroll
+          </button>
+          {selectedPayrolls.length > 0 && (
+            <button
+              onClick={handleBulkPayment}
+              className="btn btn-secondary"
+            >
+              <CreditCard className="w-4 h-4 mr-2" />
+              Bulk Payment ({selectedPayrolls.length})
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Statistics Cards */}
@@ -600,12 +611,19 @@ const PayrollManagement: React.FC = () => {
                       </button>
                       {payroll.status !== 'PAID' && (
                         <button
-                          onClick={() => handleMarkAsPaid(payroll.id)}
+                          onClick={() => handleProcessPayment(payroll)}
                           className="text-green-600 hover:text-green-900"
+                          title="Process Payment"
                         >
-                          <CheckCircle className="w-4 h-4" />
+                          <CreditCard className="w-4 h-4" />
                         </button>
                       )}
+                      <input
+                        type="checkbox"
+                        checked={selectedPayrolls.includes(payroll.id)}
+                        onChange={(e) => handlePayrollSelect(payroll.id, e.target.checked)}
+                        className="rounded border-gray-300"
+                      />
                       <button
                         onClick={() => handleDeletePayroll(payroll.id)}
                         className="text-red-600 hover:text-red-900"

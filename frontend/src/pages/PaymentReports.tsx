@@ -6,8 +6,7 @@ import {
   DollarSign, 
   Users, 
   Calendar, 
-  Download, 
-  Filter,
+  Download,
   CreditCard,
   Banknote,
   Smartphone,
@@ -30,7 +29,7 @@ const PaymentReports: React.FC = () => {
   const [reportType, setReportType] = useState('summary')
 
   // Fetch payment statistics
-  const { data: paymentStats, isLoading: statsLoading } = useQuery(
+  const { data: paymentStats } = useQuery(
     ['payment-stats', selectedYear, selectedMonth],
     () => payrollService.getPaymentStats({
       year: selectedYear,
@@ -58,7 +57,7 @@ const PaymentReports: React.FC = () => {
   // Generate monthly payment data for charts
   const generateMonthlyData = () => {
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-    const data = []
+    const data: Array<{ month: string; amount: number; count: number }> = []
     
     for (let i = 0; i < 12; i++) {
       const monthData = paymentData?.data?.payrolls?.filter((payroll: any) => {
@@ -79,7 +78,7 @@ const PaymentReports: React.FC = () => {
   // Generate payment method data
   const generatePaymentMethodData = () => {
     const methods = ['BANK_TRANSFER', 'CASH', 'CHECK', 'MOBILE_MONEY', 'CRYPTOCURRENCY', 'OTHER']
-    const data = []
+    const data: Array<{ method: string; amount: number; count: number; percentage: number }> = []
     
     methods.forEach(method => {
       const methodData = paymentData?.data?.payrolls?.filter((payroll: any) => 
@@ -90,7 +89,7 @@ const PaymentReports: React.FC = () => {
         method: method.replace('_', ' '),
         amount: methodData.reduce((sum: number, payroll: any) => sum + Number(payroll.netSalary), 0),
         count: methodData.length,
-        percentage: paymentData?.data?.payrolls?.length > 0 ? 
+        percentage: paymentData?.data?.payrolls?.length ? 
           (methodData.length / paymentData.data.payrolls.length) * 100 : 0
       })
     })
