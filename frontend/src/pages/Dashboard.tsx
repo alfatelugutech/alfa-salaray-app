@@ -100,13 +100,13 @@ const Dashboard: React.FC = () => {
     }
   )
 
-  // Self-attendance mutation
-  const markSelfAttendanceMutation = useMutation(
-    attendanceService.markAttendance,
+  // Self check-in mutation
+  const selfCheckInMutation = useMutation(
+    attendanceService.selfCheckIn,
     {
       onSuccess: () => {
         queryClient.invalidateQueries('my-attendance')
-        toast.success('Attendance marked successfully!')
+        toast.success('✅ Check-in completed successfully!')
         setShowSelfAttendanceModal(false)
         setLocation(null)
         setSelfie(null)
@@ -117,8 +117,56 @@ const Dashboard: React.FC = () => {
         })
       },
       onError: (error: any) => {
-        toast.error(error.response?.data?.error || 'Failed to mark attendance')
+        const errorMessage = error.response?.data?.error || 'Failed to check in'
+        if (errorMessage.includes('already marked')) {
+          toast.error('You have already checked in today. Please check out first.')
+        } else if (errorMessage.includes('Already completed attendance')) {
+          toast.error('Attendance already completed for today')
+        } else {
+          toast.error(errorMessage)
+        }
       }
+    }
+  )
+
+  // Self check-out mutation
+  const selfCheckOutMutation = useMutation(
+    attendanceService.selfCheckOut,
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries('my-attendance')
+        queryClient.invalidateQueries('attendance-status')
+        toast.success('✅ Check-out completed successfully!')
+        setShowSelfAttendanceModal(false)
+        setLocation(null)
+        setSelfie(null)
+        setSelfAttendanceData({
+          notes: '',
+          isRemote: false,
+          overtimeHours: ''
+        })
+      },
+      onError: (error: any) => {
+        const errorMessage = error.response?.data?.error || 'Failed to check out'
+        if (errorMessage.includes('No active check-in')) {
+          toast.error('Please check in first before checking out')
+        } else if (errorMessage.includes('Already checked out')) {
+          toast.error('You have already checked out today')
+        } else {
+          toast.error(errorMessage)
+        }
+      }
+    }
+  )
+
+  // Get current attendance status
+  const { data: attendanceStatus } = useQuery(
+    'attendance-status',
+    () => attendanceService.getAttendanceStatus(),
+    {
+      enabled: !!user?.employeeId,
+      refetchInterval: 30000, // Refetch every 30 seconds
+      refetchOnWindowFocus: true
     }
   )
 
@@ -159,95 +207,35 @@ const Dashboard: React.FC = () => {
     // Get device info
     const deviceInfo = getDeviceInfo()
     
-    // Automatically capture current date and time
-    const now = new Date()
-    const today = now.toISOString().split('T')[0]
+    // Determine if this is check-in or check-out based on current status
+    const isCheckOut = attendanceStatus?.status?.canCheckOut
     
-    // Auto-detect status based on current time
-    const hours = now.getHours()
-    const minutes = now.getMinutes()
-    let autoStatus = 'PRESENT'
-    
-    // If check-in after 9:00 AM, mark as LATE
-    if (hours > 9 || (hours === 9 && minutes > 0)) {
-      autoStatus = 'LATE'
+    if (isCheckOut) {
+      // Check-out flow
+      const checkOutData = {
+        notes: selfAttendanceData.notes || undefined,
+        checkOutSelfie: selfie || undefined,
+        checkOutLocation: location || undefined
+      }
+      
+      toast.loading('🎯 Automatically checking out...', { duration: 2000 })
+      selfCheckOutMutation.mutate(checkOutData)
+    } else {
+      // Check-in flow
+      const checkInData = {
+        isRemote: selfAttendanceData.isRemote,
+        notes: selfAttendanceData.notes || undefined,
+        checkInSelfie: selfie || undefined,
+        checkInLocation: location || undefined,
+        deviceInfo: deviceInfo || undefined,
+        shiftId: null
+      }
+      
+      toast.loading('🎯 Automatically checking in...', { duration: 2000 })
+      selfCheckInMutation.mutate(checkInData)
     }
-    
-    // If check-in after 12:00 PM, mark as HALF_DAY
-    if (hours >= 12) {
-      autoStatus = 'HALF_DAY'
-    }
-    
-    // Prepare submit data with automatic data capture
-    const submitData: any = {
-      employeeId: user?.employeeId,
-      date: today, // Automatic current date
-      checkIn: now.toISOString(), // Automatic current time
-      status: autoStatus, // Auto-detected status
-      notes: selfAttendanceData.notes || undefined,
-      isRemote: selfAttendanceData.isRemote,
-      overtimeHours: selfAttendanceData.overtimeHours ? parseFloat(selfAttendanceData.overtimeHours) : undefined,
-      deviceInfo,
-      checkInSelfie: selfie || undefined,
-      checkInLocation: location || undefined
-    }
-    
-    // Show loading message
-    toast.loading('🎯 Automatically marking attendance...', { duration: 2000 })
-    
-    // Submit attendance automatically
-    markSelfAttendanceMutation.mutate(submitData)
   }
 
-  const handleMarkSelfAttendance = (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    // Get device info
-    const deviceInfo = getDeviceInfo()
-    
-    // Automatically capture current date and time
-    const now = new Date()
-    const today = now.toISOString().split('T')[0]
-    
-    // Auto-detect status based on current time
-    const hours = now.getHours()
-    const minutes = now.getMinutes()
-    let autoStatus = 'PRESENT'
-    
-    // If check-in after 9:00 AM, mark as LATE
-    if (hours > 9 || (hours === 9 && minutes > 0)) {
-      autoStatus = 'LATE'
-    }
-    
-    // If check-in after 12:00 PM, mark as HALF_DAY
-    if (hours >= 12) {
-      autoStatus = 'HALF_DAY'
-    }
-    
-    // Determine if this is check-in or check-out based on existing attendance
-    // This will be determined by the backend based on existing records
-    const isCheckOut = false // Will be determined by backend logic
-    
-    // Prepare submit data with automatic data capture
-    const submitData: any = {
-      employeeId: user?.employeeId,
-      date: today, // Automatic current date
-      checkIn: !isCheckOut ? now.toISOString() : undefined, // Automatic current time
-      checkOut: isCheckOut ? now.toISOString() : undefined, // Automatic current time
-      status: autoStatus, // Auto-detected status
-      notes: selfAttendanceData.notes || undefined,
-      isRemote: selfAttendanceData.isRemote,
-      overtimeHours: selfAttendanceData.overtimeHours ? parseFloat(selfAttendanceData.overtimeHours) : undefined,
-      deviceInfo,
-      // Dual selfies: check-in selfie or check-out selfie
-      checkInSelfie: !isCheckOut && selfie ? selfie : undefined,
-      checkOutSelfie: isCheckOut && selfie ? selfie : undefined,
-      checkInLocation: !isCheckOut && location ? location : undefined,
-      checkOutLocation: isCheckOut && location ? location : undefined
-    }
-    
-    markSelfAttendanceMutation.mutate(submitData)
-  }
 
   // Check if user is admin/HR
   const isAdmin = user?.role === 'SUPER_ADMIN' || user?.role === 'HR_MANAGER'
@@ -496,7 +484,7 @@ const Dashboard: React.FC = () => {
               </button>
             </div>
 
-            <form onSubmit={handleMarkSelfAttendance} className="p-6 space-y-4">
+            <div className="p-6 space-y-4">
               {/* Automatic Data Capture Notice */}
               <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
                 <div className="flex items-center gap-2 mb-2">
@@ -516,13 +504,13 @@ const Dashboard: React.FC = () => {
                       <Camera className="w-10 h-10 text-white" />
                     </div>
                     <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                      📸 Attendance Selfie
+                      📸 {attendanceStatus?.status?.canCheckOut ? 'Check-Out Selfie' : 'Check-In Selfie'}
                     </h3>
                     <p className="text-base text-gray-700">
-                      🌅 Take your attendance selfie
+                      {attendanceStatus?.status?.canCheckOut ? '🌆 Take your check-out selfie' : '🌅 Take your check-in selfie'}
                     </p>
                     <p className="text-sm text-gray-600 mt-2">
-                      Selfie + location will be automatically captured and attendance will be marked
+                      Selfie + location will be automatically captured and {attendanceStatus?.status?.canCheckOut ? 'check-out' : 'check-in'} will be marked
                     </p>
                   </div>
                   <button
@@ -539,7 +527,7 @@ const Dashboard: React.FC = () => {
                     ) : (
                       <>
                         <Camera className="w-6 h-6" />
-                        📸 Take Selfie & Mark Attendance
+                        📸 {attendanceStatus?.status?.canCheckOut ? 'Take Check-Out Selfie' : 'Take Check-In Selfie'}
                       </>
                     )}
                   </button>
@@ -671,14 +659,18 @@ const Dashboard: React.FC = () => {
                   Cancel
                 </button>
                 <button
-                  type="submit"
-                  disabled={markSelfAttendanceMutation.isLoading}
+                  type="button"
+                  onClick={handleTakeSelfieAndLocation}
+                  disabled={isAutoCapturing || selfCheckInMutation.isLoading || selfCheckOutMutation.isLoading}
                   className="flex-1 bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700 disabled:opacity-50"
                 >
-                  {markSelfAttendanceMutation.isLoading ? 'Marking...' : 'Mark Attendance'}
+                  {isAutoCapturing ? 'Capturing...' : 
+                   selfCheckInMutation.isLoading ? 'Checking In...' :
+                   selfCheckOutMutation.isLoading ? 'Checking Out...' :
+                   'Take Selfie & Mark Attendance'}
                 </button>
               </div>
-            </form>
+            </div>
           </div>
         </div>
       )}
