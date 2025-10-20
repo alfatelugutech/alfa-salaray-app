@@ -179,6 +179,10 @@ const Dashboard: React.FC = () => {
       const photo = await captureSelfie()
       const compressed = await compressImage(photo)
       setSelfie(compressed)
+      console.log('📸 Selfie captured and set:', {
+        hasSelfie: !!compressed,
+        selfieLength: compressed?.length || 0
+      })
       toast.success('📸 Selfie captured successfully!')
     } catch (error: any) {
       toast.error(error.message || 'Failed to capture selfie')
@@ -190,8 +194,13 @@ const Dashboard: React.FC = () => {
     try {
       const loc = await getCompleteLocation()
       setLocation(loc)
+      console.log('📍 Location captured and set:', {
+        hasLocation: !!loc,
+        locationData: loc
+      })
       toast.success('📍 Location captured successfully!')
     } catch (error: any) {
+      console.log('❌ Location capture failed:', error)
       toast.error(error.message || 'Failed to get location')
     }
 
@@ -207,6 +216,15 @@ const Dashboard: React.FC = () => {
     // Get device info
     const deviceInfo = getDeviceInfo()
     
+    // Debug current state
+    console.log('🔍 Auto-submit state check:', {
+      hasSelfie: !!selfie,
+      selfieLength: selfie?.length || 0,
+      hasLocation: !!location,
+      locationData: location,
+      attendanceStatus: attendanceStatus?.status
+    })
+    
     // Determine if this is check-in or check-out based on current status
     const isCheckOut = attendanceStatus?.status?.canCheckOut
     
@@ -217,6 +235,14 @@ const Dashboard: React.FC = () => {
         checkOutSelfie: selfie || undefined,
         checkOutLocation: location || undefined
       }
+      
+      // Debug logging
+      console.log('🔍 Check-out data being sent:', {
+        hasSelfie: !!selfie,
+        selfieLength: selfie?.length || 0,
+        hasLocation: !!location,
+        checkOutData
+      })
       
       toast.loading('🎯 Automatically checking out...', { duration: 2000 })
       selfCheckOutMutation.mutate(checkOutData)
@@ -230,6 +256,14 @@ const Dashboard: React.FC = () => {
         deviceInfo: deviceInfo || undefined,
         shiftId: null
       }
+      
+      // Debug logging
+      console.log('🔍 Check-in data being sent:', {
+        hasSelfie: !!selfie,
+        selfieLength: selfie?.length || 0,
+        hasLocation: !!location,
+        checkInData
+      })
       
       toast.loading('🎯 Automatically checking in...', { duration: 2000 })
       selfCheckInMutation.mutate(checkInData)
