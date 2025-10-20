@@ -189,6 +189,14 @@ export interface Payroll {
   netSalary: number
   status: 'PENDING' | 'PROCESSED' | 'PAID' | 'CANCELLED'
   paidAt?: string
+  
+  // Payment details
+  paymentMethod?: 'BANK_TRANSFER' | 'CASH' | 'CHECK' | 'MOBILE_MONEY' | 'CRYPTOCURRENCY' | 'OTHER'
+  paymentReference?: string
+  paymentNotes?: string
+  processedBy?: string
+  processedAt?: string
+  
   createdAt: string
   updatedAt: string
   employee?: Employee

@@ -14,6 +14,7 @@ import Profile from './pages/Profile'
 // Phase 2 imports
 import ShiftManagement from './pages/ShiftManagement'
 import PayrollManagement from './pages/PayrollManagement'
+import PaymentReports from './pages/PaymentReports'
 import SystemSettings from './pages/SystemSettings'
 import LoadingSpinner from './components/LoadingSpinner'
 
@@ -54,6 +55,7 @@ function App() {
             {/* Phase 2 routes */}
             <Route path="/shifts" element={<ShiftManagement />} />
             <Route path="/payroll" element={<PayrollManagement />} />
+            <Route path="/payment-reports" element={<PaymentReports />} />
             <Route path="/settings" element={<SystemSettings />} />
           </>
         ) : (

@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from 'react-query'
-import { Plus, Edit, Trash2, DollarSign, Calendar, User, CheckCircle, Clock, Calculator } from 'lucide-react'
+import { Plus, Edit, Trash2, DollarSign, Calendar, User, CheckCircle, Clock, Calculator, CreditCard, Banknote, Smartphone, FileText, Coins, MoreHorizontal } from 'lucide-react'
 import { payrollService } from '../services/payrollService'
 import { employeeService } from '../services/employeeService'
 import { attendanceService } from '../services/attendanceService'
@@ -16,6 +16,17 @@ const PayrollManagement: React.FC = () => {
   const [yearFilter, setYearFilter] = useState('')
   const [selectedEmployee, setSelectedEmployee] = useState('')
   const [workingHoursData, setWorkingHoursData] = useState<any>(null)
+  
+  // Payment-related state
+  const [showPaymentModal, setShowPaymentModal] = useState(false)
+  const [showBulkPaymentModal, setShowBulkPaymentModal] = useState(false)
+  const [selectedPayroll, setSelectedPayroll] = useState<Payroll | null>(null)
+  const [selectedPayrolls, setSelectedPayrolls] = useState<string[]>([])
+  const [paymentData, setPaymentData] = useState({
+    paymentMethod: 'BANK_TRANSFER',
+    paymentReference: '',
+    paymentNotes: ''
+  })
 
   const queryClient = useQueryClient()
 
@@ -144,6 +155,37 @@ const PayrollManagement: React.FC = () => {
     }
   })
 
+  // Process payment mutation
+  const processPaymentMutation = useMutation({
+    mutationFn: ({ id, paymentData }: { id: string; paymentData: any }) =>
+      payrollService.processPayment(id, paymentData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['payroll'] })
+      queryClient.invalidateQueries({ queryKey: ['payroll-stats'] })
+      toast.success('Salary payment processed successfully')
+      setShowPaymentModal(false)
+      setSelectedPayroll(null)
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || 'Failed to process payment')
+    }
+  })
+
+  // Bulk payment mutation
+  const bulkPaymentMutation = useMutation({
+    mutationFn: payrollService.bulkPayment,
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['payroll'] })
+      queryClient.invalidateQueries({ queryKey: ['payroll-stats'] })
+      toast.success(`Bulk payment processed for ${data.updatedCount} employees`)
+      setShowBulkPaymentModal(false)
+      setSelectedPayrolls([])
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || 'Failed to process bulk payment')
+    }
+  })
+
   const handleCreatePayroll = (data: CreatePayrollData) => {
     createPayrollMutation.mutate(data)
   }
@@ -163,6 +205,55 @@ const PayrollManagement: React.FC = () => {
   const handleDeletePayroll = (id: string) => {
     if (window.confirm('Are you sure you want to delete this payroll record?')) {
       deletePayrollMutation.mutate(id)
+    }
+  }
+
+  // Payment handlers
+  const handleProcessPayment = (payroll: Payroll) => {
+    setSelectedPayroll(payroll)
+    setShowPaymentModal(true)
+  }
+
+  const handleBulkPayment = () => {
+    if (selectedPayrolls.length === 0) {
+      toast.error('Please select payroll records for bulk payment')
+      return
+    }
+    setShowBulkPaymentModal(true)
+  }
+
+  const handlePaymentSubmit = () => {
+    if (selectedPayroll) {
+      processPaymentMutation.mutate({
+        id: selectedPayroll.id,
+        paymentData
+      })
+    }
+  }
+
+  const handleBulkPaymentSubmit = () => {
+    bulkPaymentMutation.mutate({
+      payrollIds: selectedPayrolls,
+      ...paymentData
+    })
+  }
+
+  const handlePayrollSelect = (payrollId: string, checked: boolean) => {
+    if (checked) {
+      setSelectedPayrolls([...selectedPayrolls, payrollId])
+    } else {
+      setSelectedPayrolls(selectedPayrolls.filter(id => id !== payrollId))
+    }
+  }
+
+  const getPaymentMethodIcon = (method: string) => {
+    switch (method) {
+      case 'BANK_TRANSFER': return <CreditCard className="w-4 h-4" />
+      case 'CASH': return <Banknote className="w-4 h-4" />
+      case 'CHECK': return <FileText className="w-4 h-4" />
+      case 'MOBILE_MONEY': return <Smartphone className="w-4 h-4" />
+      case 'CRYPTOCURRENCY': return <Coins className="w-4 h-4" />
+      default: return <MoreHorizontal className="w-4 h-4" />
     }
   }
 
@@ -549,6 +640,36 @@ const PayrollManagement: React.FC = () => {
           isLoading={updatePayrollMutation.isLoading}
         />
       )}
+
+      {/* Payment Modal */}
+      {showPaymentModal && selectedPayroll && (
+        <PaymentModal
+          payroll={selectedPayroll}
+          paymentData={paymentData}
+          setPaymentData={setPaymentData}
+          onClose={() => {
+            setShowPaymentModal(false)
+            setSelectedPayroll(null)
+          }}
+          onSubmit={handlePaymentSubmit}
+          isLoading={processPaymentMutation.isLoading}
+        />
+      )}
+
+      {/* Bulk Payment Modal */}
+      {showBulkPaymentModal && (
+        <BulkPaymentModal
+          selectedCount={selectedPayrolls.length}
+          paymentData={paymentData}
+          setPaymentData={setPaymentData}
+          onClose={() => {
+            setShowBulkPaymentModal(false)
+            setSelectedPayrolls([])
+          }}
+          onSubmit={handleBulkPaymentSubmit}
+          isLoading={bulkPaymentMutation.isLoading}
+        />
+      )}
     </div>
   )
 }
@@ -773,6 +894,178 @@ const EditPayrollModal: React.FC<{
             </button>
             <button type="submit" className="btn btn-primary" disabled={isLoading}>
               {isLoading ? 'Updating...' : 'Update Payroll'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+// Payment Processing Modal
+const PaymentModal: React.FC<{
+  payroll: Payroll
+  paymentData: any
+  setPaymentData: (data: any) => void
+  onClose: () => void
+  onSubmit: () => void
+  isLoading: boolean
+}> = ({ payroll, paymentData, setPaymentData, onClose, onSubmit, isLoading }) => {
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    onSubmit()
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-lg p-6 w-full max-w-md">
+        <h2 className="text-xl font-semibold mb-4">Process Salary Payment</h2>
+        <div className="mb-4 p-4 bg-gray-50 rounded-lg">
+          <div className="text-sm text-gray-600">Employee: {payroll.employee?.user?.firstName} {payroll.employee?.user?.lastName}</div>
+          <div className="text-sm text-gray-600">Amount: {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(payroll.netSalary)}</div>
+          <div className="text-sm text-gray-600">Month: {payroll.month}/{payroll.year}</div>
+        </div>
+        
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="label">Payment Method</label>
+            <select
+              value={paymentData.paymentMethod}
+              onChange={(e) => setPaymentData({...paymentData, paymentMethod: e.target.value})}
+              className="input"
+              required
+            >
+              <option value="BANK_TRANSFER">Bank Transfer</option>
+              <option value="CASH">Cash</option>
+              <option value="CHECK">Check</option>
+              <option value="MOBILE_MONEY">Mobile Money</option>
+              <option value="CRYPTOCURRENCY">Cryptocurrency</option>
+              <option value="OTHER">Other</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="label">Payment Reference</label>
+            <input
+              type="text"
+              value={paymentData.paymentReference}
+              onChange={(e) => setPaymentData({...paymentData, paymentReference: e.target.value})}
+              className="input"
+              placeholder="Transaction ID, check number, etc."
+            />
+          </div>
+
+          <div>
+            <label className="label">Payment Notes</label>
+            <textarea
+              value={paymentData.paymentNotes}
+              onChange={(e) => setPaymentData({...paymentData, paymentNotes: e.target.value})}
+              className="input"
+              rows={3}
+              placeholder="Additional payment notes..."
+            />
+          </div>
+
+          <div className="flex justify-end space-x-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="btn btn-outline"
+              disabled={isLoading}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={isLoading}
+            >
+              {isLoading ? 'Processing...' : 'Process Payment'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+// Bulk Payment Modal
+const BulkPaymentModal: React.FC<{
+  selectedCount: number
+  paymentData: any
+  setPaymentData: (data: any) => void
+  onClose: () => void
+  onSubmit: () => void
+  isLoading: boolean
+}> = ({ selectedCount, paymentData, setPaymentData, onClose, onSubmit, isLoading }) => {
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    onSubmit()
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-lg p-6 w-full max-w-md">
+        <h2 className="text-xl font-semibold mb-4">Bulk Salary Payment</h2>
+        <div className="mb-4 p-4 bg-blue-50 rounded-lg">
+          <div className="text-sm text-blue-600">Processing payment for {selectedCount} employees</div>
+        </div>
+        
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="label">Payment Method</label>
+            <select
+              value={paymentData.paymentMethod}
+              onChange={(e) => setPaymentData({...paymentData, paymentMethod: e.target.value})}
+              className="input"
+              required
+            >
+              <option value="BANK_TRANSFER">Bank Transfer</option>
+              <option value="CASH">Cash</option>
+              <option value="CHECK">Check</option>
+              <option value="MOBILE_MONEY">Mobile Money</option>
+              <option value="CRYPTOCURRENCY">Cryptocurrency</option>
+              <option value="OTHER">Other</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="label">Payment Reference</label>
+            <input
+              type="text"
+              value={paymentData.paymentReference}
+              onChange={(e) => setPaymentData({...paymentData, paymentReference: e.target.value})}
+              className="input"
+              placeholder="Batch reference, transaction ID, etc."
+            />
+          </div>
+
+          <div>
+            <label className="label">Payment Notes</label>
+            <textarea
+              value={paymentData.paymentNotes}
+              onChange={(e) => setPaymentData({...paymentData, paymentNotes: e.target.value})}
+              className="input"
+              rows={3}
+              placeholder="Notes for all payments..."
+            />
+          </div>
+
+          <div className="flex justify-end space-x-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="btn btn-outline"
+              disabled={isLoading}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={isLoading}
+            >
+              {isLoading ? 'Processing...' : `Process ${selectedCount} Payments`}
             </button>
           </div>
         </form>

@@ -53,6 +53,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 {/* Phase 2 navigation */}
                 <Link to="/shifts" className="text-gray-600 hover:text-gray-900">Shifts</Link>
                 <Link to="/payroll" className="text-gray-600 hover:text-gray-900">Payroll</Link>
+                <Link to="/payment-reports" className="text-gray-600 hover:text-gray-900">Payment Reports</Link>
                 {user?.role === 'SUPER_ADMIN' && (
                   <>
                     <Link to="/settings" className="text-gray-600 hover:text-gray-900">Settings</Link>

@@ -68,6 +68,56 @@ export const payrollService = {
   }): Promise<PaginatedResponse<Payroll>> {
     const response = await api.get<PaginatedResponse<Payroll>>(`/payroll/employee/${employeeId}`, { params })
     return response.data
+  },
+
+  // Process salary payment with payment details
+  async processPayment(id: string, paymentData: {
+    paymentMethod: string
+    paymentReference?: string
+    paymentNotes?: string
+  }): Promise<Payroll> {
+    const response = await api.put<{ success: boolean; data: { payroll: Payroll } }>(`/payroll/${id}/process-payment`, paymentData)
+    return response.data.data.payroll
+  },
+
+  // Bulk salary payment for multiple employees
+  async bulkPayment(paymentData: {
+    payrollIds: string[]
+    paymentMethod: string
+    paymentReference?: string
+    paymentNotes?: string
+  }): Promise<{
+    updatedCount: number
+    payrolls: Payroll[]
+  }> {
+    const response = await api.post<{ success: boolean; data: any }>('/payroll/bulk-payment', paymentData)
+    return response.data.data
+  },
+
+  // Get payment history for an employee
+  async getPaymentHistory(employeeId: string, params?: {
+    page?: number
+    limit?: number
+    year?: number
+  }): Promise<PaginatedResponse<Payroll>> {
+    const response = await api.get<PaginatedResponse<Payroll>>(`/payroll/employee/${employeeId}/payment-history`, { params })
+    return response.data
+  },
+
+  // Get payment statistics
+  async getPaymentStats(params?: {
+    year?: number
+    month?: number
+  }): Promise<{
+    totalPayrolls: number
+    paidPayrolls: number
+    pendingPayrolls: number
+    totalAmountPaid: number
+    totalAmountPending: number
+    paymentRate: number
+  }> {
+    const response = await api.get<{ success: boolean; data: any }>('/payroll/payment-stats', { params })
+    return response.data.data
   }
 }
 
