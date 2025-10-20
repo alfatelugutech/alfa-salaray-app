@@ -325,9 +325,9 @@ const Attendance: React.FC = () => {
                               <img 
                                 src={(attendance as any).checkInSelfie} 
                                 alt="Check-In" 
-                                className="w-16 h-16 object-cover rounded-lg border-2 border-green-500 cursor-pointer hover:scale-110 transition-transform shadow-md"
+                                className="w-20 h-20 object-cover rounded-lg border-2 border-green-500 cursor-pointer hover:scale-110 transition-transform shadow-md"
                                 onClick={() => window.open((attendance as any).checkInSelfie, '_blank')}
-                                title="Morning check-in selfie"
+                                title="Morning check-in selfie (Passport Size)"
                               />
                               <span className="text-xs text-green-700 mt-1">🌅 In</span>
                             </div>
@@ -337,9 +337,9 @@ const Attendance: React.FC = () => {
                               <img 
                                 src={(attendance as any).checkOutSelfie} 
                                 alt="Check-Out" 
-                                className="w-16 h-16 object-cover rounded-lg border-2 border-orange-500 cursor-pointer hover:scale-110 transition-transform shadow-md"
+                                className="w-20 h-20 object-cover rounded-lg border-2 border-orange-500 cursor-pointer hover:scale-110 transition-transform shadow-md"
                                 onClick={() => window.open((attendance as any).checkOutSelfie, '_blank')}
-                                title="Evening check-out selfie"
+                                title="Evening check-out selfie (Passport Size)"
                               />
                               <span className="text-xs text-orange-700 mt-1">🌆 Out</span>
                             </div>
@@ -517,7 +517,7 @@ const MarkAttendanceModal: React.FC<{
     setIsCapturingSelfie(true)
     try {
       const photo = await captureSelfie()
-      const compressed = await compressImage(photo, 800)
+      const compressed = await compressImage(photo)
       setSelfie(compressed)
       toast.success('📸 Selfie captured successfully!')
     } catch (error: any) {
@@ -533,7 +533,7 @@ const MarkAttendanceModal: React.FC<{
 
     try {
       const imageData = await selectImageFile(file)
-      const compressed = await compressImage(imageData, 800)
+      const compressed = await compressImage(imageData)
       setSelfie(compressed)
       toast.success('📸 Photo uploaded successfully!')
     } catch (error: any) {
@@ -937,7 +937,7 @@ const ViewAttendanceModal: React.FC<{
                     <img
                       src={(attendance as any).checkInSelfie}
                       alt="Check-in Selfie"
-                      className="w-full h-48 object-cover rounded-lg border-2 border-green-500 shadow-md"
+                      className="w-80 h-80 object-cover rounded-lg border-2 border-green-500 shadow-md mx-auto"
                     />
                     <div className="absolute top-2 right-2 bg-green-500 text-white px-2 py-1 rounded text-xs font-semibold">
                       IN
@@ -961,7 +961,7 @@ const ViewAttendanceModal: React.FC<{
                     <img
                       src={(attendance as any).checkOutSelfie}
                       alt="Check-out Selfie"
-                      className="w-full h-48 object-cover rounded-lg border-2 border-orange-500 shadow-md"
+                      className="w-80 h-80 object-cover rounded-lg border-2 border-orange-500 shadow-md mx-auto"
                     />
                     <div className="absolute top-2 right-2 bg-orange-500 text-white px-2 py-1 rounded text-xs font-semibold">
                       OUT

@@ -15,10 +15,6 @@ const Dashboard: React.FC = () => {
   const navigate = useNavigate()
   const [showSelfAttendanceModal, setShowSelfAttendanceModal] = useState(false)
   const [selfAttendanceData, setSelfAttendanceData] = useState({
-    date: new Date().toISOString().split('T')[0],
-    checkIn: new Date().toTimeString().slice(0, 5), // Auto-set current time
-    checkOut: '',
-    status: 'PRESENT',
     notes: '',
     isRemote: false,
     overtimeHours: ''
@@ -115,10 +111,6 @@ const Dashboard: React.FC = () => {
         setLocation(null)
         setSelfie(null)
         setSelfAttendanceData({
-          date: new Date().toISOString().split('T')[0],
-          checkIn: '',
-          checkOut: '',
-          status: 'PRESENT',
           notes: '',
           isRemote: false,
           overtimeHours: ''
@@ -137,7 +129,7 @@ const Dashboard: React.FC = () => {
     // Capture selfie
     try {
       const photo = await captureSelfie()
-      const compressed = await compressImage(photo, 800)
+      const compressed = await compressImage(photo)
       setSelfie(compressed)
       toast.success('📸 Selfie captured successfully!')
     } catch (error: any) {
@@ -156,6 +148,55 @@ const Dashboard: React.FC = () => {
     }
 
     setIsAutoCapturing(false)
+    
+    // Automatically submit attendance after capturing selfie and location
+    setTimeout(() => {
+      handleAutoSubmitAttendance()
+    }, 1000) // Small delay to ensure all data is captured
+  }
+
+  const handleAutoSubmitAttendance = () => {
+    // Get device info
+    const deviceInfo = getDeviceInfo()
+    
+    // Automatically capture current date and time
+    const now = new Date()
+    const today = now.toISOString().split('T')[0]
+    
+    // Auto-detect status based on current time
+    const hours = now.getHours()
+    const minutes = now.getMinutes()
+    let autoStatus = 'PRESENT'
+    
+    // If check-in after 9:00 AM, mark as LATE
+    if (hours > 9 || (hours === 9 && minutes > 0)) {
+      autoStatus = 'LATE'
+    }
+    
+    // If check-in after 12:00 PM, mark as HALF_DAY
+    if (hours >= 12) {
+      autoStatus = 'HALF_DAY'
+    }
+    
+    // Prepare submit data with automatic data capture
+    const submitData: any = {
+      employeeId: user?.employeeId,
+      date: today, // Automatic current date
+      checkIn: now.toISOString(), // Automatic current time
+      status: autoStatus, // Auto-detected status
+      notes: selfAttendanceData.notes || undefined,
+      isRemote: selfAttendanceData.isRemote,
+      overtimeHours: selfAttendanceData.overtimeHours ? parseFloat(selfAttendanceData.overtimeHours) : undefined,
+      deviceInfo,
+      checkInSelfie: selfie || undefined,
+      checkInLocation: location || undefined
+    }
+    
+    // Show loading message
+    toast.loading('🎯 Automatically marking attendance...', { duration: 2000 })
+    
+    // Submit attendance automatically
+    markSelfAttendanceMutation.mutate(submitData)
   }
 
   const handleMarkSelfAttendance = (e: React.FormEvent) => {
@@ -164,16 +205,37 @@ const Dashboard: React.FC = () => {
     // Get device info
     const deviceInfo = getDeviceInfo()
     
-    // Determine if this is check-in or check-out
-    const isCheckOut = !!selfAttendanceData.checkOut
+    // Automatically capture current date and time
+    const now = new Date()
+    const today = now.toISOString().split('T')[0]
+    const currentTime = now.toTimeString().split(' ')[0]
     
-    // Prepare submit data
+    // Auto-detect status based on current time
+    const hours = now.getHours()
+    const minutes = now.getMinutes()
+    let autoStatus = 'PRESENT'
+    
+    // If check-in after 9:00 AM, mark as LATE
+    if (hours > 9 || (hours === 9 && minutes > 0)) {
+      autoStatus = 'LATE'
+    }
+    
+    // If check-in after 12:00 PM, mark as HALF_DAY
+    if (hours >= 12) {
+      autoStatus = 'HALF_DAY'
+    }
+    
+    // Determine if this is check-in or check-out based on existing attendance
+    // This will be determined by the backend based on existing records
+    const isCheckOut = false // Will be determined by backend logic
+    
+    // Prepare submit data with automatic data capture
     const submitData: any = {
       employeeId: user?.employeeId,
-      date: selfAttendanceData.date,
-      checkIn: selfAttendanceData.checkIn ? new Date(`${selfAttendanceData.date}T${selfAttendanceData.checkIn}`).toISOString() : undefined,
-      checkOut: selfAttendanceData.checkOut ? new Date(`${selfAttendanceData.date}T${selfAttendanceData.checkOut}`).toISOString() : undefined,
-      status: selfAttendanceData.status,
+      date: today, // Automatic current date
+      checkIn: !isCheckOut ? now.toISOString() : undefined, // Automatic current time
+      checkOut: isCheckOut ? now.toISOString() : undefined, // Automatic current time
+      status: autoStatus, // Auto-detected status
       notes: selfAttendanceData.notes || undefined,
       isRemote: selfAttendanceData.isRemote,
       overtimeHours: selfAttendanceData.overtimeHours ? parseFloat(selfAttendanceData.overtimeHours) : undefined,
@@ -436,51 +498,15 @@ const Dashboard: React.FC = () => {
             </div>
 
             <form onSubmit={handleMarkSelfAttendance} className="p-6 space-y-4">
-              <div>
-                <label className="label">Date *</label>
-                <input
-                  type="date"
-                  className="input"
-                  value={selfAttendanceData.date}
-                  onChange={(e) => setSelfAttendanceData({...selfAttendanceData, date: e.target.value})}
-                  required
-                />
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="label">Check In</label>
-                  <input
-                    type="time"
-                    className="input"
-                    value={selfAttendanceData.checkIn}
-                    onChange={(e) => setSelfAttendanceData({...selfAttendanceData, checkIn: e.target.value})}
-                  />
+              {/* Automatic Data Capture Notice */}
+              <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="flex items-center gap-2 mb-2">
+                  <Clock className="h-5 w-5 text-blue-600" />
+                  <span className="font-medium text-blue-800">Automatic Data Capture</span>
                 </div>
-                <div>
-                  <label className="label">Check Out</label>
-                  <input
-                    type="time"
-                    className="input"
-                    value={selfAttendanceData.checkOut}
-                    onChange={(e) => setSelfAttendanceData({...selfAttendanceData, checkOut: e.target.value})}
-                  />
-                </div>
-              </div>
-              
-              <div>
-                <label className="label">Status *</label>
-                <select
-                  className="input"
-                  value={selfAttendanceData.status}
-                  onChange={(e) => setSelfAttendanceData({...selfAttendanceData, status: e.target.value})}
-                  required
-                >
-                  <option value="PRESENT">Present</option>
-                  <option value="LATE">Late</option>
-                  <option value="EARLY_LEAVE">Early Leave</option>
-                  <option value="HALF_DAY">Half Day</option>
-                </select>
+                <p className="text-sm text-blue-700">
+                  Date, time, and status will be automatically captured when you take your selfie.
+                </p>
               </div>
 
               {/* Phase 2: Selfie & Location Capture */}
@@ -491,17 +517,13 @@ const Dashboard: React.FC = () => {
                       <Camera className="w-10 h-10 text-white" />
                     </div>
                     <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                      {selfAttendanceData.checkOut ? '📸 Check-Out Selfie' : '📸 Check-In Selfie'}
+                      📸 Attendance Selfie
                     </h3>
                     <p className="text-base text-gray-700">
-                      {selfAttendanceData.checkOut 
-                        ? '🏃 Leaving office? Take your check-out selfie'
-                        : '🌅 Good morning! Take your check-in selfie'}
+                      🌅 Take your attendance selfie
                     </p>
                     <p className="text-sm text-gray-600 mt-2">
-                      {selfAttendanceData.checkOut 
-                        ? 'Evening selfie + location will be captured'
-                        : 'Morning selfie + location will be captured'}
+                      Selfie + location will be automatically captured and attendance will be marked
                     </p>
                   </div>
                   <button
@@ -518,14 +540,12 @@ const Dashboard: React.FC = () => {
                     ) : (
                       <>
                         <Camera className="w-6 h-6" />
-                        {selfAttendanceData.checkOut ? '📸 Take Evening Selfie' : '📸 Take Morning Selfie'}
+                        📸 Take Selfie & Mark Attendance
                       </>
                     )}
                   </button>
                   <p className="text-xs text-gray-600 mt-4 text-center bg-white/50 p-3 rounded-lg">
-                    {selfAttendanceData.checkOut 
-                      ? 'ℹ️ Auto-marked as HALF_DAY if after 11:59 AM'
-                      : 'ℹ️ Camera and location permissions will be requested'}
+                    ℹ️ Camera and location permissions will be requested
                   </p>
                 </div>
               ) : (
@@ -534,12 +554,12 @@ const Dashboard: React.FC = () => {
                   {selfie && (
                     <div>
                       <label className="label text-lg font-semibold">
-                        {selfAttendanceData.checkOut ? '📸 Evening Selfie ✅' : '🌅 Morning Selfie ✅'}
+                        📸 Attendance Selfie ✅
                       </label>
                       <div className="relative">
                         <img 
                           src={selfie} 
-                          alt={selfAttendanceData.checkOut ? 'Check-Out Selfie' : 'Check-In Selfie'} 
+                          alt="Attendance Selfie" 
                           className="w-full h-80 object-cover rounded-xl border-4 border-green-500 shadow-lg"
                         />
                         <button
@@ -611,15 +631,15 @@ const Dashboard: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Optional: Check-out time */}
-                  <div>
-                    <label className="label">Check Out (if marking end of day)</label>
-                    <input
-                      type="time"
-                      className="input"
-                      value={selfAttendanceData.checkOut}
-                      onChange={(e) => setSelfAttendanceData({...selfAttendanceData, checkOut: e.target.value})}
-                    />
+                  {/* Automatic time capture notice */}
+                  <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-green-600" />
+                      <span className="text-sm font-medium text-green-800">Time will be automatically captured</span>
+                    </div>
+                    <p className="text-xs text-green-700 mt-1">
+                      Current time will be used for check-in/check-out
+                    </p>
                   </div>
                   
                   {/* Optional: Notes */}

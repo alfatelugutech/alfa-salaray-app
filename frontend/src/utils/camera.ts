@@ -18,12 +18,12 @@ export const captureSelfie = async (): Promise<string> => {
     }
 
     try {
-      // Request camera access
+      // Request camera access with passport size dimensions
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: 'user', // Front camera (selfie mode)
-          width: { ideal: 640 },
-          height: { ideal: 480 }
+          width: { ideal: 600 },
+          height: { ideal: 600 }
         }
       })
 
@@ -36,10 +36,10 @@ export const captureSelfie = async (): Promise<string> => {
       // Wait for video to be ready
       await new Promise(resolve => setTimeout(resolve, 500))
 
-      // Create canvas for capture
+      // Create canvas for capture with passport size (600x600)
       const canvas = document.createElement('canvas')
-      canvas.width = video.videoWidth || 640
-      canvas.height = video.videoHeight || 480
+      canvas.width = 600
+      canvas.height = 600
       
       // Draw video frame to canvas
       const context = canvas.getContext('2d')
@@ -103,33 +103,27 @@ export const selectImageFile = async (file: File): Promise<string> => {
 }
 
 /**
- * Compress image to reduce file size
+ * Compress image to passport size (600x600) with optimal quality
  */
-export const compressImage = async (dataUrl: string, maxWidth: number = 800): Promise<string> => {
+export const compressImage = async (dataUrl: string): Promise<string> => {
   return new Promise((resolve) => {
     const img = new Image()
     
     img.onload = () => {
       const canvas = document.createElement('canvas')
-      let width = img.width
-      let height = img.height
-
-      // Calculate new dimensions
-      if (width > maxWidth) {
-        height = (height * maxWidth) / width
-        width = maxWidth
-      }
-
-      canvas.width = width
-      canvas.height = height
+      
+      // Set canvas to passport size (600x600)
+      canvas.width = 600
+      canvas.height = 600
 
       const ctx = canvas.getContext('2d')
       if (ctx) {
-        ctx.drawImage(img, 0, 0, width, height)
+        // Draw image centered and scaled to fit passport size
+        ctx.drawImage(img, 0, 0, 600, 600)
       }
 
-      // Convert to base64 with compression
-      const compressed = canvas.toDataURL('image/jpeg', 0.7)
+      // Compress with high quality for passport size
+      const compressed = canvas.toDataURL('image/jpeg', 0.9)
       resolve(compressed)
     }
 
@@ -141,6 +135,6 @@ export const compressImage = async (dataUrl: string, maxWidth: number = 800): Pr
  * Get thumbnail from image
  */
 export const getImageThumbnail = async (dataUrl: string): Promise<string> => {
-  return compressImage(dataUrl, 200)
+  return compressImage(dataUrl)
 }
 
