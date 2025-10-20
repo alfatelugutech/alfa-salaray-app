@@ -8,18 +8,14 @@ import { employeeService } from '../services/employeeService'
 import { Clock, X, MapPin, Camera } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { getCompleteLocation, getDeviceInfo } from '../utils/geolocation'
-import { captureSelfie, compressImage } from '../utils/camera'
+import { captureSelfie, compressImage, checkCameraPermissions } from '../utils/camera'
 import { locationTracker } from '../utils/locationTracker'
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth()
   const navigate = useNavigate()
   const [showSelfAttendanceModal, setShowSelfAttendanceModal] = useState(false)
-  const [selfAttendanceData, setSelfAttendanceData] = useState({
-    notes: '',
-    isRemote: false,
-    overtimeHours: ''
-  })
+  const [selfAttendanceData, setSelfAttendanceData] = useState({})
   const [location, setLocation] = useState<any>(null)
   const [selfie, setSelfie] = useState<string | null>(null)
   const [isAutoCapturing, setIsAutoCapturing] = useState(false)
@@ -119,11 +115,7 @@ const Dashboard: React.FC = () => {
         setShowSelfAttendanceModal(false)
         setLocation(null)
         setSelfie(null)
-        setSelfAttendanceData({
-          notes: '',
-          isRemote: false,
-          overtimeHours: ''
-        })
+        setSelfAttendanceData({})
       },
       onError: (error: any) => {
         const errorMessage = error.response?.data?.error || 'Failed to check in'
@@ -154,11 +146,7 @@ const Dashboard: React.FC = () => {
         setShowSelfAttendanceModal(false)
         setLocation(null)
         setSelfie(null)
-        setSelfAttendanceData({
-          notes: '',
-          isRemote: false,
-          overtimeHours: ''
-        })
+        setSelfAttendanceData({})
       },
       onError: (error: any) => {
         const errorMessage = error.response?.data?.error || 'Failed to check out'
@@ -188,6 +176,21 @@ const Dashboard: React.FC = () => {
   const handleTakeSelfieAndLocation = async () => {
     setIsAutoCapturing(true)
     
+    // Check camera permissions first
+    try {
+      const permissionCheck = await checkCameraPermissions()
+      if (!permissionCheck.hasPermission) {
+        toast.error(permissionCheck.message)
+        setIsAutoCapturing(false)
+        return
+      }
+    } catch (error: any) {
+      console.error('❌ Camera permission check failed:', error)
+      toast.error('Failed to check camera permissions. Please try again.')
+      setIsAutoCapturing(false)
+      return
+    }
+
     // Capture selfie
     try {
       const photo = await captureSelfie()
@@ -199,6 +202,7 @@ const Dashboard: React.FC = () => {
       })
       toast.success('📸 Selfie captured successfully!')
     } catch (error: any) {
+      console.error('❌ Selfie capture failed:', error)
       toast.error(error.message || 'Failed to capture selfie')
       setIsAutoCapturing(false)
       return
@@ -254,7 +258,7 @@ const Dashboard: React.FC = () => {
     if (isCheckOut) {
       // Check-out flow
       const checkOutData = {
-        notes: selfAttendanceData.notes || undefined,
+        notes: undefined, // No notes field
         checkOutSelfie: selfie || undefined,
         checkOutLocation: location || undefined
       }
@@ -268,7 +272,7 @@ const Dashboard: React.FC = () => {
         locationData: location,
         checkOutData,
         fullPayload: {
-          notes: selfAttendanceData.notes || undefined,
+          notes: undefined,
           checkOutSelfie: selfie || undefined,
           checkOutLocation: location || undefined
         }
@@ -279,8 +283,8 @@ const Dashboard: React.FC = () => {
     } else {
       // Check-in flow
       const checkInData = {
-        isRemote: selfAttendanceData.isRemote,
-        notes: selfAttendanceData.notes || undefined,
+        isRemote: false, // Default to false, no user input needed
+        notes: undefined, // No notes field
         checkInSelfie: selfie || undefined,
         checkInLocation: location || undefined,
         deviceInfo: deviceInfo || undefined,
@@ -296,8 +300,8 @@ const Dashboard: React.FC = () => {
         locationData: location,
         checkInData,
         fullPayload: {
-          isRemote: selfAttendanceData.isRemote,
-          notes: selfAttendanceData.notes || undefined,
+          isRemote: false,
+          notes: undefined,
           checkInSelfie: selfie || undefined,
           checkInLocation: location || undefined,
           deviceInfo: deviceInfo || undefined,
@@ -657,41 +661,9 @@ const Dashboard: React.FC = () => {
                 </>
               )}
 
-              {/* Show additional options only after selfie is captured */}
+              {/* Show confirmation only after selfie is captured */}
               {selfie && location && (
                 <>
-                  {/* Optional: Remote Work & Overtime */}
-                  <div className="border-t pt-4">
-                    <p className="text-sm font-medium text-gray-700 mb-3">Additional Details (Optional)</p>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="flex items-center">
-                        <input
-                          type="checkbox"
-                          id="isRemote"
-                          checked={selfAttendanceData.isRemote}
-                          onChange={(e) => setSelfAttendanceData({...selfAttendanceData, isRemote: e.target.checked})}
-                          className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-                        />
-                        <label htmlFor="isRemote" className="ml-2 text-sm text-gray-700">
-                          🏠 Remote Work
-                        </label>
-                      </div>
-                      <div>
-                        <label className="label text-xs">Overtime (hrs)</label>
-                        <input
-                          type="number"
-                          step="0.5"
-                          min="0"
-                          max="12"
-                          className="input text-sm"
-                          value={selfAttendanceData.overtimeHours}
-                          onChange={(e) => setSelfAttendanceData({...selfAttendanceData, overtimeHours: e.target.value})}
-                          placeholder="0"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
                   {/* Automatic time capture notice */}
                   <div className="p-3 bg-green-50 rounded-lg border border-green-200">
                     <div className="flex items-center gap-2">
@@ -701,18 +673,6 @@ const Dashboard: React.FC = () => {
                     <p className="text-xs text-green-700 mt-1">
                       Current time will be used for check-in/check-out
                     </p>
-                  </div>
-                  
-                  {/* Optional: Notes */}
-                  <div>
-                    <label className="label">Notes</label>
-                    <textarea
-                      className="input"
-                      rows={2}
-                      value={selfAttendanceData.notes}
-                      onChange={(e) => setSelfAttendanceData({...selfAttendanceData, notes: e.target.value})}
-                      placeholder="Any additional notes..."
-                    />
                   </div>
 
                   {/* Info Badge */}
@@ -731,6 +691,24 @@ const Dashboard: React.FC = () => {
                   className="flex-1 bg-gray-200 text-gray-800 py-2 px-4 rounded hover:bg-gray-300"
                 >
                   Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      const permissionCheck = await checkCameraPermissions()
+                      if (permissionCheck.hasPermission) {
+                        toast.success('✅ Camera is working perfectly!')
+                      } else {
+                        toast.error(permissionCheck.message)
+                      }
+                    } catch (error: any) {
+                      toast.error('Camera test failed: ' + error.message)
+                    }
+                  }}
+                  className="bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 transition-colors mr-2"
+                >
+                  Test Camera
                 </button>
                 <button
                   type="button"

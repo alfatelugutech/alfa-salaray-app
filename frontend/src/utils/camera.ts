@@ -8,6 +8,50 @@ export const isCameraAvailable = (): boolean => {
 }
 
 /**
+ * Check camera permissions and provide user guidance
+ */
+export const checkCameraPermissions = async (): Promise<{ hasPermission: boolean; message: string }> => {
+  try {
+    if (!isCameraAvailable()) {
+      return {
+        hasPermission: false,
+        message: 'Camera is not available on this device. Please use a device with a camera.'
+      }
+    }
+
+    // Try to get camera access to check permissions
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true })
+    
+    // Stop the stream immediately as we were just checking permissions
+    stream.getTracks().forEach(track => track.stop())
+    
+    return {
+      hasPermission: true,
+      message: 'Camera access granted successfully!'
+    }
+  } catch (error: any) {
+    console.error('❌ Camera permission check failed:', error)
+    
+    let message = 'Camera access failed'
+    
+    if (error.name === 'NotAllowedError') {
+      message = 'Camera permission denied. Please click "Allow" when prompted for camera access.'
+    } else if (error.name === 'NotFoundError') {
+      message = 'No camera found. Please check if your device has a camera.'
+    } else if (error.name === 'NotReadableError') {
+      message = 'Camera is being used by another app. Please close other camera applications.'
+    } else {
+      message = `Camera error: ${error.message || 'Unknown error'}`
+    }
+    
+    return {
+      hasPermission: false,
+      message
+    }
+  }
+}
+
+/**
  * Capture photo from camera
  */
 export const captureSelfie = async (): Promise<string> => {
@@ -17,15 +61,37 @@ export const captureSelfie = async (): Promise<string> => {
       return
     }
 
+    let stream: MediaStream | null = null
+    
     try {
-      // Request camera access with passport size dimensions
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: 'user', // Front camera (selfie mode)
-          width: { ideal: 600 },
-          height: { ideal: 600 }
+      // Try with strict constraints first
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: 'user', // Front camera (selfie mode)
+            width: { ideal: 600, min: 300 },
+            height: { ideal: 600, min: 300 }
+          }
+        })
+      } catch (strictError) {
+        console.log('⚠️ Strict constraints failed, trying relaxed constraints:', strictError)
+        
+        // Fallback to relaxed constraints
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              facingMode: 'user'
+            }
+          })
+        } catch (relaxedError) {
+          console.log('⚠️ Relaxed constraints failed, trying basic video:', relaxedError)
+          
+          // Final fallback to basic video
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: true
+          })
         }
-      })
+      }
 
       // Create video element
       const video = document.createElement('video')
@@ -48,21 +114,36 @@ export const captureSelfie = async (): Promise<string> => {
       }
 
       // Stop camera
-      stream.getTracks().forEach(track => track.stop())
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop())
+      }
 
       // Convert to base64
       const imageData = canvas.toDataURL('image/jpeg', 0.8)
       
       resolve(imageData)
     } catch (error: any) {
+      // Clean up stream if it exists
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop())
+      }
+      
+      console.error('❌ Camera capture error:', error)
+      
       let errorMessage = 'Failed to capture photo'
       
       if (error.name === 'NotAllowedError') {
-        errorMessage = 'Camera permission denied. Please allow camera access.'
+        errorMessage = 'Camera permission denied. Please allow camera access and try again.'
       } else if (error.name === 'NotFoundError') {
-        errorMessage = 'No camera found on this device.'
+        errorMessage = 'No camera found on this device. Please check your camera connection.'
       } else if (error.name === 'NotReadableError') {
-        errorMessage = 'Camera is already in use by another application.'
+        errorMessage = 'Camera is already in use by another application. Please close other camera apps and try again.'
+      } else if (error.name === 'OverconstrainedError') {
+        errorMessage = 'Camera constraints not supported. Please try again.'
+      } else if (error.name === 'AbortError') {
+        errorMessage = 'Camera access was interrupted. Please try again.'
+      } else {
+        errorMessage = `Camera error: ${error.message || 'Unknown error'}`
       }
       
       reject(new Error(errorMessage))
