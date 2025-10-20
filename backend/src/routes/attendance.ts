@@ -119,31 +119,23 @@ router.post("/self/check-in", async (req: Request, res: Response) => {
       where: { employeeId_date: { employeeId: employee.id, date: dateOnly } }
     });
 
-    if (existing?.checkIn) {
-      res.status(400).json({ success: false, error: "Already checked in today", code: "ALREADY_CHECKED_IN" });
+    if (existing?.checkIn && !existing?.checkOut) {
+      res.status(400).json({ success: false, error: "Already checked in today. Please check out first.", code: "ALREADY_CHECKED_IN" });
+      return;
+    }
+
+    if (existing?.checkIn && existing?.checkOut) {
+      res.status(400).json({ success: false, error: "Already completed attendance for today", code: "ATTENDANCE_COMPLETED" });
       return;
     }
 
     const ipAddress = (req.headers['x-forwarded-for'] as string) || (req.socket.remoteAddress as string) || null;
 
     const now = new Date();
-    const attendance = await prisma.attendance.upsert({
-      where: { employeeId_date: { employeeId: employee.id, date: dateOnly } },
-      create: {
+    const attendance = await prisma.attendance.create({
+      data: {
         employeeId: employee.id,
         date: dateOnly,
-        checkIn: now,
-        status: now.getHours() > 9 ? "LATE" : "PRESENT",
-        notes,
-        shiftId,
-        deviceInfo,
-        ipAddress,
-        isRemote,
-        createdBy: authUser.id,
-        checkInSelfie: checkInSelfie || null,
-        checkInLocation: checkInLocation || null
-      },
-      update: {
         checkIn: now,
         status: now.getHours() > 9 ? "LATE" : "PRESENT",
         notes,
