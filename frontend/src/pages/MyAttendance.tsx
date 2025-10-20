@@ -26,10 +26,22 @@ const MyAttendance: React.FC = () => {
     })
   )
 
+  // Get current attendance status for today
+  const { data: attendanceStatus, isLoading: statusLoading } = useQuery(
+    'attendance-status',
+    () => attendanceService.getAttendanceStatus(),
+    {
+      enabled: !!user?.employeeId,
+      refetchInterval: 30000, // Refetch every 30 seconds
+      refetchOnWindowFocus: true
+    }
+  )
+
   const selfCheckInMutation = useMutation(attendanceService.selfCheckIn, {
     onSuccess: () => {
       toast.success('Checked in successfully')
       queryClient.invalidateQueries('my-attendance')
+      queryClient.invalidateQueries('attendance-status')
     },
     onError: (error: any) => {
       const errorMessage = error.response?.data?.error || 'Failed to check in'
@@ -47,6 +59,7 @@ const MyAttendance: React.FC = () => {
     onSuccess: () => {
       toast.success('Checked out successfully')
       queryClient.invalidateQueries('my-attendance')
+      queryClient.invalidateQueries('attendance-status')
     },
     onError: (error: any) => {
       const errorMessage = error.response?.data?.error || 'Failed to check out'
@@ -198,7 +211,7 @@ const MyAttendance: React.FC = () => {
       )}
 
       {/* Current Status */}
-      {attendanceData?.data?.attendances && attendanceData.data.attendances.length > 0 && (
+      {attendanceStatus && (
         <div className="card p-4 bg-blue-50 border-blue-200">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -208,17 +221,18 @@ const MyAttendance: React.FC = () => {
               <div>
                 <h3 className="font-medium text-blue-900">Today's Status</h3>
                 <p className="text-sm text-blue-700">
-                  {(() => {
-                    const today = new Date().toISOString().split('T')[0]
-                    const todayAttendance = attendanceData?.data?.attendances?.find((att: any) => 
-                      new Date(att.date).toISOString().split('T')[0] === today
-                    )
-                    if (!todayAttendance) return "Not checked in yet"
-                    if (todayAttendance.checkIn && !todayAttendance.checkOut) return "Checked in - Ready to check out"
-                    if (todayAttendance.checkIn && todayAttendance.checkOut) return "Completed for today"
-                    return "No attendance recorded"
-                  })()}
+                  {attendanceStatus.status.isCompleted ? "Completed for today" :
+                   attendanceStatus.status.canCheckOut ? "Checked in - Ready to check out" :
+                   attendanceStatus.status.canCheckIn ? "Not checked in yet" : "No attendance recorded"}
                 </p>
+                {attendanceStatus.attendance && (
+                  <div className="mt-2 text-xs text-gray-600">
+                    <div>Check In: {new Date(attendanceStatus.attendance.checkIn).toLocaleTimeString()}</div>
+                    {attendanceStatus.attendance.checkOut && (
+                      <div>Check Out: {new Date(attendanceStatus.attendance.checkOut).toLocaleTimeString()}</div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -229,49 +243,23 @@ const MyAttendance: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <button
           onClick={handleOpenCheckIn}
-          disabled={selfCheckInMutation.isLoading || (() => {
-            const today = new Date().toISOString().split('T')[0]
-            const todayAttendance = attendanceData?.data?.attendances?.find((att: any) => 
-              new Date(att.date).toISOString().split('T')[0] === today
-            )
-            return Boolean(todayAttendance?.checkIn && !todayAttendance?.checkOut)
-          })()}
+          disabled={selfCheckInMutation.isLoading || !attendanceStatus?.status?.canCheckIn}
           className="card p-4 flex items-center justify-center gap-3 hover:bg-green-50 disabled:opacity-60 disabled:cursor-not-allowed"
         >
           <LogIn className="h-5 w-5 text-green-600" />
           <span className="font-medium text-green-700">
-            {(() => {
-              const today = new Date().toISOString().split('T')[0]
-              const todayAttendance = attendanceData?.data?.attendances?.find((att: any) => 
-                new Date(att.date).toISOString().split('T')[0] === today
-              )
-              if (todayAttendance?.checkIn && !todayAttendance?.checkOut) return "Already Checked In"
-              return "Check In (Selfie + Location)"
-            })()}
+            {attendanceStatus?.status?.canCheckIn ? "Check In (Selfie + Location)" : "Already Checked In"}
           </span>
         </button>
         <button
           onClick={handleOpenCheckOut}
-          disabled={selfCheckOutMutation.isLoading || (() => {
-            const today = new Date().toISOString().split('T')[0]
-            const todayAttendance = attendanceData?.data?.attendances?.find((att: any) => 
-              new Date(att.date).toISOString().split('T')[0] === today
-            )
-            return Boolean(!todayAttendance?.checkIn || todayAttendance?.checkOut)
-          })()}
+          disabled={selfCheckOutMutation.isLoading || !attendanceStatus?.status?.canCheckOut}
           className="card p-4 flex items-center justify-center gap-3 hover:bg-orange-50 disabled:opacity-60 disabled:cursor-not-allowed"
         >
           <LogOut className="h-5 w-5 text-orange-600" />
           <span className="font-medium text-orange-700">
-            {(() => {
-              const today = new Date().toISOString().split('T')[0]
-              const todayAttendance = attendanceData?.data?.attendances?.find((att: any) => 
-                new Date(att.date).toISOString().split('T')[0] === today
-              )
-              if (!todayAttendance?.checkIn) return "Check In First"
-              if (todayAttendance?.checkOut) return "Already Checked Out"
-              return "Check Out (Selfie + Location)"
-            })()}
+            {attendanceStatus?.status?.canCheckOut ? "Check Out (Selfie + Location)" : 
+             attendanceStatus?.status?.isCompleted ? "Already Checked Out" : "Check In First"}
           </span>
         </button>
       </div>

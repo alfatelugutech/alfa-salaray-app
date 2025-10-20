@@ -101,6 +101,21 @@ export const attendanceService = {
       payload
     )
     return response.data.data.attendance
+  },
+
+  // Get current attendance status
+  async getAttendanceStatus(): Promise<{
+    status: {
+      canCheckIn: boolean
+      canCheckOut: boolean
+      isCompleted: boolean
+      currentTime: string
+      today: string
+    }
+    attendance: Attendance | null
+  }> {
+    const response = await api.get<{ success: boolean; data: any }>('/attendance/self/status')
+    return response.data.data
   }
 }
 
