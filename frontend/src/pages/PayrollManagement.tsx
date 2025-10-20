@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from 'react-query'
-import { Plus, Edit, Trash2, DollarSign, Calendar, User, CheckCircle, Clock, Calculator, CreditCard, Banknote, Smartphone, FileText, Coins, MoreHorizontal } from 'lucide-react'
+import { Plus, Edit, Trash2, DollarSign, Calendar, User, CheckCircle, Clock, Calculator, CreditCard } from 'lucide-react'
 import { payrollService } from '../services/payrollService'
 import { employeeService } from '../services/employeeService'
 import { attendanceService } from '../services/attendanceService'
@@ -129,18 +129,6 @@ const PayrollManagement: React.FC = () => {
     }
   })
 
-  // Mark as paid mutation
-  const markPaidMutation = useMutation({
-    mutationFn: payrollService.markPayrollAsPaid,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['payroll'] })
-      queryClient.invalidateQueries({ queryKey: ['payroll-stats'] })
-      toast.success('Payroll marked as paid successfully')
-    },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.error || 'Failed to mark payroll as paid')
-    }
-  })
 
   // Delete payroll mutation
   const deletePayrollMutation = useMutation({
