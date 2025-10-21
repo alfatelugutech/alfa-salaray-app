@@ -130,6 +130,9 @@ export interface Attendance {
   checkIn?: string
   checkOut?: string
   totalHours?: number
+  regularHours?: number
+  overtimeHours?: number
+  breakHours?: number
   status: 'PRESENT' | 'ABSENT' | 'LATE' | 'EARLY_LEAVE' | 'HALF_DAY'
   notes?: string
   createdBy?: string

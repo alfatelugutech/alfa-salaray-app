@@ -14,6 +14,7 @@ import { locationTracker } from '../utils/locationTracker'
 import ConnectionTest from '../components/ConnectionTest'
 import LiveCamera from '../components/LiveCamera'
 import SmartDashboard from '../components/SmartDashboard'
+import LiveClock from '../components/LiveClock'
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth()
@@ -58,7 +59,7 @@ const Dashboard: React.FC = () => {
     }
   }
   
-  // Fetch data based on user role with better error handling
+  // Fetch data based on user role with better error handling and real-time updates
   const { data: attendanceData, error: attendanceError } = useQuery(
     'my-attendance',
     () => attendanceService.getAttendance({ employeeId: user?.employeeId }),
@@ -66,11 +67,24 @@ const Dashboard: React.FC = () => {
       enabled: !!user?.employeeId,
       retry: 2,
       retryDelay: 1000,
+      refetchInterval: 30000, // Refetch every 30 seconds for live updates
+      refetchOnWindowFocus: true,
       onError: (error: any) => {
         if (error.code !== 'NETWORK_ERROR') {
           console.error('Attendance data fetch error:', error)
         }
       }
+    }
+  )
+
+  // Get current attendance status for today with live updates
+  const { data: attendanceStatus } = useQuery(
+    'attendance-status',
+    () => attendanceService.getAttendanceStatus(),
+    {
+      enabled: !!user?.employeeId,
+      refetchInterval: 30000, // Refetch every 30 seconds
+      refetchOnWindowFocus: true
     }
   )
   
@@ -211,19 +225,6 @@ const Dashboard: React.FC = () => {
     }
   }, [selfie, location, selfCheckInMutation.isLoading, selfCheckOutMutation.isLoading])
 
-  // Get current attendance status
-  const { data: attendanceStatus } = useQuery(
-    'attendance-status',
-    () => attendanceService.getAttendanceStatus(),
-    {
-      enabled: !!user?.employeeId,
-      refetchInterval: 30000, // Refetch every 30 seconds
-      refetchOnWindowFocus: true,
-      onSuccess: (data) => {
-        console.log('📊 Frontend attendance status:', data);
-      }
-    }
-  )
 
   // Open live camera for selfie capture
   const handleTakeSelfieAndLocation = async () => {
@@ -396,52 +397,206 @@ const Dashboard: React.FC = () => {
             </p>
           </div>
           
+          {/* Live Clock */}
+          <div className="flex items-center gap-4">
+            <LiveClock />
+            <div className="text-sm text-gray-500">
+              <span className="inline-block w-2 h-2 bg-green-500 rounded-full animate-pulse mr-2"></span>
+              Live Updates
+            </div>
+          </div>
+          
         </div>
         
         {/* Role-based content */}
         {isAdmin ? (
-          // Admin/HR Dashboard
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <h3 className="font-semibold text-blue-900">Total Employees</h3>
-              <p className="text-2xl font-bold text-blue-600">
-                {employeeStats?.totalEmployees || 0}
-              </p>
+          // Admin/HR Dashboard with Live Updates
+          <div className="space-y-6">
+            {/* Live Admin Status */}
+            <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-6 border border-blue-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Admin Dashboard</h3>
+                  <p className="text-sm text-gray-600">Real-time workforce management</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm text-gray-600">Last Updated</p>
+                  <p className="text-lg font-bold text-gray-900">
+                    {new Date().toLocaleTimeString()}
+                  </p>
+                </div>
+              </div>
             </div>
-            <div className="bg-green-50 p-4 rounded-lg">
-              <h3 className="font-semibold text-green-900">Active Today</h3>
-              <p className="text-2xl font-bold text-green-600">
-                {attendanceStats?.presentCount || 0}
-              </p>
+
+            {/* Enhanced Admin Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <h3 className="font-semibold text-blue-900">Total Employees</h3>
+                <p className="text-2xl font-bold text-blue-600">
+                  {employeeStats?.totalEmployees || 0}
+                </p>
+                <p className="text-xs text-blue-600 mt-1">All Employees</p>
+              </div>
+              <div className="bg-green-50 p-4 rounded-lg">
+                <h3 className="font-semibold text-green-900">Present Today</h3>
+                <p className="text-2xl font-bold text-green-600">
+                  {attendanceStats?.presentCount || 0}
+                </p>
+                <p className="text-xs text-green-600 mt-1">Active Employees</p>
+              </div>
+              <div className="bg-orange-50 p-4 rounded-lg">
+                <h3 className="font-semibold text-orange-900">Late Today</h3>
+                <p className="text-2xl font-bold text-orange-600">
+                  {attendanceStats?.lateCount || 0}
+                </p>
+                <p className="text-xs text-orange-600 mt-1">Late Arrivals</p>
+              </div>
+              <div className="bg-purple-50 p-4 rounded-lg">
+                <h3 className="font-semibold text-purple-900">Pending Leaves</h3>
+                <p className="text-2xl font-bold text-purple-600">
+                  {leaveStats?.pendingRequests || 0}
+                </p>
+                <p className="text-xs text-purple-600 mt-1">Awaiting Approval</p>
+              </div>
             </div>
-            <div className="bg-purple-50 p-4 rounded-lg">
-              <h3 className="font-semibold text-purple-900">Pending Leaves</h3>
-              <p className="text-2xl font-bold text-purple-600">
-                {leaveStats?.pendingRequests || 0}
-              </p>
+
+            {/* Live Attendance Overview */}
+            <div className="bg-white rounded-lg shadow-sm border p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Today's Attendance Overview</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="text-center p-4 bg-green-50 rounded-lg">
+                  <p className="text-sm text-gray-600">Attendance Rate</p>
+                  <p className="text-2xl font-bold text-green-600">
+                    {attendanceStats?.attendanceRate ? 
+                      `${Math.round(attendanceStats.attendanceRate)}%` : 
+                      '0%'
+                    }
+                  </p>
+                </div>
+                <div className="text-center p-4 bg-blue-50 rounded-lg">
+                  <p className="text-sm text-gray-600">Total Records</p>
+                  <p className="text-2xl font-bold text-blue-600">
+                    {attendanceStats?.totalRecords || 0}
+                  </p>
+                </div>
+                <div className="text-center p-4 bg-red-50 rounded-lg">
+                  <p className="text-sm text-gray-600">Absent Today</p>
+                  <p className="text-2xl font-bold text-red-600">
+                    {attendanceStats?.absentCount || 0}
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         ) : (
-          // Employee Dashboard
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <h3 className="font-semibold text-blue-900">My Attendance</h3>
-              <p className="text-2xl font-bold text-blue-600">
-                {attendanceData?.data?.attendances?.length || 0}
-              </p>
+          // Employee Dashboard with Live Updates
+          <div className="space-y-6">
+            {/* Live Attendance Status */}
+            {attendanceStatus && (
+              <div className={`p-6 rounded-lg border-2 ${
+                attendanceStatus.status?.isCompleted ? 'bg-green-50 border-green-200' :
+                attendanceStatus.status?.canCheckOut ? 'bg-orange-50 border-orange-200' :
+                'bg-blue-50 border-blue-200'
+              }`}>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">Today's Status</h3>
+                    <p className="text-sm text-gray-600">
+                      {attendanceStatus.status?.isCompleted ? '✅ Work day completed' :
+                       attendanceStatus.status?.canCheckOut ? '🕐 Ready for check-out' :
+                       '🚀 Ready for check-in'}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm text-gray-600">Current Time</p>
+                    <p className="text-lg font-bold text-gray-900">
+                      {new Date().toLocaleTimeString()}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Enhanced Stats Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <h3 className="font-semibold text-blue-900">My Attendance</h3>
+                <p className="text-2xl font-bold text-blue-600">
+                  {attendanceData?.data?.attendances?.length || 0}
+                </p>
+                <p className="text-xs text-blue-600 mt-1">Total Records</p>
+              </div>
+              
+              <div className="bg-green-50 p-4 rounded-lg">
+                <h3 className="font-semibold text-green-900">My Leave Requests</h3>
+                <p className="text-2xl font-bold text-green-600">
+                  {leaveData?.data?.leaveRequests?.length || 0}
+                </p>
+                <p className="text-xs text-green-600 mt-1">All Requests</p>
+              </div>
+              
+              <div className="bg-purple-50 p-4 rounded-lg">
+                <h3 className="font-semibold text-purple-900">Pending Leaves</h3>
+                <p className="text-2xl font-bold text-purple-600">
+                  {leaveData?.data?.leaveRequests?.filter((leave: any) => leave.status === 'PENDING').length || 0}
+                </p>
+                <p className="text-xs text-purple-600 mt-1">Awaiting Approval</p>
+              </div>
+
+              {/* Working Hours Display */}
+              <div className="bg-orange-50 p-4 rounded-lg">
+                <h3 className="font-semibold text-orange-900">Today's Hours</h3>
+                <p className="text-2xl font-bold text-orange-600">
+                  {attendanceStatus?.attendance?.totalHours ? 
+                    `${parseFloat(attendanceStatus.attendance.totalHours.toString()).toFixed(1)}h` : 
+                    '0h'
+                  }
+                </p>
+                <p className="text-xs text-orange-600 mt-1">
+                  {attendanceStatus?.attendance?.overtimeHours && parseFloat(attendanceStatus.attendance.overtimeHours.toString()) > 0 ? 
+                    `+${parseFloat(attendanceStatus.attendance.overtimeHours.toString()).toFixed(1)}h OT` : 
+                    'Regular Hours'
+                  }
+                </p>
+              </div>
             </div>
-            <div className="bg-green-50 p-4 rounded-lg">
-              <h3 className="font-semibold text-green-900">My Leave Requests</h3>
-              <p className="text-2xl font-bold text-green-600">
-                {leaveData?.data?.leaveRequests?.length || 0}
-              </p>
-            </div>
-            <div className="bg-purple-50 p-4 rounded-lg">
-              <h3 className="font-semibold text-purple-900">Pending Leaves</h3>
-              <p className="text-2xl font-bold text-purple-600">
-                {leaveData?.data?.leaveRequests?.filter((leave: any) => leave.status === 'PENDING').length || 0}
-              </p>
-            </div>
+
+            {/* Today's Attendance Details */}
+            {attendanceStatus?.attendance && (
+              <div className="bg-white rounded-lg shadow-sm border p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Today's Attendance Details</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="text-center p-4 bg-gray-50 rounded-lg">
+                    <p className="text-sm text-gray-600">Check-in Time</p>
+                    <p className="text-lg font-bold text-gray-900">
+                      {attendanceStatus.attendance.checkIn ? 
+                        new Date(attendanceStatus.attendance.checkIn).toLocaleTimeString() : 
+                        'Not checked in'
+                      }
+                    </p>
+                  </div>
+                  <div className="text-center p-4 bg-gray-50 rounded-lg">
+                    <p className="text-sm text-gray-600">Check-out Time</p>
+                    <p className="text-lg font-bold text-gray-900">
+                      {attendanceStatus.attendance.checkOut ? 
+                        new Date(attendanceStatus.attendance.checkOut).toLocaleTimeString() : 
+                        'Not checked out'
+                      }
+                    </p>
+                  </div>
+                  <div className="text-center p-4 bg-gray-50 rounded-lg">
+                    <p className="text-sm text-gray-600">Status</p>
+                    <p className={`text-lg font-bold ${
+                      attendanceStatus.attendance.status === 'PRESENT' ? 'text-green-600' :
+                      attendanceStatus.attendance.status === 'LATE' ? 'text-orange-600' :
+                      'text-red-600'
+                    }`}>
+                      {attendanceStatus.attendance.status || 'Not marked'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
         
