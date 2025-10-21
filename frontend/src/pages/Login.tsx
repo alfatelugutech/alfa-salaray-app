@@ -5,7 +5,7 @@ import { Clock, Users, Calendar } from 'lucide-react'
 const Login: React.FC = () => {
   const { login, isLoggingIn } = useAuth()
   const [formData, setFormData] = useState({
-    email: '',
+    login: '', // Can be email or mobile number
     password: ''
   })
 
@@ -64,19 +64,19 @@ const Login: React.FC = () => {
         <div className="bg-white rounded-lg shadow-lg p-8">
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email address
+              <label htmlFor="login" className="block text-sm font-medium text-gray-700">
+                Email or Mobile Number
               </label>
               <input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
+                id="login"
+                name="login"
+                type="text"
+                autoComplete="username"
                 required
-                value={formData.email}
+                value={formData.login}
                 onChange={handleChange}
                 className="mt-1 input"
-                placeholder="Enter your email"
+                placeholder="Enter your email or mobile number"
               />
             </div>
 

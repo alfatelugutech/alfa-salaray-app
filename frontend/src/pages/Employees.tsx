@@ -192,7 +192,7 @@ const Employees: React.FC = () => {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {employee.department || 'N/A'}
+                        {employee.department?.name || 'N/A'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {employee.position || 'N/A'}
@@ -569,7 +569,7 @@ const ViewEmployeeModal: React.FC<{
             </div>
             <div>
               <label className="label">Department</label>
-              <p className="text-gray-900">{employee.department || 'N/A'}</p>
+              <p className="text-gray-900">{employee.department?.name || 'N/A'}</p>
             </div>
             <div>
               <label className="label">Position</label>
@@ -629,7 +629,7 @@ const EditEmployeeModal: React.FC<{
     phone: employee.user?.phone || '',
     // Employee information
     employeeId: employee.employeeId || '',
-    department: employee.department || '',
+    department: employee.department?.name || '',
     position: employee.position || '',
     status: employee.status,
     salary: employee.salary?.toString() || '',

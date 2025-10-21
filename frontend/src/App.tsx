@@ -18,6 +18,8 @@ const Profile = lazy(() => import('./pages/Profile'))
 const ShiftManagement = lazy(() => import('./pages/ShiftManagement'))
 const PayrollManagement = lazy(() => import('./pages/PayrollManagement'))
 const PaymentReports = lazy(() => import('./pages/PaymentReports'))
+const DepartmentManagement = lazy(() => import('./pages/DepartmentManagement'))
+const RoleManagement = lazy(() => import('./pages/RoleManagement'))
 const SystemSettings = lazy(() => import('./pages/SystemSettings'))
 
 function App() {
@@ -61,6 +63,8 @@ function App() {
             <Route path="/shifts" element={<ShiftManagement />} />
             <Route path="/payroll" element={<PayrollManagement />} />
             <Route path="/payment-reports" element={<PaymentReports />} />
+            <Route path="/departments" element={<DepartmentManagement />} />
+            <Route path="/roles" element={<RoleManagement />} />
             <Route path="/settings" element={<SystemSettings />} />
           </>
         ) : (

@@ -1,21 +1,102 @@
 export interface User {
   id: string
   email: string
+  mobileNumber?: string
   firstName: string
   lastName: string
-  role: 'SUPER_ADMIN' | 'HR_MANAGER' | 'DEPARTMENT_MANAGER' | 'EMPLOYEE'
+  role: 'SUPER_ADMIN' | 'HR_MANAGER' | 'DEPARTMENT_MANAGER' | 'EMPLOYEE' | 'CUSTOM'
   employeeId?: string
   lastLoginAt?: string
+  customRoles?: UserRole[]
+}
+
+export interface Role {
+  id: string
+  name: string
+  description?: string
+  isActive: boolean
+  isSystem: boolean
+  createdAt: string
+  updatedAt: string
+  createdBy: string
+  permissions?: RolePermission[]
+  users?: UserRole[]
+  _count?: {
+    users: number
+  }
+  createdByUser?: {
+    id: string
+    firstName: string
+    lastName: string
+    email: string
+  }
+}
+
+export interface Permission {
+  id: string
+  name: string
+  description?: string
+  category: string
+  action: string
+  resource: string
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+  rolePermissions?: RolePermission[]
+}
+
+export interface RolePermission {
+  id: string
+  roleId: string
+  permissionId: string
+  granted: boolean
+  createdAt: string
+  role?: Role
+  permission?: Permission
+}
+
+export interface UserRole {
+  id: string
+  userId: string
+  roleId: string
+  assignedAt: string
+  assignedBy: string
+  isActive: boolean
+  user?: User
+  role?: Role
+  assignedByUser?: User
+}
+
+export interface Department {
+  id: string
+  name: string
+  description?: string
+  managerId?: string
+  manager?: {
+    id: string
+    firstName: string
+    lastName: string
+    email: string
+  }
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+  _count?: {
+    employees: number
+  }
 }
 
 export interface Employee {
   id: string
   userId: string
   employeeId: string
-  department?: string
+  departmentId?: string
+  department?: Department
   position?: string
   managerId?: string
   hireDate: string
+  dateOfBirth?: string
+  mobileNumber?: string
   salary?: number
   status: 'ACTIVE' | 'INACTIVE' | 'TERMINATED' | 'ON_LEAVE'
   workLocation?: string
@@ -23,6 +104,7 @@ export interface Employee {
   user: {
     id: string
     email: string
+    mobileNumber?: string
     firstName: string
     lastName: string
     phone?: string
@@ -112,7 +194,7 @@ export interface PaginatedResponse<T> {
 }
 
 export interface LoginCredentials {
-  email: string
+  login: string // Can be email or mobile number
   password: string
 }
 

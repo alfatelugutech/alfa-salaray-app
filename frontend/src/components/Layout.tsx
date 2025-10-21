@@ -54,6 +54,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 <Link to="/shifts" className="text-gray-600 hover:text-gray-900">Shifts</Link>
                 <Link to="/payroll" className="text-gray-600 hover:text-gray-900">Payroll</Link>
                 <Link to="/payment-reports" className="text-gray-600 hover:text-gray-900">Payment Reports</Link>
+                <Link to="/departments" className="text-gray-600 hover:text-gray-900">Departments</Link>
+                <Link to="/roles" className="text-gray-600 hover:text-gray-900">Roles</Link>
                 {user?.role === 'SUPER_ADMIN' && (
                   <>
                     <Link to="/settings" className="text-gray-600 hover:text-gray-900">Settings</Link>
