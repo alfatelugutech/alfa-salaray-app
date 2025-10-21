@@ -16,6 +16,9 @@ import shiftRoutes from './routes/shifts';
 import payrollRoutes from './routes/payroll';
 import settingsRoutes from './routes/settings';
 import locationTrackingRoutes from './routes/locationTracking';
+import departmentRoutes from './routes/departments';
+import roleRoutes from './routes/roles';
+import permissionRoutes from './routes/permissions';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler';
@@ -92,6 +95,9 @@ app.use('/api/shifts', shiftRoutes);
 app.use('/api/payroll', payrollRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/location-tracking', locationTrackingRoutes);
+app.use('/api/departments', departmentRoutes);
+app.use('/api/roles', roleRoutes);
+app.use('/api/permissions', permissionRoutes);
 
 // Error handling middleware
 app.use(notFound);

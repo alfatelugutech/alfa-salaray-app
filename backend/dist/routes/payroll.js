@@ -445,4 +445,235 @@ router.get("/employee/:employeeId", async (req, res) => {
         });
     }
 });
+// Process salary payment with payment details
+router.put("/:id/process-payment", auth_1.requireHR, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { paymentMethod, paymentReference, paymentNotes } = req.body;
+        const authUser = req.user;
+        // Validate payment method
+        const validPaymentMethods = ["BANK_TRANSFER", "CASH", "CHECK", "MOBILE_MONEY", "CRYPTOCURRENCY", "OTHER"];
+        if (!validPaymentMethods.includes(paymentMethod)) {
+            res.status(400).json({
+                success: false,
+                error: "Invalid payment method",
+                code: "INVALID_PAYMENT_METHOD"
+            });
+            return;
+        }
+        const payroll = await prisma.payroll.update({
+            where: { id },
+            data: {
+                status: "PAID",
+                paidAt: new Date(),
+                paymentMethod,
+                paymentReference: paymentReference || null,
+                paymentNotes: paymentNotes || null,
+                processedBy: authUser.id,
+                processedAt: new Date()
+            },
+            include: {
+                employee: {
+                    include: {
+                        user: {
+                            select: {
+                                firstName: true,
+                                lastName: true,
+                                email: true
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        res.json({
+            success: true,
+            message: "Salary payment processed successfully",
+            data: { payroll }
+        });
+    }
+    catch (error) {
+        console.error("Process salary payment error:", error);
+        res.status(500).json({
+            success: false,
+            error: "Failed to process salary payment",
+            code: "PROCESS_PAYMENT_ERROR"
+        });
+    }
+});
+// Bulk salary payment for multiple employees
+router.post("/bulk-payment", auth_1.requireHR, async (req, res) => {
+    try {
+        const { payrollIds, paymentMethod, paymentReference, paymentNotes } = req.body;
+        const authUser = req.user;
+        if (!Array.isArray(payrollIds) || payrollIds.length === 0) {
+            res.status(400).json({
+                success: false,
+                error: "Payroll IDs array is required",
+                code: "INVALID_PAYROLL_IDS"
+            });
+            return;
+        }
+        // Validate payment method
+        const validPaymentMethods = ["BANK_TRANSFER", "CASH", "CHECK", "MOBILE_MONEY", "CRYPTOCURRENCY", "OTHER"];
+        if (!validPaymentMethods.includes(paymentMethod)) {
+            res.status(400).json({
+                success: false,
+                error: "Invalid payment method",
+                code: "INVALID_PAYMENT_METHOD"
+            });
+            return;
+        }
+        // Process bulk payment
+        const updateData = {
+            status: "PAID",
+            paidAt: new Date(),
+            paymentMethod,
+            paymentReference: paymentReference || null,
+            paymentNotes: paymentNotes || null,
+            processedBy: authUser.id,
+            processedAt: new Date()
+        };
+        const result = await prisma.payroll.updateMany({
+            where: {
+                id: { in: payrollIds },
+                status: { not: "PAID" } // Only update unpaid payrolls
+            },
+            data: updateData
+        });
+        // Get updated payroll records
+        const updatedPayrolls = await prisma.payroll.findMany({
+            where: { id: { in: payrollIds } },
+            include: {
+                employee: {
+                    include: {
+                        user: {
+                            select: {
+                                firstName: true,
+                                lastName: true,
+                                email: true
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        res.json({
+            success: true,
+            message: `Bulk salary payment processed for ${result.count} employees`,
+            data: {
+                updatedCount: result.count,
+                payrolls: updatedPayrolls
+            }
+        });
+    }
+    catch (error) {
+        console.error("Bulk salary payment error:", error);
+        res.status(500).json({
+            success: false,
+            error: "Failed to process bulk salary payment",
+            code: "BULK_PAYMENT_ERROR"
+        });
+    }
+});
+// Get payment history for an employee
+router.get("/employee/:employeeId/payment-history", auth_1.requireHR, async (req, res) => {
+    try {
+        const { employeeId } = req.params;
+        const { page = 1, limit = 10, year } = req.query;
+        const skip = (Number(page) - 1) * Number(limit);
+        const where = {
+            employeeId,
+            status: "PAID"
+        };
+        if (year) {
+            where.year = Number(year);
+        }
+        const [payrolls, total] = await Promise.all([
+            prisma.payroll.findMany({
+                where,
+                include: {
+                    employee: {
+                        include: {
+                            user: {
+                                select: {
+                                    firstName: true,
+                                    lastName: true,
+                                    email: true
+                                }
+                            }
+                        }
+                    }
+                },
+                skip,
+                take: Number(limit),
+                orderBy: [{ year: "desc" }, { month: "desc" }]
+            }),
+            prisma.payroll.count({ where })
+        ]);
+        res.json({
+            success: true,
+            data: {
+                payrolls,
+                pagination: {
+                    page: Number(page),
+                    limit: Number(limit),
+                    total,
+                    pages: Math.ceil(total / Number(limit))
+                }
+            }
+        });
+    }
+    catch (error) {
+        console.error("Get payment history error:", error);
+        res.status(500).json({
+            success: false,
+            error: "Failed to fetch payment history",
+            code: "FETCH_PAYMENT_HISTORY_ERROR"
+        });
+    }
+});
+// Get payment statistics
+router.get("/payment-stats", auth_1.requireHR, async (req, res) => {
+    try {
+        const { year, month } = req.query;
+        const where = {};
+        if (year)
+            where.year = Number(year);
+        if (month)
+            where.month = Number(month);
+        const [totalPayrolls, paidPayrolls, pendingPayrolls, totalAmountPaid, totalAmountPending] = await Promise.all([
+            prisma.payroll.count({ where }),
+            prisma.payroll.count({ where: { ...where, status: "PAID" } }),
+            prisma.payroll.count({ where: { ...where, status: "PENDING" } }),
+            prisma.payroll.aggregate({
+                where: { ...where, status: "PAID" },
+                _sum: { netSalary: true }
+            }),
+            prisma.payroll.aggregate({
+                where: { ...where, status: "PENDING" },
+                _sum: { netSalary: true }
+            })
+        ]);
+        res.json({
+            success: true,
+            data: {
+                totalPayrolls,
+                paidPayrolls,
+                pendingPayrolls,
+                totalAmountPaid: totalAmountPaid._sum.netSalary || 0,
+                totalAmountPending: totalAmountPending._sum.netSalary || 0,
+                paymentRate: totalPayrolls > 0 ? (paidPayrolls / totalPayrolls) * 100 : 0
+            }
+        });
+    }
+    catch (error) {
+        console.error("Get payment statistics error:", error);
+        res.status(500).json({
+            success: false,
+            error: "Failed to fetch payment statistics",
+            code: "FETCH_PAYMENT_STATS_ERROR"
+        });
+    }
+});
 exports.default = router;

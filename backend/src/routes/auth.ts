@@ -18,7 +18,7 @@ const registerSchema = Joi.object({
 });
 
 const loginSchema = Joi.object({
-  email: Joi.string().email().required(),
+  login: Joi.string().required(), // Can be email or mobile number
   password: Joi.string().required()
 });
 
@@ -121,11 +121,16 @@ router.post("/login", async (req: Request, res: Response) => {
       return;
     }
 
-    const { email, password } = value;
+    const { login, password } = value;
 
-    // Find user
-    const user = await prisma.user.findUnique({
-      where: { email },
+    // Find user by email or mobile number
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: login },
+          { mobileNumber: login }
+        ]
+      },
       include: {
         employee: true
       }

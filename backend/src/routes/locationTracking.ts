@@ -224,3 +224,4 @@ router.post("/stop/:attendanceId", async (req: Request, res: Response) => {
 });
 
 export default router
+

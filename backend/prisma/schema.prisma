@@ -12,6 +12,7 @@ datasource db {
 model User {
   id            String    @id @default(cuid())
   email         String    @unique
+  mobileNumber  String?   @unique // Mobile number for login
   password      String
   firstName     String
   lastName      String
@@ -25,8 +26,29 @@ model User {
 
   // Relations
   employee      Employee?
+  managedDepartments Department[] @relation("DepartmentManager")
+  createdRoles  Role[] @relation("RoleCreator")
+  assignedRoles UserRole[]
+  assignedRolesBy UserRole[] @relation("RoleAssigner")
 
   @@map("users")
+}
+
+// Department Management
+model Department {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  managerId   String?  // Department manager
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  employees   Employee[]
+  manager    User?      @relation("DepartmentManager", fields: [managerId], references: [id])
+
+  @@map("departments")
 }
 
 // Employee Information
@@ -34,17 +56,20 @@ model Employee {
   id              String    @id @default(cuid())
   userId          String    @unique
   employeeId      String    @unique
-  department      String?
+  departmentId    String?   // Reference to Department
   position        String?
   hireDate        DateTime
+  dateOfBirth     DateTime? // Date of birth
+  mobileNumber    String?   // Mobile number for login
+  workLocation    String?
   salary          Decimal?
   status          EmployeeStatus @default(ACTIVE)
-  workLocation    String?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
   // Relations
   user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  department      Department? @relation(fields: [departmentId], references: [id])
   attendances     Attendance[]
   leaveRequests   LeaveRequest[]
   shifts          EmployeeShift[]
@@ -183,6 +208,14 @@ model Payroll {
   netSalary     Decimal
   status        PayrollStatus @default(PENDING)
   paidAt        DateTime?
+  
+  // Payment details
+  paymentMethod PaymentMethod?
+  paymentReference String?     // Transaction ID, check number, etc.
+  paymentNotes   String?       // Additional payment notes
+  processedBy    String?       // User who processed the payment
+  processedAt    DateTime?     // When payment was processed
+  
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -212,6 +245,78 @@ enum UserRole {
   HR_MANAGER
   DEPARTMENT_MANAGER
   EMPLOYEE
+  CUSTOM // For custom roles
+}
+
+// Custom Role Management
+model Role {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  isActive    Boolean  @default(true)
+  isSystem    Boolean  @default(false) // System roles cannot be deleted
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdBy   String   // User who created this role
+
+  // Relations
+  permissions RolePermission[]
+  users       UserRole[]
+  createdByUser User @relation("RoleCreator", fields: [createdBy], references: [id])
+
+  @@map("roles")
+}
+
+// Permission Management
+model Permission {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  category    String   // e.g., "attendance", "payroll", "employees"
+  action      String   // e.g., "create", "read", "update", "delete"
+  resource    String   // e.g., "employee", "attendance", "payroll"
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  rolePermissions RolePermission[]
+
+  @@map("permissions")
+}
+
+// Role-Permission Mapping
+model RolePermission {
+  id           String @id @default(cuid())
+  roleId       String
+  permissionId String
+  granted      Boolean @default(true)
+  createdAt    DateTime @default(now())
+
+  // Relations
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+// User-Role Mapping (for custom roles)
+model UserRole {
+  id        String   @id @default(cuid())
+  userId    String
+  roleId    String
+  assignedAt DateTime @default(now())
+  assignedBy String   // User who assigned this role
+  isActive  Boolean  @default(true)
+
+  // Relations
+  user        User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role        Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  assignedByUser User @relation("RoleAssigner", fields: [assignedBy], references: [id])
+
+  @@unique([userId, roleId])
+  @@map("user_roles")
 }
 
 enum EmployeeStatus {
@@ -251,6 +356,15 @@ enum PayrollStatus {
   PROCESSED
   PAID
   CANCELLED
+}
+
+enum PaymentMethod {
+  BANK_TRANSFER
+  CASH
+  CHECK
+  MOBILE_MONEY
+  CRYPTOCURRENCY
+  OTHER
 }
 
 enum SettingType {
