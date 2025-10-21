@@ -1,6 +1,7 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+import NotificationCenter from './NotificationCenter'
 
 interface LayoutProps {
   children: React.ReactNode
@@ -98,6 +99,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               <span className="text-sm text-gray-600">
                 Welcome, {user?.firstName} {user?.lastName}
               </span>
+              <NotificationCenter />
               <button
                 onClick={logout}
                 className="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700"
