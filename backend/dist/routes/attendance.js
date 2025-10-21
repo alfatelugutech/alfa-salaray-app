@@ -17,6 +17,152 @@ router.get("/test", (req, res) => {
         timestamp: new Date().toISOString()
     });
 });
+// Smart productivity metrics endpoint
+router.get('/analytics/productivity', auth_1.authenticateToken, async (req, res) => {
+    try {
+        const { employeeId, startDate, endDate } = req.query;
+        if (!employeeId) {
+            return res.status(400).json({
+                success: false,
+                error: "Employee ID required",
+                code: "EMPLOYEE_ID_REQUIRED"
+            });
+        }
+        const start = startDate ? new Date(startDate) : new Date();
+        start.setDate(start.getDate() - 30);
+        const end = endDate ? new Date(endDate) : new Date();
+        const attendances = await prisma.attendance.findMany({
+            where: {
+                employeeId: employeeId,
+                date: { gte: start, lte: end },
+                checkIn: { not: null },
+                checkOut: { not: null }
+            },
+            orderBy: { date: 'desc' }
+        });
+        // Calculate productivity metrics
+        const totalWorkingHours = attendances.reduce((sum, att) => sum + Number(att.totalHours || 0), 0);
+        const totalOvertimeHours = attendances.reduce((sum, att) => sum + Number(att.overtimeHours || 0), 0);
+        const averageWorkingHours = attendances.length > 0 ? totalWorkingHours / attendances.length : 0;
+        // Calculate efficiency score (based on consistent working hours)
+        const efficiencyScore = calculateEfficiencyScore(attendances);
+        // Calculate punctuality score
+        const punctualityScore = calculatePunctualityScore(attendances);
+        // Calculate work-life balance (based on overtime patterns)
+        const workLifeBalance = calculateWorkLifeBalance(attendances);
+        res.json({
+            success: true,
+            data: {
+                averageWorkingHours: Math.round(averageWorkingHours * 100) / 100,
+                totalOvertimeHours: Math.round(totalOvertimeHours * 100) / 100,
+                efficiencyScore,
+                punctualityScore,
+                workLifeBalance
+            }
+        });
+    }
+    catch (error) {
+        console.error('Productivity analytics error:', error);
+        res.status(500).json({
+            success: false,
+            error: "Failed to generate productivity metrics",
+            code: "PRODUCTIVITY_ERROR"
+        });
+    }
+});
+// Smart predictions endpoint
+router.get('/analytics/predictions', auth_1.authenticateToken, async (req, res) => {
+    try {
+        const { employeeId } = req.query;
+        if (!employeeId) {
+            return res.status(400).json({
+                success: false,
+                error: "Employee ID required",
+                code: "EMPLOYEE_ID_REQUIRED"
+            });
+        }
+        // Get last 30 days of data for predictions
+        const start = new Date();
+        start.setDate(start.getDate() - 30);
+        const end = new Date();
+        const attendances = await prisma.attendance.findMany({
+            where: {
+                employeeId: employeeId,
+                date: { gte: start, lte: end }
+            },
+            orderBy: { date: 'desc' }
+        });
+        // Generate predictions
+        const predictions = generateSmartPredictions(attendances);
+        res.json({
+            success: true,
+            data: predictions
+        });
+    }
+    catch (error) {
+        console.error('Predictions error:', error);
+        res.status(500).json({
+            success: false,
+            error: "Failed to generate predictions",
+            code: "PREDICTIONS_ERROR"
+        });
+    }
+});
+// Team analytics endpoint
+router.get('/analytics/team', auth_1.authenticateToken, async (req, res) => {
+    try {
+        const { startDate, endDate } = req.query;
+        const start = startDate ? new Date(startDate) : new Date();
+        start.setDate(start.getDate() - 30);
+        const end = endDate ? new Date(endDate) : new Date();
+        // Get all employees and their attendance
+        const employees = await prisma.employee.findMany({
+            include: {
+                user: { select: { firstName: true, lastName: true, email: true } },
+                department: { select: { name: true } },
+                attendances: {
+                    where: { date: { gte: start, lte: end } }
+                }
+            }
+        });
+        // Calculate team performance
+        const teamPerformance = calculateTeamPerformance(employees);
+        const departmentComparison = calculateDepartmentComparison(employees);
+        res.json({
+            success: true,
+            data: {
+                teamPerformance,
+                departmentComparison
+            }
+        });
+    }
+    catch (error) {
+        console.error('Team analytics error:', error);
+        res.status(500).json({
+            success: false,
+            error: "Failed to generate team analytics",
+            code: "TEAM_ANALYTICS_ERROR"
+        });
+    }
+});
+// Smart notifications endpoint
+router.get('/analytics/notifications', auth_1.authenticateToken, async (req, res) => {
+    try {
+        const notifications = await generateSmartNotifications();
+        res.json({
+            success: true,
+            data: notifications
+        });
+    }
+    catch (error) {
+        console.error('Notifications error:', error);
+        res.status(500).json({
+            success: false,
+            error: "Failed to generate notifications",
+            code: "NOTIFICATIONS_ERROR"
+        });
+    }
+});
 // Smart analytics endpoint
 router.get('/analytics/smart-insights', auth_1.authenticateToken, async (req, res) => {
     try {
@@ -144,6 +290,194 @@ function getPerformanceMessage(attendanceRate) {
     if (attendanceRate >= 70)
         return '⚠️ Attendance needs improvement';
     return '🚨 Poor attendance record';
+}
+// Helper functions for smart analytics
+function calculateEfficiencyScore(attendances) {
+    if (attendances.length === 0)
+        return 0;
+    const workingHours = attendances.map(att => att.totalHours || 0);
+    const avgHours = workingHours.reduce((a, b) => a + b, 0) / workingHours.length;
+    const variance = workingHours.reduce((sum, hours) => sum + Math.pow(hours - avgHours, 2), 0) / workingHours.length;
+    // Higher score for consistent working hours (lower variance)
+    const consistencyScore = Math.max(0, 100 - (Math.sqrt(variance) * 10));
+    return Math.round(consistencyScore);
+}
+function calculatePunctualityScore(attendances) {
+    if (attendances.length === 0)
+        return 0;
+    const onTimeCount = attendances.filter(att => att.status === 'PRESENT').length;
+    const totalCount = attendances.length;
+    return Math.round((onTimeCount / totalCount) * 100);
+}
+function calculateWorkLifeBalance(attendances) {
+    if (attendances.length === 0)
+        return 100;
+    const overtimeDays = attendances.filter(att => (att.overtimeHours || 0) > 0).length;
+    const totalDays = attendances.length;
+    const overtimeRatio = overtimeDays / totalDays;
+    // Higher score for better work-life balance (less overtime)
+    return Math.round((1 - overtimeRatio) * 100);
+}
+function generateSmartPredictions(attendances) {
+    if (attendances.length < 7) {
+        return {
+            nextWeekPrediction: {
+                expectedAttendance: 5,
+                confidence: 50,
+                riskFactors: ['Insufficient data for accurate prediction']
+            },
+            performanceForecast: {
+                trend: 'STABLE',
+                projectedScore: 75
+            },
+            recommendations: ['More data needed for accurate predictions']
+        };
+    }
+    const recentWeek = attendances.slice(0, 7);
+    const presentDays = recentWeek.filter(att => att.status === 'PRESENT').length;
+    // Simple prediction based on recent performance
+    const expectedAttendance = Math.min(5, Math.max(0, presentDays));
+    const confidence = Math.min(95, 50 + (presentDays * 8));
+    const riskFactors = [];
+    if (presentDays < 4)
+        riskFactors.push('Low recent attendance');
+    if (recentWeek.some(att => att.status === 'LATE'))
+        riskFactors.push('Punctuality concerns');
+    const trend = presentDays >= 5 ? 'UP' : presentDays <= 3 ? 'DOWN' : 'STABLE';
+    const projectedScore = Math.min(100, 60 + (presentDays * 8));
+    const recommendations = [];
+    if (presentDays < 4)
+        recommendations.push('Focus on consistent daily attendance');
+    if (recentWeek.some(att => att.status === 'LATE'))
+        recommendations.push('Improve punctuality');
+    if (presentDays >= 5)
+        recommendations.push('Maintain excellent attendance');
+    return {
+        nextWeekPrediction: {
+            expectedAttendance,
+            confidence,
+            riskFactors
+        },
+        performanceForecast: {
+            trend,
+            projectedScore
+        },
+        recommendations
+    };
+}
+function calculateTeamPerformance(employees) {
+    const totalEmployees = employees.length;
+    if (totalEmployees === 0) {
+        return {
+            averageAttendance: 0,
+            topPerformers: [],
+            improvementAreas: []
+        };
+    }
+    const employeeScores = employees.map(emp => {
+        const attendances = emp.attendances || [];
+        const presentDays = attendances.filter(att => att.status === 'PRESENT').length;
+        const totalDays = attendances.length;
+        const score = totalDays > 0 ? (presentDays / totalDays) * 100 : 0;
+        return {
+            name: `${emp.user.firstName} ${emp.user.lastName}`,
+            score: Math.round(score)
+        };
+    });
+    const averageAttendance = employeeScores.reduce((sum, emp) => sum + emp.score, 0) / totalEmployees;
+    const topPerformers = employeeScores
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 3)
+        .filter(emp => emp.score > 0);
+    const improvementAreas = [];
+    const lowPerformers = employeeScores.filter(emp => emp.score < 70);
+    if (lowPerformers.length > 0) {
+        improvementAreas.push(`${lowPerformers.length} employees need attendance improvement`);
+    }
+    return {
+        averageAttendance: Math.round(averageAttendance),
+        topPerformers,
+        improvementAreas
+    };
+}
+function calculateDepartmentComparison(employees) {
+    const departmentMap = new Map();
+    employees.forEach(emp => {
+        const deptName = emp.department?.name || 'Unassigned';
+        if (!departmentMap.has(deptName)) {
+            departmentMap.set(deptName, { employees: [], totalScore: 0, count: 0 });
+        }
+        const attendances = emp.attendances || [];
+        const presentDays = attendances.filter(att => att.status === 'PRESENT').length;
+        const totalDays = attendances.length;
+        const score = totalDays > 0 ? (presentDays / totalDays) * 100 : 0;
+        const dept = departmentMap.get(deptName);
+        dept.employees.push(emp);
+        dept.totalScore += score;
+        dept.count += 1;
+    });
+    return Array.from(departmentMap.entries()).map(([name, data]) => ({
+        department: name,
+        attendanceRate: Math.round(data.totalScore / data.count),
+        productivity: Math.round((data.totalScore / data.count) * 0.8) // Simplified productivity calculation
+    }));
+}
+async function generateSmartNotifications() {
+    const notifications = [];
+    // Check for employees who haven't checked in today
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const employeesWithoutCheckIn = await prisma.employee.findMany({
+        where: {
+            attendances: {
+                none: {
+                    date: { gte: today, lt: tomorrow }
+                }
+            }
+        },
+        include: {
+            user: { select: { firstName: true, lastName: true } }
+        }
+    });
+    employeesWithoutCheckIn.forEach(emp => {
+        notifications.push({
+            id: `no-checkin-${emp.id}`,
+            type: 'WARNING',
+            title: 'Missing Check-in',
+            message: `${emp.user.firstName} ${emp.user.lastName} hasn't checked in today`,
+            priority: 'HIGH',
+            actionRequired: true,
+            timestamp: new Date().toISOString()
+        });
+    });
+    // Check for employees with consistent late arrivals
+    const lateEmployees = await prisma.employee.findMany({
+        where: {
+            attendances: {
+                some: {
+                    status: 'LATE',
+                    date: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
+                }
+            }
+        },
+        include: {
+            user: { select: { firstName: true, lastName: true } }
+        }
+    });
+    lateEmployees.forEach(emp => {
+        notifications.push({
+            id: `late-${emp.id}`,
+            type: 'INFO',
+            title: 'Punctuality Alert',
+            message: `${emp.user.firstName} ${emp.user.lastName} has been late recently`,
+            priority: 'MEDIUM',
+            actionRequired: false,
+            timestamp: new Date().toISOString()
+        });
+    });
+    return notifications;
 }
 // Get current attendance status for user
 router.get("/self/status", async (req, res) => {
@@ -455,14 +789,40 @@ router.post("/self/check-out", async (req, res) => {
                 code: "LOCATION_REQUIRED"
             });
         }
-        // Update attendance with check-out
+        // Calculate working hours
+        const checkInTime = new Date(attendance.checkIn);
+        const checkOutTime = new Date();
+        // Calculate total time worked
+        const totalTimeMs = checkOutTime.getTime() - checkInTime.getTime();
+        const totalHours = totalTimeMs / (1000 * 60 * 60); // Convert to hours
+        // Standard working day is 8 hours
+        const standardWorkingHours = 8;
+        // Calculate break time (1 hour lunch break if working more than 6 hours)
+        let breakHours = 0;
+        if (totalHours > 6) {
+            breakHours = 1; // 1 hour lunch break
+        }
+        // Calculate actual working hours (excluding break)
+        const actualWorkingHours = totalHours - breakHours;
+        // Calculate regular hours (up to 8 hours)
+        const regularHours = Math.min(actualWorkingHours, standardWorkingHours);
+        // Calculate overtime hours (anything over 8 hours)
+        let overtimeHours = 0;
+        if (actualWorkingHours > standardWorkingHours) {
+            overtimeHours = actualWorkingHours - standardWorkingHours;
+        }
+        // Update attendance with check-out and calculated hours
         const updatedAttendance = await prisma.attendance.update({
             where: { id: attendance.id },
             data: {
-                checkOut: new Date(),
+                checkOut: checkOutTime,
                 checkOutSelfie: checkOutSelfie || null,
                 checkOutLocation: checkOutLocation || null,
-                notes: notes || attendance.notes
+                notes: notes || attendance.notes,
+                totalHours: totalHours,
+                regularHours: regularHours > 0 ? regularHours : null,
+                overtimeHours: overtimeHours > 0 ? overtimeHours : null,
+                breakHours: breakHours > 0 ? breakHours : null
             }
         });
         console.log('✅ Check-out successful:', {
