@@ -29,18 +29,6 @@ const Dashboard: React.FC = () => {
   const [showLiveCamera, setShowLiveCamera] = useState(false)
   const queryClient = useQueryClient()
 
-  // Smart auto-submit when both selfie and location are ready
-  useEffect(() => {
-    if (selfie && location && !selfCheckInMutation.isLoading && !selfCheckOutMutation.isLoading) {
-      console.log('🧠 Smart system: Both selfie and location ready, auto-submitting...')
-      // Smart delay based on data size and network conditions
-      const smartDelay = selfie.length > 100000 ? 1000 : 500
-      const timer = setTimeout(() => {
-        handleAutoSubmitAttendance()
-      }, smartDelay)
-      return () => clearTimeout(timer)
-    }
-  }, [selfie, location, selfCheckInMutation.isLoading, selfCheckOutMutation.isLoading])
 
   // Smart status detection
   const getSmartStatus = () => {
@@ -208,6 +196,19 @@ const Dashboard: React.FC = () => {
     }
   )
 
+  // Smart auto-submit when both selfie and location are ready
+  useEffect(() => {
+    if (selfie && location && !selfCheckInMutation.isLoading && !selfCheckOutMutation.isLoading) {
+      console.log('🧠 Smart system: Both selfie and location ready, auto-submitting...')
+      // Smart delay based on data size and network conditions
+      const smartDelay = selfie.length > 100000 ? 1000 : 500
+      const timer = setTimeout(() => {
+        handleAutoSubmitAttendance()
+      }, smartDelay)
+      return () => clearTimeout(timer)
+    }
+  }, [selfie, location, selfCheckInMutation.isLoading, selfCheckOutMutation.isLoading])
+
   // Get current attendance status
   const { data: attendanceStatus } = useQuery(
     'attendance-status',
@@ -264,9 +265,9 @@ const Dashboard: React.FC = () => {
     
     // Show info about what's happening next
     if (location) {
-      toast.info('✅ Both selfie and location ready! Attendance will be marked automatically.')
+      toast('✅ Both selfie and location ready! Attendance will be marked automatically.', { icon: 'ℹ️' })
     } else {
-      toast.info('📍 Selfie captured! Waiting for location data...')
+      toast('📍 Selfie captured! Waiting for location data...', { icon: 'ℹ️' })
     }
   }
 
