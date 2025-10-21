@@ -10,19 +10,19 @@ const NotificationCenter: React.FC = () => {
   const queryClient = useQueryClient()
 
   // Fetch notifications
-  const { data: notificationsData, isLoading } = useQuery(
-    'notifications',
-    notificationService.getNotifications,
-    {
+  const { data: notificationsData, isLoading } = useQuery({
+    queryKey: ['notifications'],
+    queryFn: notificationService.getNotifications,
+    
       refetchInterval: 30000, // Refetch every 30 seconds
       refetchOnWindowFocus: true
-    }
-  )
+    
+  })
 
   // Mark as read mutation
   const markAsReadMutation = useMutation(notificationService.markAsRead, {
     onSuccess: () => {
-      queryClient.invalidateQueries('notifications')
+      queryClient.invalidateQueries({ queryKey: ['notifications'] })
       toast.success('Notification marked as read')
     },
     onError: (error: any) => {
@@ -33,7 +33,7 @@ const NotificationCenter: React.FC = () => {
   // Mark all as read mutation
   const markAllAsReadMutation = useMutation(notificationService.markAllAsRead, {
     onSuccess: () => {
-      queryClient.invalidateQueries('notifications')
+      queryClient.invalidateQueries({ queryKey: ['notifications'] })
       toast.success('All notifications marked as read')
     },
     onError: (error: any) => {
@@ -44,7 +44,7 @@ const NotificationCenter: React.FC = () => {
   // Delete notification mutation
   const deleteNotificationMutation = useMutation(notificationService.deleteNotification, {
     onSuccess: () => {
-      queryClient.invalidateQueries('notifications')
+      queryClient.invalidateQueries({ queryKey: ['notifications'] })
       toast.success('Notification deleted')
     },
     onError: (error: any) => {

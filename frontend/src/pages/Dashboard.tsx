@@ -13,8 +13,6 @@ import { captureSelfie, compressImage, checkCameraPermissions } from '../utils/c
 import { locationTracker } from '../utils/locationTracker'
 import ConnectionTest from '../components/ConnectionTest'
 import LiveCamera from '../components/LiveCamera'
-import SmartDashboard from '../components/SmartDashboard'
-import LiveClock from '../components/LiveClock'
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth()
@@ -29,7 +27,6 @@ const Dashboard: React.FC = () => {
   const [selfie, setSelfie] = useState<string | null>(null)
   const [isAutoCapturing, setIsAutoCapturing] = useState(false)
   const [showLiveCamera, setShowLiveCamera] = useState(false)
-  const [activeTab, setActiveTab] = useState<'overview' | 'smart'>('overview')
   const queryClient = useQueryClient()
 
 
@@ -59,49 +56,32 @@ const Dashboard: React.FC = () => {
     }
   }
   
-  // Fetch data based on user role with better error handling and real-time updates
-  const { data: attendanceData, error: attendanceError } = useQuery(
-    'my-attendance',
-    () => attendanceService.getAttendance({ employeeId: user?.employeeId }),
-    { 
-      enabled: !!user?.employeeId,
-      retry: 2,
-      retryDelay: 1000,
-      refetchInterval: 30000, // Refetch every 30 seconds for live updates
-      refetchOnWindowFocus: true,
-      onError: (error: any) => {
-        if (error.code !== 'NETWORK_ERROR') {
-          console.error('Attendance data fetch error:', error)
-        }
+  // Fetch data based on user role with better error handling
+  const { data: attendanceData, error: attendanceError } = useQuery({
+    queryKey: ['my-attendance'],
+    queryFn: () => attendanceService.getAttendance({ employeeId: user?.employeeId }),
+    enabled: !!user?.employeeId,
+    retry: 2,
+    retryDelay: 1000,
+    onError: (error: any) => {
+      if (error.code !== 'NETWORK_ERROR') {
+        console.error('Attendance data fetch error:', error)
       }
     }
-  )
-
-  // Get current attendance status for today with live updates
-  const { data: attendanceStatus } = useQuery(
-    'attendance-status',
-    () => attendanceService.getAttendanceStatus(),
-    {
-      enabled: !!user?.employeeId,
-      refetchInterval: 30000, // Refetch every 30 seconds
-      refetchOnWindowFocus: true
-    }
-  )
+  })
   
-  const { data: leaveData, error: leaveError } = useQuery(
-    'my-leave-requests',
-    () => leaveService.getLeaveRequests({ employeeId: user?.employeeId }),
-    { 
-      enabled: !!user?.employeeId,
-      retry: 2,
-      retryDelay: 1000,
-      onError: (error: any) => {
-        if (error.code !== 'NETWORK_ERROR') {
-          console.error('Leave data fetch error:', error)
-        }
+  const { data: leaveData, error: leaveError } = useQuery({
+    queryKey: ['my-leave-requests'],
+    queryFn: () => leaveService.getLeaveRequests({ employeeId: user?.employeeId }),
+    enabled: !!user?.employeeId,
+    retry: 2,
+    retryDelay: 1000,
+    onError: (error: any) => {
+      if (error.code !== 'NETWORK_ERROR') {
+        console.error('Leave data fetch error:', error)
       }
     }
-  )
+  })
   
   const { data: employeeStats, error: employeeStatsError } = useQuery(
     'employee-stats',
@@ -225,6 +205,19 @@ const Dashboard: React.FC = () => {
     }
   }, [selfie, location, selfCheckInMutation.isLoading, selfCheckOutMutation.isLoading])
 
+  // Get current attendance status
+  const { data: attendanceStatus } = useQuery(
+    'attendance-status',
+    () => attendanceService.getAttendanceStatus(),
+    {
+      enabled: !!user?.employeeId,
+      refetchInterval: 30000, // Refetch every 30 seconds
+      refetchOnWindowFocus: true,
+      onSuccess: (data) => {
+        console.log('📊 Frontend attendance status:', data);
+      }
+    }
+  )
 
   // Open live camera for selfie capture
   const handleTakeSelfieAndLocation = async () => {
@@ -387,216 +380,57 @@ const Dashboard: React.FC = () => {
       <ConnectionTest />
       
       <div className="bg-white rounded-lg shadow p-6">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">
-              🎉 Smart Dashboard
-            </h1>
-            <p className="text-gray-600">
-              AI-powered workforce management system
-            </p>
-          </div>
-          
-          {/* Live Clock */}
-          <div className="flex items-center gap-4">
-            <LiveClock />
-            <div className="text-sm text-gray-500">
-              <span className="inline-block w-2 h-2 bg-green-500 rounded-full animate-pulse mr-2"></span>
-              Live Updates
-            </div>
-          </div>
-          
-        </div>
+        <h1 className="text-3xl font-bold text-gray-900 mb-4">
+          🎉 Dashboard Loaded Successfully!
+        </h1>
+        <p className="text-gray-600 mb-6">
+          Welcome to the Employee Attendance System Dashboard
+        </p>
         
         {/* Role-based content */}
         {isAdmin ? (
-          // Admin/HR Dashboard with Live Updates
-          <div className="space-y-6">
-            {/* Live Admin Status */}
-            <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-6 border border-blue-200">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900">Admin Dashboard</h3>
-                  <p className="text-sm text-gray-600">Real-time workforce management</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm text-gray-600">Last Updated</p>
-                  <p className="text-lg font-bold text-gray-900">
-                    {new Date().toLocaleTimeString()}
-                  </p>
-                </div>
-              </div>
+          // Admin/HR Dashboard
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <h3 className="font-semibold text-blue-900">Total Employees</h3>
+              <p className="text-2xl font-bold text-blue-600">
+                {employeeStats?.totalEmployees || 0}
+              </p>
             </div>
-
-            {/* Enhanced Admin Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <h3 className="font-semibold text-blue-900">Total Employees</h3>
-                <p className="text-2xl font-bold text-blue-600">
-                  {employeeStats?.totalEmployees || 0}
-                </p>
-                <p className="text-xs text-blue-600 mt-1">All Employees</p>
-              </div>
-              <div className="bg-green-50 p-4 rounded-lg">
-                <h3 className="font-semibold text-green-900">Present Today</h3>
-                <p className="text-2xl font-bold text-green-600">
-                  {attendanceStats?.presentCount || 0}
-                </p>
-                <p className="text-xs text-green-600 mt-1">Active Employees</p>
-              </div>
-              <div className="bg-orange-50 p-4 rounded-lg">
-                <h3 className="font-semibold text-orange-900">Late Today</h3>
-                <p className="text-2xl font-bold text-orange-600">
-                  {attendanceStats?.lateCount || 0}
-                </p>
-                <p className="text-xs text-orange-600 mt-1">Late Arrivals</p>
-              </div>
-              <div className="bg-purple-50 p-4 rounded-lg">
-                <h3 className="font-semibold text-purple-900">Pending Leaves</h3>
-                <p className="text-2xl font-bold text-purple-600">
-                  {leaveStats?.pendingRequests || 0}
-                </p>
-                <p className="text-xs text-purple-600 mt-1">Awaiting Approval</p>
-              </div>
+            <div className="bg-green-50 p-4 rounded-lg">
+              <h3 className="font-semibold text-green-900">Active Today</h3>
+              <p className="text-2xl font-bold text-green-600">
+                {attendanceStats?.presentCount || 0}
+              </p>
             </div>
-
-            {/* Live Attendance Overview */}
-            <div className="bg-white rounded-lg shadow-sm border p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Today's Attendance Overview</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="text-center p-4 bg-green-50 rounded-lg">
-                  <p className="text-sm text-gray-600">Attendance Rate</p>
-                  <p className="text-2xl font-bold text-green-600">
-                    {attendanceStats?.attendanceRate ? 
-                      `${Math.round(attendanceStats.attendanceRate)}%` : 
-                      '0%'
-                    }
-                  </p>
-                </div>
-                <div className="text-center p-4 bg-blue-50 rounded-lg">
-                  <p className="text-sm text-gray-600">Total Records</p>
-                  <p className="text-2xl font-bold text-blue-600">
-                    {attendanceStats?.totalRecords || 0}
-                  </p>
-                </div>
-                <div className="text-center p-4 bg-red-50 rounded-lg">
-                  <p className="text-sm text-gray-600">Absent Today</p>
-                  <p className="text-2xl font-bold text-red-600">
-                    {attendanceStats?.absentCount || 0}
-                  </p>
-                </div>
-              </div>
+            <div className="bg-purple-50 p-4 rounded-lg">
+              <h3 className="font-semibold text-purple-900">Pending Leaves</h3>
+              <p className="text-2xl font-bold text-purple-600">
+                {leaveStats?.pendingRequests || 0}
+              </p>
             </div>
           </div>
         ) : (
-          // Employee Dashboard with Live Updates
-          <div className="space-y-6">
-            {/* Live Attendance Status */}
-            {attendanceStatus && (
-              <div className={`p-6 rounded-lg border-2 ${
-                attendanceStatus.status?.isCompleted ? 'bg-green-50 border-green-200' :
-                attendanceStatus.status?.canCheckOut ? 'bg-orange-50 border-orange-200' :
-                'bg-blue-50 border-blue-200'
-              }`}>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">Today's Status</h3>
-                    <p className="text-sm text-gray-600">
-                      {attendanceStatus.status?.isCompleted ? '✅ Work day completed' :
-                       attendanceStatus.status?.canCheckOut ? '🕐 Ready for check-out' :
-                       '🚀 Ready for check-in'}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm text-gray-600">Current Time</p>
-                    <p className="text-lg font-bold text-gray-900">
-                      {new Date().toLocaleTimeString()}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Enhanced Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <h3 className="font-semibold text-blue-900">My Attendance</h3>
-                <p className="text-2xl font-bold text-blue-600">
-                  {attendanceData?.data?.attendances?.length || 0}
-                </p>
-                <p className="text-xs text-blue-600 mt-1">Total Records</p>
-              </div>
-              
-              <div className="bg-green-50 p-4 rounded-lg">
-                <h3 className="font-semibold text-green-900">My Leave Requests</h3>
-                <p className="text-2xl font-bold text-green-600">
-                  {leaveData?.data?.leaveRequests?.length || 0}
-                </p>
-                <p className="text-xs text-green-600 mt-1">All Requests</p>
-              </div>
-              
-              <div className="bg-purple-50 p-4 rounded-lg">
-                <h3 className="font-semibold text-purple-900">Pending Leaves</h3>
-                <p className="text-2xl font-bold text-purple-600">
-                  {leaveData?.data?.leaveRequests?.filter((leave: any) => leave.status === 'PENDING').length || 0}
-                </p>
-                <p className="text-xs text-purple-600 mt-1">Awaiting Approval</p>
-              </div>
-
-              {/* Working Hours Display */}
-              <div className="bg-orange-50 p-4 rounded-lg">
-                <h3 className="font-semibold text-orange-900">Today's Hours</h3>
-                <p className="text-2xl font-bold text-orange-600">
-                  {attendanceStatus?.attendance?.totalHours ? 
-                    `${parseFloat(attendanceStatus.attendance.totalHours.toString()).toFixed(1)}h` : 
-                    '0h'
-                  }
-                </p>
-                <p className="text-xs text-orange-600 mt-1">
-                  {attendanceStatus?.attendance?.overtimeHours && parseFloat(attendanceStatus.attendance.overtimeHours.toString()) > 0 ? 
-                    `+${parseFloat(attendanceStatus.attendance.overtimeHours.toString()).toFixed(1)}h OT` : 
-                    'Regular Hours'
-                  }
-                </p>
-              </div>
+          // Employee Dashboard
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <h3 className="font-semibold text-blue-900">My Attendance</h3>
+              <p className="text-2xl font-bold text-blue-600">
+                {attendanceData?.data?.attendances?.length || 0}
+              </p>
             </div>
-
-            {/* Today's Attendance Details */}
-            {attendanceStatus?.attendance && (
-              <div className="bg-white rounded-lg shadow-sm border p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Today's Attendance Details</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="text-center p-4 bg-gray-50 rounded-lg">
-                    <p className="text-sm text-gray-600">Check-in Time</p>
-                    <p className="text-lg font-bold text-gray-900">
-                      {attendanceStatus.attendance.checkIn ? 
-                        new Date(attendanceStatus.attendance.checkIn).toLocaleTimeString() : 
-                        'Not checked in'
-                      }
-                    </p>
-                  </div>
-                  <div className="text-center p-4 bg-gray-50 rounded-lg">
-                    <p className="text-sm text-gray-600">Check-out Time</p>
-                    <p className="text-lg font-bold text-gray-900">
-                      {attendanceStatus.attendance.checkOut ? 
-                        new Date(attendanceStatus.attendance.checkOut).toLocaleTimeString() : 
-                        'Not checked out'
-                      }
-                    </p>
-                  </div>
-                  <div className="text-center p-4 bg-gray-50 rounded-lg">
-                    <p className="text-sm text-gray-600">Status</p>
-                    <p className={`text-lg font-bold ${
-                      attendanceStatus.attendance.status === 'PRESENT' ? 'text-green-600' :
-                      attendanceStatus.attendance.status === 'LATE' ? 'text-orange-600' :
-                      'text-red-600'
-                    }`}>
-                      {attendanceStatus.attendance.status || 'Not marked'}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
+            <div className="bg-green-50 p-4 rounded-lg">
+              <h3 className="font-semibold text-green-900">My Leave Requests</h3>
+              <p className="text-2xl font-bold text-green-600">
+                {leaveData?.data?.leaveRequests?.length || 0}
+              </p>
+            </div>
+            <div className="bg-purple-50 p-4 rounded-lg">
+              <h3 className="font-semibold text-purple-900">Pending Leaves</h3>
+              <p className="text-2xl font-bold text-purple-600">
+                {leaveData?.data?.leaveRequests?.filter((leave: any) => leave.status === 'PENDING').length || 0}
+              </p>
+            </div>
           </div>
         )}
         
@@ -1044,107 +878,6 @@ const Dashboard: React.FC = () => {
                    selfCheckOutMutation.isLoading ? 'Checking Out...' :
                    'Take Selfie & Mark Attendance'}
                 </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Self-Attendance Modal */}
-      {showSelfAttendanceModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-lg w-full max-w-lg mx-auto max-h-[95vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-6 border-b sticky top-0 bg-white z-10">
-              <h2 className="text-xl font-semibold text-gray-900 flex items-center">
-                <Clock className="w-5 h-5 mr-2" />
-                Mark Attendance
-              </h2>
-              <button
-                onClick={() => setShowSelfAttendanceModal(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-            
-            <div className="p-6">
-              <div className="space-y-4">
-                <div className="text-center">
-                  <div className="mb-4">
-                    {selfie ? (
-                      <div className="relative">
-                        <img 
-                          src={selfie} 
-                          alt="Selfie" 
-                          className="w-32 h-32 object-cover rounded-lg mx-auto border-2 border-green-500"
-                        />
-                        <div className="absolute -top-2 -right-2 bg-green-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs">
-                          ✓
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="w-32 h-32 bg-gray-100 rounded-lg mx-auto flex items-center justify-center border-2 border-dashed border-gray-300">
-                        <Camera className="w-8 h-8 text-gray-400" />
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div className="mb-4">
-                    {location ? (
-                      <div className="flex items-center justify-center text-green-600">
-                        <MapPin className="w-4 h-4 mr-2" />
-                        <span className="text-sm">Location captured</span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-center text-gray-400">
-                        <MapPin className="w-4 h-4 mr-2" />
-                        <span className="text-sm">Getting location...</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowLiveCamera(true)}
-                    disabled={isAutoCapturing}
-                    className="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 disabled:opacity-50 transition-colors"
-                  >
-                    {selfie ? 'Retake Selfie' : 'Take Selfie'}
-                  </button>
-                  
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      try {
-                        const loc = await getCompleteLocation()
-                        setLocation(loc)
-                        toast.success('Location updated!')
-                      } catch (error: any) {
-                        toast.error('Failed to get location: ' + error.message)
-                      }
-                    }}
-                    disabled={isAutoCapturing}
-                    className="w-full bg-gray-600 text-white py-2 px-4 rounded hover:bg-gray-700 disabled:opacity-50 transition-colors"
-                  >
-                    Update Location
-                  </button>
-                </div>
-
-                <div className="pt-4 border-t">
-                  <button
-                    type="button"
-                    onClick={handleTakeSelfieAndLocation}
-                    disabled={isAutoCapturing || selfCheckInMutation.isLoading || selfCheckOutMutation.isLoading}
-                    className="w-full bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700 disabled:opacity-50 transition-colors"
-                  >
-                    {isAutoCapturing ? 'Capturing...' : 
-                     selfCheckInMutation.isLoading ? 'Checking In...' :
-                     selfCheckOutMutation.isLoading ? 'Checking Out...' :
-                     'Mark Attendance'}
-                  </button>
-                </div>
               </div>
             </div>
           </div>
