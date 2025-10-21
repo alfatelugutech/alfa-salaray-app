@@ -20,19 +20,31 @@ router.post("/self/check-in", async (req: Request, res: Response) => {
   console.log('📝 Self check-in request received:', {
     body: req.body,
     headers: req.headers,
-    user: (req as any).user
+    authorization: req.headers.authorization
   });
   
   try {
-    const { isRemote, notes, checkInSelfie, checkInLocation, deviceInfo, shiftId } = req.body;
+    const { isRemote, notes, checkInSelfie, checkInLocation, deviceInfo, shiftId, userId } = req.body;
     
-    // Get user from request (should be set by auth middleware)
-    const user = (req as any).user;
-    if (!user) {
+    // Simple authentication - check if userId is provided
+    if (!userId) {
       return res.status(401).json({
         success: false,
-        error: "Authentication required",
-        code: "AUTH_REQUIRED"
+        error: "User ID required",
+        code: "USER_ID_REQUIRED"
+      });
+    }
+
+    // Find user by ID
+    const user = await prisma.user.findUnique({
+      where: { id: userId }
+    });
+
+    if (!user || !user.isActive) {
+      return res.status(401).json({
+        success: false,
+        error: "Invalid user or user not active",
+        code: "INVALID_USER"
       });
     }
 
@@ -111,19 +123,31 @@ router.post("/self/check-out", async (req: Request, res: Response) => {
   console.log('📝 Self check-out request received:', {
     body: req.body,
     headers: req.headers,
-    user: (req as any).user
+    authorization: req.headers.authorization
   });
   
   try {
-    const { notes, checkOutSelfie, checkOutLocation } = req.body;
+    const { notes, checkOutSelfie, checkOutLocation, userId } = req.body;
     
-    // Get user from request
-    const user = (req as any).user;
-    if (!user) {
+    // Simple authentication - check if userId is provided
+    if (!userId) {
       return res.status(401).json({
         success: false,
-        error: "Authentication required",
-        code: "AUTH_REQUIRED"
+        error: "User ID required",
+        code: "USER_ID_REQUIRED"
+      });
+    }
+
+    // Find user by ID
+    const user = await prisma.user.findUnique({
+      where: { id: userId }
+    });
+
+    if (!user || !user.isActive) {
+      return res.status(401).json({
+        success: false,
+        error: "Invalid user or user not active",
+        code: "INVALID_USER"
       });
     }
 
