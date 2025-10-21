@@ -13,6 +13,7 @@ import { captureSelfie, compressImage, checkCameraPermissions } from '../utils/c
 import { locationTracker } from '../utils/locationTracker'
 import ConnectionTest from '../components/ConnectionTest'
 import LiveCamera from '../components/LiveCamera'
+import SmartDashboard from '../components/SmartDashboard'
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth()
@@ -27,6 +28,7 @@ const Dashboard: React.FC = () => {
   const [selfie, setSelfie] = useState<string | null>(null)
   const [isAutoCapturing, setIsAutoCapturing] = useState(false)
   const [showLiveCamera, setShowLiveCamera] = useState(false)
+  const [activeTab, setActiveTab] = useState<'overview' | 'smart'>('overview')
   const queryClient = useQueryClient()
 
 
@@ -384,12 +386,17 @@ const Dashboard: React.FC = () => {
       <ConnectionTest />
       
       <div className="bg-white rounded-lg shadow p-6">
-        <h1 className="text-3xl font-bold text-gray-900 mb-4">
-          🎉 Dashboard Loaded Successfully!
-        </h1>
-        <p className="text-gray-600 mb-6">
-          Welcome to the Employee Attendance System Dashboard
-        </p>
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">
+              🎉 Smart Dashboard
+            </h1>
+            <p className="text-gray-600">
+              AI-powered workforce management system
+            </p>
+          </div>
+          
+        </div>
         
         {/* Role-based content */}
         {isAdmin ? (
@@ -882,6 +889,107 @@ const Dashboard: React.FC = () => {
                    selfCheckOutMutation.isLoading ? 'Checking Out...' :
                    'Take Selfie & Mark Attendance'}
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Self-Attendance Modal */}
+      {showSelfAttendanceModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-lg mx-auto max-h-[95vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-6 border-b sticky top-0 bg-white z-10">
+              <h2 className="text-xl font-semibold text-gray-900 flex items-center">
+                <Clock className="w-5 h-5 mr-2" />
+                Mark Attendance
+              </h2>
+              <button
+                onClick={() => setShowSelfAttendanceModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            
+            <div className="p-6">
+              <div className="space-y-4">
+                <div className="text-center">
+                  <div className="mb-4">
+                    {selfie ? (
+                      <div className="relative">
+                        <img 
+                          src={selfie} 
+                          alt="Selfie" 
+                          className="w-32 h-32 object-cover rounded-lg mx-auto border-2 border-green-500"
+                        />
+                        <div className="absolute -top-2 -right-2 bg-green-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs">
+                          ✓
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="w-32 h-32 bg-gray-100 rounded-lg mx-auto flex items-center justify-center border-2 border-dashed border-gray-300">
+                        <Camera className="w-8 h-8 text-gray-400" />
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="mb-4">
+                    {location ? (
+                      <div className="flex items-center justify-center text-green-600">
+                        <MapPin className="w-4 h-4 mr-2" />
+                        <span className="text-sm">Location captured</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center text-gray-400">
+                        <MapPin className="w-4 h-4 mr-2" />
+                        <span className="text-sm">Getting location...</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowLiveCamera(true)}
+                    disabled={isAutoCapturing}
+                    className="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                  >
+                    {selfie ? 'Retake Selfie' : 'Take Selfie'}
+                  </button>
+                  
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        const loc = await getCompleteLocation()
+                        setLocation(loc)
+                        toast.success('Location updated!')
+                      } catch (error: any) {
+                        toast.error('Failed to get location: ' + error.message)
+                      }
+                    }}
+                    disabled={isAutoCapturing}
+                    className="w-full bg-gray-600 text-white py-2 px-4 rounded hover:bg-gray-700 disabled:opacity-50 transition-colors"
+                  >
+                    Update Location
+                  </button>
+                </div>
+
+                <div className="pt-4 border-t">
+                  <button
+                    type="button"
+                    onClick={handleTakeSelfieAndLocation}
+                    disabled={isAutoCapturing || selfCheckInMutation.isLoading || selfCheckOutMutation.isLoading}
+                    className="w-full bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700 disabled:opacity-50 transition-colors"
+                  >
+                    {isAutoCapturing ? 'Capturing...' : 
+                     selfCheckInMutation.isLoading ? 'Checking In...' :
+                     selfCheckOutMutation.isLoading ? 'Checking Out...' :
+                     'Mark Attendance'}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
