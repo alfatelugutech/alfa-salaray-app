@@ -109,6 +109,13 @@ router.post("/self/check-in", async (req, res) => {
     });
     try {
         const { isRemote, notes, checkInSelfie, checkInLocation, deviceInfo, shiftId, userId } = req.body;
+        console.log('📝 Check-in data received:', {
+            hasSelfie: !!checkInSelfie,
+            selfieLength: checkInSelfie?.length || 0,
+            hasLocation: !!checkInLocation,
+            locationData: checkInLocation,
+            userId: userId
+        });
         // Simple authentication - check if userId is provided
         if (!userId) {
             return res.status(401).json({
@@ -160,6 +167,21 @@ router.post("/self/check-in", async (req, res) => {
                 code: "ATTENDANCE_EXISTS"
             });
         }
+        // Enhanced validation for check-in requirements
+        if (!checkInSelfie) {
+            return res.status(400).json({
+                success: false,
+                error: "Check-in requires a selfie",
+                code: "SELFIE_REQUIRED"
+            });
+        }
+        if (!checkInLocation) {
+            return res.status(400).json({
+                success: false,
+                error: "Check-in requires location data",
+                code: "LOCATION_REQUIRED"
+            });
+        }
         // Create attendance record
         const attendance = await prisma.attendance.create({
             data: {
@@ -176,10 +198,24 @@ router.post("/self/check-in", async (req, res) => {
                 location: checkInLocation || null
             }
         });
+        console.log('✅ Check-in successful:', {
+            attendanceId: attendance.id,
+            employeeId: attendance.employeeId,
+            checkInTime: attendance.checkIn,
+            hasSelfie: !!attendance.checkInSelfie,
+            hasLocation: !!attendance.checkInLocation
+        });
         res.json({
             success: true,
-            message: "Check-in successful",
-            data: { attendance }
+            message: "Check-in successful - Attendance recorded with selfie and location",
+            data: {
+                attendance,
+                checkInTime: attendance.checkIn,
+                requirements: {
+                    selfie: !!attendance.checkInSelfie,
+                    location: !!attendance.checkInLocation
+                }
+            }
         });
     }
     catch (error) {
@@ -200,6 +236,13 @@ router.post("/self/check-out", async (req, res) => {
     });
     try {
         const { notes, checkOutSelfie, checkOutLocation, userId } = req.body;
+        console.log('📝 Check-out data received:', {
+            hasSelfie: !!checkOutSelfie,
+            selfieLength: checkOutSelfie?.length || 0,
+            hasLocation: !!checkOutLocation,
+            locationData: checkOutLocation,
+            userId: userId
+        });
         // Simple authentication - check if userId is provided
         if (!userId) {
             return res.status(401).json({
@@ -258,6 +301,21 @@ router.post("/self/check-out", async (req, res) => {
                 code: "ALREADY_CHECKED_OUT"
             });
         }
+        // Enhanced validation for check-out requirements
+        if (!checkOutSelfie) {
+            return res.status(400).json({
+                success: false,
+                error: "Check-out requires a selfie",
+                code: "SELFIE_REQUIRED"
+            });
+        }
+        if (!checkOutLocation) {
+            return res.status(400).json({
+                success: false,
+                error: "Check-out requires location data",
+                code: "LOCATION_REQUIRED"
+            });
+        }
         // Update attendance with check-out
         const updatedAttendance = await prisma.attendance.update({
             where: { id: attendance.id },
@@ -268,10 +326,24 @@ router.post("/self/check-out", async (req, res) => {
                 notes: notes || attendance.notes
             }
         });
+        console.log('✅ Check-out successful:', {
+            attendanceId: updatedAttendance.id,
+            employeeId: updatedAttendance.employeeId,
+            checkOutTime: updatedAttendance.checkOut,
+            hasSelfie: !!updatedAttendance.checkOutSelfie,
+            hasLocation: !!updatedAttendance.checkOutLocation
+        });
         res.json({
             success: true,
-            message: "Check-out successful",
-            data: { attendance: updatedAttendance }
+            message: "Check-out successful - Attendance recorded with selfie and location",
+            data: {
+                attendance: updatedAttendance,
+                checkOutTime: updatedAttendance.checkOut,
+                requirements: {
+                    selfie: !!updatedAttendance.checkOutSelfie,
+                    location: !!updatedAttendance.checkOutLocation
+                }
+            }
         });
     }
     catch (error) {
