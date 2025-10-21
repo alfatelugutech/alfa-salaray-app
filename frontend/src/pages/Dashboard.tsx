@@ -27,6 +27,7 @@ const Dashboard: React.FC = () => {
   const [selfie, setSelfie] = useState<string | null>(null)
   const [isAutoCapturing, setIsAutoCapturing] = useState(false)
   const [showLiveCamera, setShowLiveCamera] = useState(false)
+  const [showCheckOutConfirm, setShowCheckOutConfirm] = useState(false)
   const queryClient = useQueryClient()
   
   // Fetch data based on user role with better error handling
@@ -149,7 +150,7 @@ const Dashboard: React.FC = () => {
         locationTracker.stopTracking()
         console.log('🛑 Location tracking stopped after check-out')
         
-        toast.success('✅ Check-out completed successfully! Location tracking stopped.')
+        toast.success('✅ Check-out completed successfully! Your attendance has been recorded with selfie and location.')
         setShowSelfAttendanceModal(false)
         setLocation(null)
         setSelfie(null)
@@ -157,11 +158,13 @@ const Dashboard: React.FC = () => {
       onError: (error: any) => {
         const errorMessage = error.response?.data?.error || 'Failed to check out'
         if (errorMessage.includes('No active check-in')) {
-          toast.error('Please check in first before checking out')
+          toast.error('❌ Please check in first before checking out')
         } else if (errorMessage.includes('Already checked out')) {
-          toast.error('You have already checked out today')
+          toast.error('❌ You have already checked out today')
+        } else if (errorMessage.includes('User ID required')) {
+          toast.error('❌ Authentication error. Please login again.')
         } else {
-          toast.error(errorMessage)
+          toast.error(`❌ Check-out failed: ${errorMessage}`)
         }
       }
     }
@@ -183,6 +186,18 @@ const Dashboard: React.FC = () => {
 
   // Open live camera for selfie capture
   const handleTakeSelfieAndLocation = async () => {
+    // Check if this is check-out and show confirmation
+    if (attendanceStatus?.status?.canCheckOut) {
+      setShowCheckOutConfirm(true)
+      return
+    }
+
+    // For check-in, proceed directly
+    await startSelfieCapture()
+  }
+
+  // Start the selfie capture process
+  const startSelfieCapture = async () => {
     // First capture location automatically
     try {
       const loc = await getCompleteLocation()
@@ -202,6 +217,12 @@ const Dashboard: React.FC = () => {
     setShowLiveCamera(true)
   }
 
+  // Confirm check-out
+  const handleConfirmCheckOut = () => {
+    setShowCheckOutConfirm(false)
+    startSelfieCapture()
+  }
+
   // Handle selfie capture from live camera
   const handleSelfieCapture = (imageData: string) => {
     setSelfie(imageData)
@@ -210,6 +231,11 @@ const Dashboard: React.FC = () => {
       selfieLength: imageData?.length || 0
     })
     toast.success('📸 Selfie captured successfully!')
+    
+    // Auto-submit attendance after selfie capture
+    setTimeout(() => {
+      handleAutoSubmitAttendance()
+    }, 1000)
   }
 
   const handleAutoSubmitAttendance = () => {
@@ -230,6 +256,31 @@ const Dashboard: React.FC = () => {
     
     // Determine if this is check-in or check-out based on current status
     const isCheckOut = attendanceStatus?.status?.canCheckOut
+    
+    // Enhanced validation for check-out requirements
+    if (isCheckOut) {
+      // Check-out specific validation
+      if (!selfie) {
+        toast.error('❌ Check-out requires a selfie. Please capture your selfie first.')
+        return
+      }
+      if (!location) {
+        toast.error('❌ Check-out requires location. Please allow location access.')
+        return
+      }
+      console.log('✅ Check-out requirements validated: Selfie + Location captured')
+    } else {
+      // Check-in specific validation
+      if (!selfie) {
+        toast.error('❌ Check-in requires a selfie. Please capture your selfie first.')
+        return
+      }
+      if (!location) {
+        toast.error('❌ Check-in requires location. Please allow location access.')
+        return
+      }
+      console.log('✅ Check-in requirements validated: Selfie + Location captured')
+    }
     
     if (isCheckOut) {
       // Check-out flow
@@ -606,7 +657,9 @@ const Dashboard: React.FC = () => {
                     <p className="text-sm text-gray-600 mt-2">
                       {attendanceStatus?.status?.isCompleted 
                         ? 'Great job! See you tomorrow.'
-                        : `Location will be captured automatically, then you can take your selfie with live camera`
+                        : attendanceStatus?.status?.canCheckOut
+                        ? '🌆 Check-out Requirements: Location + Selfie required'
+                        : '🌅 Check-in Requirements: Location + Selfie required'
                       }
                     </p>
                   </div>
@@ -635,12 +688,15 @@ const Dashboard: React.FC = () => {
                     ) : (
                       <>
                         <Camera className="w-6 h-6" />
-                        📸 {attendanceStatus?.status?.canCheckOut ? 'Open Live Camera for Check-Out' : 'Open Live Camera for Check-In'}
+                        📸 {attendanceStatus?.status?.canCheckOut ? 'Start Check-Out Process' : 'Start Check-In Process'}
                       </>
                     )}
                   </button>
                   <p className="text-xs text-gray-600 mt-4 text-center bg-white/50 p-3 rounded-lg">
-                    ℹ️ Location will be captured automatically, then you can take your selfie with live camera
+                    ℹ️ {attendanceStatus?.status?.canCheckOut 
+                      ? 'Check-out: Location captured automatically, then take your selfie with live camera'
+                      : 'Check-in: Location captured automatically, then take your selfie with live camera'
+                    }
                   </p>
                 </div>
               ) : (
@@ -764,6 +820,39 @@ const Dashboard: React.FC = () => {
         onCapture={handleSelfieCapture}
         title={attendanceStatus?.status?.canCheckOut ? 'Check-Out Selfie' : 'Check-In Selfie'}
       />
+
+      {/* Check-Out Confirmation Modal */}
+      {showCheckOutConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Clock className="w-8 h-8 text-orange-600" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">
+                Confirm Check-Out
+              </h3>
+              <p className="text-gray-600 mb-6">
+                Are you sure you want to check out? This will end your work day and stop location tracking.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowCheckOutConfirm(false)}
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmCheckOut}
+                  className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
+                >
+                  Yes, Check Out
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
