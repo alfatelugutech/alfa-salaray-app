@@ -28,8 +28,8 @@ model User {
   employee      Employee?
   managedDepartments Department[] @relation("DepartmentManager")
   createdRoles  Role[] @relation("RoleCreator")
-  assignedRoles UserRole[]
-  assignedRolesBy UserRole[] @relation("RoleAssigner")
+  assignedRoles UserRoleAssignment[]
+  assignedRolesBy UserRoleAssignment[] @relation("RoleAssigner")
 
   @@map("users")
 }
@@ -261,7 +261,7 @@ model Role {
 
   // Relations
   permissions RolePermission[]
-  users       UserRole[]
+  users       UserRoleAssignment[]
   createdByUser User @relation("RoleCreator", fields: [createdBy], references: [id])
 
   @@map("roles")
@@ -302,7 +302,7 @@ model RolePermission {
 }
 
 // User-Role Mapping (for custom roles)
-model UserRole {
+model UserRoleAssignment {
   id        String   @id @default(cuid())
   userId    String
   roleId    String
