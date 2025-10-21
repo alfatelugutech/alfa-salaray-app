@@ -123,13 +123,10 @@ router.post("/login", async (req: Request, res: Response) => {
 
     const { login, password } = value;
 
-    // Find user by email or mobile number
+    // Find user by email (mobileNumber support will be added after database migration)
     const user = await prisma.user.findFirst({
       where: {
-        OR: [
-          { email: login },
-          { mobileNumber: login }
-        ]
+        email: login
       },
       include: {
         employee: true

@@ -6,6 +6,10 @@ echo "🚀 Starting Employee Attendance System..."
 echo "📦 Generating Prisma client..."
 npx prisma generate
 
+# Fix database schema issues
+echo "🔧 Fixing database schema..."
+npx ts-node scripts/fix-database.ts || echo "⚠️ Database fix failed, continuing..."
+
 # Try to run migration first (for existing databases)
 echo "🔄 Attempting department migration..."
 npx ts-node scripts/migrate-departments.ts || echo "⚠️ Migration skipped or failed, continuing..."

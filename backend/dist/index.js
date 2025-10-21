@@ -110,6 +110,14 @@ app.get('/api/debug', (req, res) => {
         ip: req.ip
     });
 });
+// Simple test endpoint
+app.get('/api/test', (req, res) => {
+    res.status(200).json({
+        success: true,
+        message: 'API is working',
+        timestamp: new Date().toISOString()
+    });
+});
 // API routes
 app.use('/api/auth', auth_1.default);
 app.use('/api/employees', employees_1.default);
