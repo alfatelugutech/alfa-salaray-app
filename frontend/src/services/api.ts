@@ -16,6 +16,20 @@ const api = axios.create({
 console.log('🔗 API Base URL:', API_BASE_URL)
 console.log('🌍 Environment:', import.meta.env.MODE)
 
+// Health check function
+export const checkBackendHealth = async () => {
+  try {
+    const response = await axios.get(`${API_BASE_URL.replace('/api', '')}/health`, {
+      timeout: 5000
+    })
+    console.log('✅ Backend health check passed:', response.data)
+    return { isHealthy: true, data: response.data }
+  } catch (error: any) {
+    console.error('❌ Backend health check failed:', error.message)
+    return { isHealthy: false, error: error.message }
+  }
+}
+
 // Request interceptor to add auth token
 api.interceptors.request.use(
   (config) => {
@@ -58,14 +72,30 @@ api.interceptors.response.use(
     // Handle timeout errors
     if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
       console.error('Request timeout - backend is not responding')
-      toast.error('Cannot connect to server. Please ensure the backend is running at ' + API_BASE_URL.replace('/api', ''))
+      console.error('Backend URL:', API_BASE_URL)
+      toast.error('Server timeout. The backend may be slow or overloaded. Please try again.')
       return Promise.reject(error)
     }
     
     // Handle network errors more gracefully
     if (error.code === 'NETWORK_ERROR' || error.message === 'Network Error' || error.code === 'ERR_NETWORK') {
       console.error('Network error - backend may be unavailable at:', API_BASE_URL)
-      toast.error('Cannot connect to server. Please check if the backend is running.')
+      console.error('Full error:', error)
+      toast.error('Network error. Please check your internet connection and try again.')
+      return Promise.reject(error)
+    }
+    
+    // Handle connection refused errors
+    if (error.code === 'ECONNREFUSED' || error.message.includes('Connection refused')) {
+      console.error('Connection refused - backend is not running')
+      toast.error('Backend server is not running. Please contact support.')
+      return Promise.reject(error)
+    }
+    
+    // Handle 502/503 errors (bad gateway/service unavailable)
+    if (error.response?.status === 502 || error.response?.status === 503) {
+      console.error('Backend service unavailable:', error.response.status)
+      toast.error('Backend service is temporarily unavailable. Please try again later.')
       return Promise.reject(error)
     }
     

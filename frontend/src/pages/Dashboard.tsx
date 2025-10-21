@@ -11,6 +11,7 @@ import toast from 'react-hot-toast'
 import { getCompleteLocation, getDeviceInfo } from '../utils/geolocation'
 import { captureSelfie, compressImage, checkCameraPermissions } from '../utils/camera'
 import { locationTracker } from '../utils/locationTracker'
+import ConnectionTest from '../components/ConnectionTest'
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth()
@@ -326,6 +327,9 @@ const Dashboard: React.FC = () => {
   
   return (
     <div className="p-6">
+      {/* Connection Test Component */}
+      <ConnectionTest />
+      
       <div className="bg-white rounded-lg shadow p-6">
         <h1 className="text-3xl font-bold text-gray-900 mb-4">
           🎉 Dashboard Loaded Successfully!
