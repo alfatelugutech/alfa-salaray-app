@@ -4,6 +4,10 @@ import { Attendance, MarkAttendanceData, PaginatedResponse } from '../types'
 export const attendanceService = {
   // Mark attendance
   async markAttendance(data: MarkAttendanceData): Promise<Attendance> {
+    console.log('🎯 Marking attendance with data:', data)
+    console.log('🔑 Auth token:', localStorage.getItem('token'))
+    console.log('👤 User:', localStorage.getItem('user'))
+    
     const response = await api.post<{ success: boolean; data: { attendance: Attendance } }>('/attendance/mark', data)
     return response.data.data.attendance
   },

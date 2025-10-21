@@ -14,6 +14,11 @@ import { locationTracker } from '../utils/locationTracker'
 const Dashboard: React.FC = () => {
   const { user } = useAuth()
   const navigate = useNavigate()
+  
+  // Debug user data
+  console.log('👤 Dashboard user data:', user)
+  console.log('🔑 User role:', user?.role)
+  console.log('🆔 User ID:', user?.id)
   const [showSelfAttendanceModal, setShowSelfAttendanceModal] = useState(false)
   const [location, setLocation] = useState<any>(null)
   const [selfie, setSelfie] = useState<string | null>(null)
