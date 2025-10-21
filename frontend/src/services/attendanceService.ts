@@ -81,10 +81,19 @@ export const attendanceService = {
     } | null
     deviceInfo?: any
     shiftId?: string | null
+    userId?: string
   }): Promise<Attendance> {
+    // Get user ID from localStorage if not provided
+    const userData = localStorage.getItem('user');
+    const userId = payload.userId || (userData ? JSON.parse(userData).id : null);
+    
+    if (!userId) {
+      throw new Error('User ID not found. Please login again.');
+    }
+
     const response = await api.post<{ success: boolean; data: { attendance: Attendance } }>(
       '/attendance/self/check-in',
-      payload
+      { ...payload, userId }
     )
     return response.data.data.attendance
   },
@@ -99,10 +108,19 @@ export const attendanceService = {
       address?: string
       accuracy?: number
     } | null
+    userId?: string
   }): Promise<Attendance> {
+    // Get user ID from localStorage if not provided
+    const userData = localStorage.getItem('user');
+    const userId = payload.userId || (userData ? JSON.parse(userData).id : null);
+    
+    if (!userId) {
+      throw new Error('User ID not found. Please login again.');
+    }
+
     const response = await api.post<{ success: boolean; data: { attendance: Attendance } }>(
       '/attendance/self/check-out',
-      payload
+      { ...payload, userId }
     )
     return response.data.data.attendance
   },

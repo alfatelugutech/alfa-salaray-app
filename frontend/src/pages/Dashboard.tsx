@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from 'react-query'
 import { attendanceService } from '../services/attendanceService'
 import { leaveService } from '../services/leaveService'
 import { employeeService } from '../services/employeeService'
+import { authService } from '../services/authService'
 import { Clock, X, MapPin, Camera } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { getCompleteLocation, getDeviceInfo } from '../utils/geolocation'
@@ -251,7 +252,10 @@ const Dashboard: React.FC = () => {
       selfieLength: selfie?.length || 0,
       hasLocation: !!location,
       locationData: location,
-      attendanceStatus: attendanceStatus?.status
+      attendanceStatus: attendanceStatus?.status,
+      user: user,
+      userId: user?.id,
+      isAuthenticated: authService.isAuthenticated()
     })
     
     // Determine if this is check-in or check-out based on current status
