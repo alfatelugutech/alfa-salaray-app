@@ -11,7 +11,10 @@ const authenticateToken = async (req, res, next) => {
     try {
         const authHeader = req.headers.authorization;
         const token = authHeader && authHeader.split(" ")[1];
+        console.log('🔐 Auth middleware - Header:', authHeader);
+        console.log('🔐 Auth middleware - Token:', token ? 'Present' : 'Missing');
         if (!token) {
+            console.log('❌ No token provided');
             res.status(401).json({
                 success: false,
                 error: "Access token required",
@@ -20,7 +23,9 @@ const authenticateToken = async (req, res, next) => {
             return;
         }
         const jwtSecret = process.env.JWT_SECRET || (process.env.NODE_ENV === "production" ? "" : "dev-secret");
+        console.log('🔐 JWT Secret configured:', !!jwtSecret);
         if (!jwtSecret) {
+            console.log('❌ JWT Secret not configured');
             res.status(500).json({
                 success: false,
                 error: "Server configuration error: JWT secret not set",
@@ -29,6 +34,7 @@ const authenticateToken = async (req, res, next) => {
             return;
         }
         const decoded = jsonwebtoken_1.default.verify(token, jwtSecret);
+        console.log('🔐 Decoded token:', { userId: decoded.userId, email: decoded.email });
         const user = await prisma.user.findUnique({
             where: { id: decoded.userId }
         });

@@ -58,14 +58,27 @@ app.use(limiter);
 const allowedOrigins = [
     process.env.FRONTEND_URL || "http://localhost:3000",
     "https://alfa-salaray-app.vercel.app",
-    "http://localhost:3000"
+    "http://localhost:3000",
+    "http://localhost:5173", // Vite dev server
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:5173"
 ];
 app.use((0, cors_1.default)({
     origin: (origin, callback) => {
-        // Allow requests with no origin (mobile apps, Postman, etc.)
-        if (!origin)
+        console.log('🌐 CORS request from origin:', origin);
+        // Allow requests with no origin (mobile apps, Postman, file://, etc.)
+        if (!origin || origin === 'null') {
+            console.log('✅ Allowing request with no origin');
             return callback(null, true);
+        }
         if (allowedOrigins.includes(origin)) {
+            console.log('✅ Allowing origin:', origin);
+            return callback(null, true);
+        }
+        // In development, allow localhost and 127.0.0.1
+        if (process.env.NODE_ENV !== 'production' &&
+            (origin.includes('localhost') || origin.includes('127.0.0.1'))) {
+            console.log('✅ Allowing localhost origin in development:', origin);
             return callback(null, true);
         }
         console.log('🚫 CORS blocked origin:', origin);
@@ -115,7 +128,23 @@ app.get('/api/test', (req, res) => {
     res.status(200).json({
         success: true,
         message: 'API is working',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        origin: req.get('origin'),
+        userAgent: req.get('user-agent')
+    });
+});
+// CORS test endpoint
+app.get('/api/cors-test', (req, res) => {
+    res.status(200).json({
+        success: true,
+        message: 'CORS is working',
+        timestamp: new Date().toISOString(),
+        origin: req.get('origin'),
+        headers: {
+            origin: req.get('origin'),
+            referer: req.get('referer'),
+            userAgent: req.get('user-agent')
+        }
     });
 });
 // API routes

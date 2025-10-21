@@ -108,6 +108,15 @@ router.post("/register", async (req: Request, res: Response) => {
   }
 });
 
+// Test endpoint to check if auth service is working
+router.get("/test", (req: Request, res: Response) => {
+  res.json({
+    success: true,
+    message: "Auth service is working",
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Login user
 router.post("/login", async (req: Request, res: Response) => {
   try {
