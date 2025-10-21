@@ -55,8 +55,22 @@ const limiter = (0, express_rate_limit_1.default)({
 });
 app.use(limiter);
 // CORS configuration
+const allowedOrigins = [
+    process.env.FRONTEND_URL || "http://localhost:3000",
+    "https://alfa-salaray-app.vercel.app",
+    "http://localhost:3000"
+];
 app.use((0, cors_1.default)({
-    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    origin: (origin, callback) => {
+        // Allow requests with no origin (mobile apps, Postman, etc.)
+        if (!origin)
+            return callback(null, true);
+        if (allowedOrigins.includes(origin)) {
+            return callback(null, true);
+        }
+        console.log('🚫 CORS blocked origin:', origin);
+        return callback(new Error('Not allowed by CORS'));
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
@@ -79,7 +93,21 @@ app.get('/health', (req, res) => {
         timestamp: new Date().toISOString(),
         uptime: process.uptime(),
         environment: process.env.NODE_ENV || 'development',
-        version: '2.0.0 - Phase 2'
+        version: '2.0.0 - Phase 2',
+        cors: {
+            allowedOrigins: allowedOrigins,
+            frontendUrl: process.env.FRONTEND_URL
+        }
+    });
+});
+// Debug endpoint for CORS testing
+app.get('/api/debug', (req, res) => {
+    res.status(200).json({
+        message: 'Backend is working!',
+        timestamp: new Date().toISOString(),
+        origin: req.get('origin'),
+        userAgent: req.get('user-agent'),
+        ip: req.ip
     });
 });
 // API routes

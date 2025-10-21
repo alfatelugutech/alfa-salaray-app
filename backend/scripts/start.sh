@@ -6,9 +6,13 @@ echo "🚀 Starting Employee Attendance System..."
 echo "📦 Generating Prisma client..."
 npx prisma generate
 
-# Push database schema
+# Try to run migration first (for existing databases)
+echo "🔄 Attempting department migration..."
+npx ts-node scripts/migrate-departments.ts || echo "⚠️ Migration skipped or failed, continuing..."
+
+# Push database schema with data loss acceptance
 echo "🗄️ Setting up database schema..."
-npx prisma db push
+npx prisma db push --accept-data-loss
 
 # Seed database with initial data
 echo "🌱 Seeding database with initial data..."
