@@ -19,6 +19,10 @@ import locationTrackingRoutes from './routes/locationTracking';
 import departmentRoutes from './routes/departments';
 import roleRoutes from './routes/roles';
 import permissionRoutes from './routes/permissions';
+import exportRoutes from './routes/export';
+import notificationRoutes from './routes/notifications';
+import auditRoutes from './routes/audit';
+import backupRoutes from './routes/backup';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler';
@@ -232,6 +236,10 @@ app.use('/api/location-tracking', locationTrackingRoutes);
 app.use('/api/departments', departmentRoutes);
 app.use('/api/roles', roleRoutes);
 app.use('/api/permissions', permissionRoutes);
+app.use('/api/export', exportRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/audit', auditRoutes);
+app.use('/api/backup', backupRoutes);
 
 // Error handling middleware
 app.use(notFound);

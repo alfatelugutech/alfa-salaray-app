@@ -24,6 +24,10 @@ const locationTracking_1 = __importDefault(require("./routes/locationTracking"))
 const departments_1 = __importDefault(require("./routes/departments"));
 const roles_1 = __importDefault(require("./routes/roles"));
 const permissions_1 = __importDefault(require("./routes/permissions"));
+const export_1 = __importDefault(require("./routes/export"));
+const notifications_1 = __importDefault(require("./routes/notifications"));
+const audit_1 = __importDefault(require("./routes/audit"));
+const backup_1 = __importDefault(require("./routes/backup"));
 // Import middleware
 const errorHandler_1 = require("./middleware/errorHandler");
 const notFound_1 = require("./middleware/notFound");
@@ -214,6 +218,10 @@ app.use('/api/location-tracking', locationTracking_1.default);
 app.use('/api/departments', departments_1.default);
 app.use('/api/roles', roles_1.default);
 app.use('/api/permissions', permissions_1.default);
+app.use('/api/export', export_1.default);
+app.use('/api/notifications', notifications_1.default);
+app.use('/api/audit', audit_1.default);
+app.use('/api/backup', backup_1.default);
 // Error handling middleware
 app.use(notFound_1.notFound);
 app.use(errorHandler_1.errorHandler);

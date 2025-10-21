@@ -30,6 +30,10 @@ model User {
   createdRoles  Role[] @relation("RoleCreator")
   assignedRoles UserRoleAssignment[]
   assignedRolesBy UserRoleAssignment[] @relation("RoleAssigner")
+  notifications Notification[]
+  notificationPreferences NotificationPreference?
+  auditLogs     AuditLog[]
+  createdBackups Backup[]
 
   @@map("users")
 }
@@ -239,6 +243,83 @@ model SystemSetting {
   @@map("system_settings")
 }
 
+// Notifications System
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  message   String
+  priority  NotificationPriority @default(MEDIUM)
+  read      Boolean  @default(false)
+  readAt    DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+// Notification Preferences
+model NotificationPreference {
+  id                    String   @id @default(cuid())
+  userId                String   @unique
+  emailNotifications    Boolean  @default(true)
+  pushNotifications     Boolean  @default(true)
+  smsNotifications      Boolean  @default(false)
+  attendanceReminders   Boolean  @default(true)
+  leaveNotifications    Boolean  @default(true)
+  payrollNotifications  Boolean  @default(true)
+  systemNotifications   Boolean  @default(true)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  // Relations
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notification_preferences")
+}
+
+// Audit Logs
+model AuditLog {
+  id          String   @id @default(cuid())
+  action      String
+  resource    String
+  resourceId  String
+  userId      String
+  userEmail   String
+  timestamp   DateTime @default(now())
+  details     Json?
+  ipAddress   String?
+  userAgent   String?
+
+  // Relations
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("audit_logs")
+}
+
+// Data Backups
+model Backup {
+  id          String   @id @default(cuid())
+  name        String
+  type        BackupType
+  status      BackupStatus @default(PENDING)
+  size        BigInt?
+  filePath    String?
+  downloadUrl String?
+  createdAt   DateTime @default(now())
+  completedAt DateTime?
+  createdBy   String
+
+  // Relations
+  creator     User     @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+
+  @@map("backups")
+}
+
 // Enums
 enum UserRole {
   SUPER_ADMIN
@@ -372,4 +453,31 @@ enum SettingType {
   NUMBER
   BOOLEAN
   JSON
+}
+
+enum NotificationType {
+  INFO
+  WARNING
+  ERROR
+  SUCCESS
+}
+
+enum NotificationPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum BackupType {
+  FULL
+  INCREMENTAL
+  DIFFERENTIAL
+}
+
+enum BackupStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  FAILED
 }
