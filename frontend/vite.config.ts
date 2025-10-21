@@ -10,6 +10,18 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    sourcemap: true
+    sourcemap: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          router: ['react-router-dom'],
+          query: ['react-query'],
+          ui: ['lucide-react', 'react-hot-toast'],
+          utils: ['axios']
+        }
+      }
+    },
+    chunkSizeWarningLimit: 1000
   }
 })
