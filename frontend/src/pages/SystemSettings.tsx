@@ -1,11 +1,13 @@
 import React, { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from 'react-query'
-import { Plus, Edit, Trash2 } from 'lucide-react'
+import { Plus, Edit, Trash2, Settings, DollarSign } from 'lucide-react'
 import { settingsService } from '../services/settingsService'
 import { SystemSetting, CreateSettingData } from '../types'
+import PayrollSettings from '../components/PayrollSettings'
 import toast from 'react-hot-toast'
 
 const SystemSettings: React.FC = () => {
+  const [activeTab, setActiveTab] = useState('general')
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [editingSetting, setEditingSetting] = useState<SystemSetting | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
@@ -194,7 +196,40 @@ const SystemSettings: React.FC = () => {
         </div>
       )}
 
-      {/* Filters */}
+      {/* Tab Navigation */}
+      <div className="border-b border-gray-200">
+        <nav className="-mb-px flex space-x-8">
+          <button
+            onClick={() => setActiveTab('general')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'general'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            <Settings className="h-4 w-4 inline mr-2" />
+            General Settings
+          </button>
+          <button
+            onClick={() => setActiveTab('payroll')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'payroll'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            <DollarSign className="h-4 w-4 inline mr-2" />
+            Payroll Settings
+          </button>
+        </nav>
+      </div>
+
+      {/* Tab Content */}
+      {activeTab === 'payroll' ? (
+        <PayrollSettings />
+      ) : (
+        <>
+          {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="flex-1">
           <input
@@ -343,6 +378,8 @@ const SystemSettings: React.FC = () => {
           onSubmit={(data) => handleUpdateSetting(editingSetting.key, data)}
           isLoading={updateSettingMutation.isLoading}
         />
+      )}
+        </>
       )}
     </div>
   )

@@ -98,6 +98,8 @@ export interface Employee {
   dateOfBirth?: string
   mobileNumber?: string
   salary?: number
+  hourlyRate?: number
+  payrollMethod?: 'FIXED_SALARY' | 'HOURLY_RATE' | 'COMMISSION_BASED' | 'PROJECT_BASED' | 'MIXED'
   status: 'ACTIVE' | 'INACTIVE' | 'TERMINATED' | 'ON_LEAVE'
   workLocation?: string
   emergencyContact?: any

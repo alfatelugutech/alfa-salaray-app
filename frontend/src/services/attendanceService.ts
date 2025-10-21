@@ -148,6 +148,14 @@ export const attendanceService = {
       params: { userId }
     })
     return response.data.data
+  },
+
+  // Get working hours analytics
+  async getWorkingHoursAnalytics(employeeId: string, startDate?: string, endDate?: string) {
+    const response = await api.get('/attendance/analytics/working-hours', {
+      params: { employeeId, startDate, endDate }
+    });
+    return response.data;
   }
 }
 

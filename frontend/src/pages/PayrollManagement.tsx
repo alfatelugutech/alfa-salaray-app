@@ -4,6 +4,7 @@ import { Plus, Edit, Trash2, DollarSign, Calendar, User, CheckCircle, Clock, Cal
 import { payrollService } from '../services/payrollService'
 import { employeeService } from '../services/employeeService'
 import { attendanceService } from '../services/attendanceService'
+import { payrollSettingsService } from '../services/payrollSettingsService'
 import { Payroll, CreatePayrollData, Employee } from '../types'
 import toast from 'react-hot-toast'
 
@@ -38,74 +39,138 @@ const PayrollManagement: React.FC = () => {
     }
 
     try {
-      const response = await attendanceService.getAttendance({
-        employeeId: selectedEmployee,
-        startDate: `${yearFilter}-${monthFilter.toString().padStart(2, '0')}-01`,
-        endDate: `${yearFilter}-${monthFilter.toString().padStart(2, '0')}-31`,
-        limit: 100
-      })
+      // Use the working hours analytics endpoint
+      const response = await attendanceService.getWorkingHoursAnalytics(
+        selectedEmployee,
+        `${yearFilter}-${monthFilter.toString().padStart(2, '0')}-01`,
+        `${yearFilter}-${monthFilter.toString().padStart(2, '0')}-31`
+      )
 
-      if (response.data.attendances) {
-        let totalRegularHours = 0
-        let totalOvertimeHours = 0
-        let totalBreakHours = 0
-        let totalWorkingDays = 0
-
-        response.data.attendances.forEach((attendance: any) => {
-          if (attendance.regularHours) totalRegularHours += Number(attendance.regularHours)
-          if (attendance.overtimeHours) totalOvertimeHours += Number(attendance.overtimeHours)
-          if (attendance.breakHours) totalBreakHours += Number(attendance.breakHours)
-          if (attendance.status === 'PRESENT' || attendance.status === 'HALF_DAY') totalWorkingDays++
-        })
-
+      if (response.data?.insights) {
+        const insights = response.data.insights
         setWorkingHoursData({
-          totalRegularHours,
-          totalOvertimeHours,
-          totalBreakHours,
-          totalWorkingDays,
-          totalHours: totalRegularHours + totalOvertimeHours
+          totalRegularHours: insights.totalRegularHours || 0,
+          totalOvertimeHours: insights.totalOvertimeHours || 0,
+          totalBreakHours: insights.totalBreakHours || 0,
+          totalWorkingDays: insights.totalDays || 0,
+          totalHours: insights.totalWorkingHours || 0
         })
 
         toast.success('Working hours calculated successfully!')
+      } else {
+        // Fallback to manual calculation if analytics endpoint fails
+        const response = await attendanceService.getAttendance({
+          employeeId: selectedEmployee,
+          startDate: `${yearFilter}-${monthFilter.toString().padStart(2, '0')}-01`,
+          endDate: `${yearFilter}-${monthFilter.toString().padStart(2, '0')}-31`,
+          limit: 100
+        })
+
+        if (response.data?.attendances) {
+          let totalRegularHours = 0
+          let totalOvertimeHours = 0
+          let totalBreakHours = 0
+          let totalWorkingDays = 0
+
+          response.data.attendances.forEach((attendance: any) => {
+            if (attendance.regularHours) totalRegularHours += Number(attendance.regularHours)
+            if (attendance.overtimeHours) totalOvertimeHours += Number(attendance.overtimeHours)
+            if (attendance.breakHours) totalBreakHours += Number(attendance.breakHours)
+            if (attendance.status === 'PRESENT' || attendance.status === 'HALF_DAY') totalWorkingDays++
+          })
+
+          setWorkingHoursData({
+            totalRegularHours,
+            totalOvertimeHours,
+            totalBreakHours,
+            totalWorkingDays,
+            totalHours: totalRegularHours + totalOvertimeHours
+          })
+
+          toast.success('Working hours calculated successfully!')
+        }
       }
     } catch (error) {
+      console.error('Working hours calculation error:', error)
       toast.error('Failed to calculate working hours')
     }
   }
 
+  // Calculate salary based on working hours using payroll settings
+  const calculateSalaryFromHours = async (employee: any, workingHours: any) => {
+    if (!employee || !workingHours) return null
+
+    try {
+      // Use the new payroll calculation API
+      const calculation = await payrollSettingsService.calculatePayroll(
+        employee.id,
+        monthFilter ? Number(monthFilter) : new Date().getMonth() + 1,
+        yearFilter ? Number(yearFilter) : new Date().getFullYear(),
+        workingHours
+      )
+
+      return {
+        basicSalary: calculation.calculation.basicSalary,
+        overtimePay: calculation.calculation.overtimePay,
+        totalPay: calculation.calculation.totalPay,
+        method: calculation.calculation.method,
+        breakdown: calculation.calculation.breakdown
+      }
+    } catch (error) {
+      console.error('Payroll calculation error:', error)
+      // Fallback to simple calculation
+      const hourlyRate = Number(employee.salary || 0) / 160
+      const regularPay = workingHours.totalRegularHours * hourlyRate
+      const overtimeRate = hourlyRate * 1.5
+      const overtimePay = workingHours.totalOvertimeHours * overtimeRate
+      
+      return {
+        basicSalary: regularPay,
+        overtimePay: overtimePay,
+        totalPay: regularPay + overtimePay,
+        method: 'FIXED_SALARY',
+        breakdown: { note: 'Fallback calculation' }
+      }
+    }
+  }
+
   // Fetch payroll records
-  const { data: payrollData, isLoading: payrollLoading } = useQuery({
-    queryKey: ['payroll', searchTerm, statusFilter, monthFilter, yearFilter],
-    queryFn: () => payrollService.getPayrolls({
+  const { data: payrollData, isLoading: payrollLoading } = useQuery(
+    ['payroll', searchTerm, statusFilter, monthFilter, yearFilter],
+    () => payrollService.getPayrolls({
       search: searchTerm,
       status: statusFilter,
       month: monthFilter ? Number(monthFilter) : undefined,
       year: yearFilter ? Number(yearFilter) : undefined,
       limit: 50
     })
-  })
+  )
 
   // Fetch employees
-  const { data: employeesData } = useQuery({
-    queryKey: ['employees'],
-    queryFn: () => employeeService.getEmployees({ limit: 100 })
-  })
+  const { data: employeesData, error: employeesError, isLoading: employeesLoading } = useQuery(
+    'employees',
+    () => employeeService.getEmployees({ limit: 100 })
+  )
+
+  // Debug logging
+  console.log('Employees Data:', employeesData);
+  console.log('Employees Error:', employeesError);
+  console.log('Employees Loading:', employeesLoading);
 
   // Fetch payroll statistics
-  const { data: statsData } = useQuery({
-    queryKey: ['payroll-stats', monthFilter, yearFilter],
-    queryFn: () => payrollService.getPayrollStats({
+  const { data: statsData } = useQuery(
+    ['payroll-stats', monthFilter, yearFilter],
+    () => payrollService.getPayrollStats({
       month: monthFilter ? Number(monthFilter) : undefined,
       year: yearFilter ? Number(yearFilter) : undefined
     })
-  })
+  )
 
   // Create payroll mutation
-  const createPayrollMutation = useMutation({
-    mutationFn: payrollService.createPayroll,
+  const createPayrollMutation = useMutation(payrollService.createPayroll, {
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['payroll'] })
-      queryClient.invalidateQueries({ queryKey: ['payroll-stats'] })
+      queryClient.invalidateQueries('payroll')
+      queryClient.invalidateQueries('payroll-stats')
       setShowCreateModal(false)
       toast.success('Payroll record created successfully')
     },
@@ -115,27 +180,28 @@ const PayrollManagement: React.FC = () => {
   })
 
   // Update payroll mutation
-  const updatePayrollMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<CreatePayrollData> }) =>
+  const updatePayrollMutation = useMutation(
+    ({ id, data }: { id: string; data: Partial<CreatePayrollData> }) =>
       payrollService.updatePayroll(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['payroll'] })
-      queryClient.invalidateQueries({ queryKey: ['payroll-stats'] })
-      setEditingPayroll(null)
-      toast.success('Payroll record updated successfully')
-    },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.error || 'Failed to update payroll record')
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries('payroll')
+        queryClient.invalidateQueries('payroll-stats')
+        setEditingPayroll(null)
+        toast.success('Payroll record updated successfully')
+      },
+      onError: (error: any) => {
+        toast.error(error.response?.data?.error || 'Failed to update payroll record')
+      }
     }
-  })
+  )
 
 
   // Delete payroll mutation
-  const deletePayrollMutation = useMutation({
-    mutationFn: payrollService.deletePayroll,
+  const deletePayrollMutation = useMutation(payrollService.deletePayroll, {
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['payroll'] })
-      queryClient.invalidateQueries({ queryKey: ['payroll-stats'] })
+      queryClient.invalidateQueries('payroll')
+      queryClient.invalidateQueries('payroll-stats')
       toast.success('Payroll record deleted successfully')
     },
     onError: (error: any) => {
@@ -144,27 +210,28 @@ const PayrollManagement: React.FC = () => {
   })
 
   // Process payment mutation
-  const processPaymentMutation = useMutation({
-    mutationFn: ({ id, paymentData }: { id: string; paymentData: any }) =>
+  const processPaymentMutation = useMutation(
+    ({ id, paymentData }: { id: string; paymentData: any }) =>
       payrollService.processPayment(id, paymentData),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['payroll'] })
-      queryClient.invalidateQueries({ queryKey: ['payroll-stats'] })
-      toast.success('Salary payment processed successfully')
-      setShowPaymentModal(false)
-      setSelectedPayroll(null)
-    },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.error || 'Failed to process payment')
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries('payroll')
+        queryClient.invalidateQueries('payroll-stats')
+        toast.success('Salary payment processed successfully')
+        setShowPaymentModal(false)
+        setSelectedPayroll(null)
+      },
+      onError: (error: any) => {
+        toast.error(error.response?.data?.error || 'Failed to process payment')
+      }
     }
-  })
+  )
 
   // Bulk payment mutation
-  const bulkPaymentMutation = useMutation({
-    mutationFn: payrollService.bulkPayment,
+  const bulkPaymentMutation = useMutation(payrollService.bulkPayment, {
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['payroll'] })
-      queryClient.invalidateQueries({ queryKey: ['payroll-stats'] })
+      queryClient.invalidateQueries('payroll')
+      queryClient.invalidateQueries('payroll-stats')
       toast.success(`Bulk payment processed for ${data.updatedCount} employees`)
       setShowBulkPaymentModal(false)
       setSelectedPayrolls([])
@@ -360,13 +427,26 @@ const PayrollManagement: React.FC = () => {
               value={selectedEmployee}
               onChange={(e) => setSelectedEmployee(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={employeesLoading}
             >
-              <option value="">Select Employee</option>
+              <option value="">
+                {employeesLoading ? 'Loading employees...' : 'Select Employee'}
+              </option>
+              {employeesError && (
+                <option value="" disabled>
+                  Error loading employees
+                </option>
+              )}
               {employeesData?.data?.employees?.map((employee: any) => (
                 <option key={employee.id} value={employee.id}>
-                  {employee.name} - {employee.department}
+                  {employee.user.firstName} {employee.user.lastName} - {employee.employeeId}
                 </option>
               ))}
+              {employeesData?.data?.employees?.length === 0 && !employeesLoading && (
+                <option value="" disabled>
+                  No employees found
+                </option>
+              )}
             </select>
           </div>
           
@@ -419,7 +499,32 @@ const PayrollManagement: React.FC = () => {
         {/* Working Hours Results */}
         {workingHoursData && (
           <div className="bg-gray-50 rounded-lg p-4">
-            <h4 className="text-md font-semibold text-gray-900 mb-3">Working Hours Summary</h4>
+            <div className="flex justify-between items-center mb-3">
+              <h4 className="text-md font-semibold text-gray-900">Working Hours Summary</h4>
+              <button
+                onClick={async () => {
+                  const selectedEmp = employeesData?.data?.employees?.find((emp: any) => emp.id === selectedEmployee)
+                  if (selectedEmp) {
+                    try {
+                      const salaryCalc = await calculateSalaryFromHours(selectedEmp, workingHoursData)
+                      if (salaryCalc) {
+                        setShowCreateModal(true)
+                        // Pre-fill the create modal with calculated values
+                        console.log('Calculated salary:', salaryCalc)
+                        toast.success(`Salary calculated using ${salaryCalc.method} method! Please review in the create payroll form.`)
+                      }
+                    } catch (error) {
+                      console.error('Salary calculation error:', error)
+                      toast.error('Failed to calculate salary')
+                    }
+                  }
+                }}
+                className="btn btn-primary btn-sm flex items-center gap-2"
+              >
+                <Calculator className="w-4 h-4" />
+                Calculate Salary
+              </button>
+            </div>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               <div className="text-center">
                 <div className="text-2xl font-bold text-blue-600">{workingHoursData.totalWorkingDays}</div>
@@ -442,6 +547,26 @@ const PayrollManagement: React.FC = () => {
                 <div className="text-sm text-gray-600">Total Hours</div>
               </div>
             </div>
+            
+            {/* Salary Calculation Preview */}
+            {(() => {
+              const selectedEmp = employeesData?.data?.employees?.find((emp: any) => emp.id === selectedEmployee)
+              if (selectedEmp) {
+                // Note: This is now async, so we'll show a loading state or use a different approach
+                return (
+                  <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                    <h5 className="font-semibold text-blue-900 mb-2">Salary Calculation</h5>
+                    <div className="text-sm text-gray-600 mb-2">
+                      Method: {selectedEmp.payrollMethod || 'FIXED_SALARY'}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      Click "Calculate Salary" to get detailed calculation based on current payroll settings
+                    </div>
+                  </div>
+                )
+              }
+              return null
+            })()}
           </div>
         )}
       </div>
@@ -615,10 +740,11 @@ const PayrollManagement: React.FC = () => {
       {/* Create Payroll Modal */}
       {showCreateModal && (
         <CreatePayrollModal
-          employees={employeesData?.data.employees || []}
+          employees={employeesData?.data?.employees || []}
           onClose={() => setShowCreateModal(false)}
           onSubmit={handleCreatePayroll}
           isLoading={createPayrollMutation.isLoading}
+          preCalculatedData={null}
         />
       )}
 
@@ -671,15 +797,16 @@ const CreatePayrollModal: React.FC<{
   onClose: () => void
   onSubmit: (data: CreatePayrollData) => void
   isLoading: boolean
-}> = ({ employees, onClose, onSubmit, isLoading }) => {
+  preCalculatedData?: any
+}> = ({ employees, onClose, onSubmit, isLoading, preCalculatedData }) => {
   const [formData, setFormData] = useState<CreatePayrollData>({
-    employeeId: '',
-    month: new Date().getMonth() + 1,
-    year: new Date().getFullYear(),
-    basicSalary: 0,
-    overtimePay: 0,
-    allowances: 0,
-    deductions: 0
+    employeeId: preCalculatedData?.employeeId || '',
+    month: preCalculatedData?.month || new Date().getMonth() + 1,
+    year: preCalculatedData?.year || new Date().getFullYear(),
+    basicSalary: preCalculatedData?.basicSalary || 0,
+    overtimePay: preCalculatedData?.overtimePay || 0,
+    allowances: preCalculatedData?.allowances || 0,
+    deductions: preCalculatedData?.deductions || 0
   })
 
   const handleSubmit = (e: React.FormEvent) => {
