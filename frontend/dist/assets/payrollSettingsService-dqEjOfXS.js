@@ -1,0 +1,2 @@
+import{b as s}from"./index-DwF7U1DN.js";const p={async getSettings(){return(await s.get("/payroll-settings")).data.data.settings},async updateSettings(t){return(await s.put("/payroll-settings",t)).data.data.settings},async getMethods(){return(await s.get("/payroll-settings/methods")).data.data.methods},async calculatePayroll(t,a,e,n){return(await s.post("/payroll-settings/calculate",{employeeId:t,month:a,year:e,workingHours:n})).data.data}};export{p};
+//# sourceMappingURL=payrollSettingsService-dqEjOfXS.js.map

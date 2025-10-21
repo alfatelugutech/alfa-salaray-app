@@ -1,0 +1,2 @@
+import{b as a}from"./index-DwF7U1DN.js";const s={async trackLocation(t){return(await a.post("/location-tracking/track",t)).data},async getLocationHistory(t){return(await a.get(`/location-tracking/attendance/${t}`)).data},async getAdminLocationHistory(t){return(await a.get(`/location-tracking/admin/attendance/${t}`)).data},async stopTracking(t){return(await a.post(`/location-tracking/stop/${t}`)).data}};export{s as l};
+//# sourceMappingURL=locationTrackingService-CL6_djP_.js.map
