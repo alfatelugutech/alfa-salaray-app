@@ -7,6 +7,7 @@ import { employeeService } from '../services/employeeService'
 const AttendanceReports: React.FC = () => {
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7))
   const [selectedEmployee, setSelectedEmployee] = useState<string>('all')
+  const [smartInsights, setSmartInsights] = useState<any>(null)
 
   // Fetch employees
   const { data: employeesData } = useQuery(
@@ -38,6 +39,33 @@ const AttendanceReports: React.FC = () => {
       }
     }
   )
+
+  // Smart insights calculation
+  const calculateSmartInsights = (data: any) => {
+    if (!data?.data?.attendances) return null
+    
+    const attendances = data.data.attendances
+    const totalDays = attendances.length
+    const presentDays = attendances.filter((att: any) => att.status === 'PRESENT').length
+    const lateDays = attendances.filter((att: any) => att.status === 'LATE').length
+    const absentDays = attendances.filter((att: any) => att.status === 'ABSENT').length
+    const attendanceRate = totalDays > 0 ? (presentDays / totalDays) * 100 : 0
+    
+    return {
+      totalDays,
+      presentDays,
+      lateDays,
+      absentDays,
+      attendanceRate,
+      insights: [
+        attendanceRate >= 95 ? '🌟 Excellent attendance record!' : 
+        attendanceRate >= 85 ? '👍 Good attendance performance' :
+        attendanceRate >= 70 ? '⚠️ Attendance needs improvement' : '🚨 Poor attendance record',
+        lateDays > 0 ? `⏰ ${lateDays} late arrival${lateDays > 1 ? 's' : ''} this month` : '✅ No late arrivals',
+        absentDays > 0 ? `❌ ${absentDays} absent day${absentDays > 1 ? 's' : ''} this month` : '✅ Perfect attendance'
+      ]
+    }
+  }
 
   // Generate calendar data
   const generateCalendarData = () => {

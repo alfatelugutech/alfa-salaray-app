@@ -11,6 +11,39 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   
   console.log('Layout component rendering...', { user })
 
+  // Smart navigation based on user role
+  const getSmartNavigation = () => {
+    if (!user) return []
+    
+    const baseNav = [
+      { name: 'Dashboard', href: '/dashboard', icon: '🏠' },
+      { name: 'My Attendance', href: '/my-attendance', icon: '📅' }
+    ]
+    
+    if (user.role === 'SUPER_ADMIN' || user.role === 'HR_MANAGER') {
+      return [
+        ...baseNav,
+        { name: 'Employees', href: '/employees', icon: '👥' },
+        { name: 'Attendance', href: '/attendance', icon: '📊' },
+        { name: 'Calendar', href: '/attendance-calendar', icon: '📅' },
+        { name: 'Reports', href: '/attendance-reports', icon: '📈' },
+        { name: 'Leave Management', href: '/leave', icon: '🏖️' },
+        { name: 'Shifts', href: '/shifts', icon: '⏰' },
+        { name: 'Payroll', href: '/payroll', icon: '💰' },
+        { name: 'Payment Reports', href: '/payment-reports', icon: '💳' },
+        { name: 'Departments', href: '/departments', icon: '🏢' },
+        { name: 'Roles', href: '/roles', icon: '👤' },
+        ...(user.role === 'SUPER_ADMIN' ? [{ name: 'Settings', href: '/settings', icon: '⚙️' }] : [])
+      ]
+    }
+    
+    return [
+      ...baseNav,
+      { name: 'My Leave', href: '/my-leave', icon: '🏖️' },
+      { name: 'Profile', href: '/profile', icon: '👤' }
+    ]
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Simple header */}
@@ -35,41 +68,20 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         </div>
       </div>
 
-      {/* Role-based navigation */}
-      <div className="bg-white border-b">
-        <div className="px-4 py-2">
-          <nav className="flex space-x-4">
-            <Link to="/" className="text-blue-600 font-medium">Dashboard</Link>
-            
-            {/* Show different navigation based on user role */}
-            {user?.role === 'SUPER_ADMIN' || user?.role === 'HR_MANAGER' ? (
-              // Admin/HR navigation
-              <>
-                <Link to="/employees" className="text-gray-600 hover:text-gray-900">Employees</Link>
-                <Link to="/attendance" className="text-gray-600 hover:text-gray-900">Attendance</Link>
-                <Link to="/attendance-calendar" className="text-gray-600 hover:text-gray-900">Calendar</Link>
-                <Link to="/attendance-reports" className="text-gray-600 hover:text-gray-900">Reports</Link>
-                <Link to="/leave" className="text-gray-600 hover:text-gray-900">Leave</Link>
-                {/* Phase 2 navigation */}
-                <Link to="/shifts" className="text-gray-600 hover:text-gray-900">Shifts</Link>
-                <Link to="/payroll" className="text-gray-600 hover:text-gray-900">Payroll</Link>
-                <Link to="/payment-reports" className="text-gray-600 hover:text-gray-900">Payment Reports</Link>
-                <Link to="/departments" className="text-gray-600 hover:text-gray-900">Departments</Link>
-                <Link to="/roles" className="text-gray-600 hover:text-gray-900">Roles</Link>
-                {user?.role === 'SUPER_ADMIN' && (
-                  <>
-                    <Link to="/settings" className="text-gray-600 hover:text-gray-900">Settings</Link>
-                  </>
-                )}
-              </>
-            ) : (
-              // Employee navigation
-              <>
-                <Link to="/my-attendance" className="text-gray-600 hover:text-gray-900">My Attendance</Link>
-                <Link to="/my-leave" className="text-gray-600 hover:text-gray-900">My Leave</Link>
-                <Link to="/profile" className="text-gray-600 hover:text-gray-900">Profile</Link>
-              </>
-            )}
+      {/* Smart Navigation */}
+      <div className="bg-white border-b shadow-sm">
+        <div className="px-4 py-3">
+          <nav className="flex flex-wrap gap-2">
+            {getSmartNavigation().map((item, index) => (
+              <Link
+                key={index}
+                to={item.href}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200 hover:shadow-sm"
+              >
+                <span className="text-lg">{item.icon}</span>
+                <span>{item.name}</span>
+              </Link>
+            ))}
           </nav>
         </div>
       </div>

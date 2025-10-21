@@ -14,6 +14,7 @@ const Employees: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('')
   const [departmentFilter, setDepartmentFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
+  const [smartSuggestions, setSmartSuggestions] = useState<any>(null)
   const queryClient = useQueryClient()
 
   // Fetch employees

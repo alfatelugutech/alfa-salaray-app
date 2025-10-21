@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from 'react-query'
@@ -27,8 +27,46 @@ const Dashboard: React.FC = () => {
   const [selfie, setSelfie] = useState<string | null>(null)
   const [isAutoCapturing, setIsAutoCapturing] = useState(false)
   const [showLiveCamera, setShowLiveCamera] = useState(false)
-  const [showCheckOutConfirm, setShowCheckOutConfirm] = useState(false)
   const queryClient = useQueryClient()
+
+  // Smart auto-submit when both selfie and location are ready
+  useEffect(() => {
+    if (selfie && location && !selfCheckInMutation.isLoading && !selfCheckOutMutation.isLoading) {
+      console.log('🧠 Smart system: Both selfie and location ready, auto-submitting...')
+      // Smart delay based on data size and network conditions
+      const smartDelay = selfie.length > 100000 ? 1000 : 500
+      const timer = setTimeout(() => {
+        handleAutoSubmitAttendance()
+      }, smartDelay)
+      return () => clearTimeout(timer)
+    }
+  }, [selfie, location, selfCheckInMutation.isLoading, selfCheckOutMutation.isLoading])
+
+  // Smart status detection
+  const getSmartStatus = () => {
+    if (attendanceStatus?.status?.isCompleted) {
+      return {
+        type: 'completed',
+        message: '🎉 Work day completed successfully!',
+        color: 'green',
+        icon: '✅'
+      }
+    } else if (attendanceStatus?.status?.canCheckOut) {
+      return {
+        type: 'checkout',
+        message: '🌆 Ready for smart check-out',
+        color: 'orange',
+        icon: '🕐'
+      }
+    } else {
+      return {
+        type: 'checkin',
+        message: '🌅 Ready for smart check-in',
+        color: 'blue',
+        icon: '🚀'
+      }
+    }
+  }
   
   // Fetch data based on user role with better error handling
   const { data: attendanceData, error: attendanceError } = useQuery(
@@ -186,13 +224,7 @@ const Dashboard: React.FC = () => {
 
   // Open live camera for selfie capture
   const handleTakeSelfieAndLocation = async () => {
-    // Check if this is check-out and show confirmation
-    if (attendanceStatus?.status?.canCheckOut) {
-      setShowCheckOutConfirm(true)
-      return
-    }
-
-    // For check-in, proceed directly
+    // Proceed directly for both check-in and check-out
     await startSelfieCapture()
   }
 
@@ -217,11 +249,6 @@ const Dashboard: React.FC = () => {
     setShowLiveCamera(true)
   }
 
-  // Confirm check-out
-  const handleConfirmCheckOut = () => {
-    setShowCheckOutConfirm(false)
-    startSelfieCapture()
-  }
 
   // Handle selfie capture from live camera
   const handleSelfieCapture = (imageData: string) => {
@@ -232,10 +259,15 @@ const Dashboard: React.FC = () => {
     })
     toast.success('📸 Selfie captured successfully!')
     
-    // Auto-submit attendance after selfie capture
-    setTimeout(() => {
-      handleAutoSubmitAttendance()
-    }, 1000)
+    // Close the live camera
+    setShowLiveCamera(false)
+    
+    // Show info about what's happening next
+    if (location) {
+      toast.info('✅ Both selfie and location ready! Attendance will be marked automatically.')
+    } else {
+      toast.info('📍 Selfie captured! Waiting for location data...')
+    }
   }
 
   const handleAutoSubmitAttendance = () => {
@@ -594,26 +626,35 @@ const Dashboard: React.FC = () => {
 
             <div className="p-6 space-y-4">
               {/* Automatic Data Capture Notice */}
-              {/* Attendance Status Indicator */}
-              <div className="mb-6 p-4 bg-white rounded-lg border-2 border-gray-200">
-                <div className="flex items-center justify-center gap-3">
-                  <div className={`w-3 h-3 rounded-full ${
-                    attendanceStatus?.status?.isCompleted 
-                      ? 'bg-green-500' 
-                      : attendanceStatus?.status?.canCheckOut 
-                      ? 'bg-orange-500' 
-                      : 'bg-blue-500'
-                  }`}></div>
-                  <span className="text-sm font-medium text-gray-700">
-                    {attendanceStatus?.status?.isCompleted 
-                      ? '✅ Attendance Completed Today'
-                      : attendanceStatus?.status?.canCheckOut 
-                      ? '🟠 Ready for Check-Out'
-                      : '🔵 Ready for Check-In'
-                    }
-                  </span>
-                </div>
-              </div>
+              {/* Smart Attendance Status Indicator */}
+              {(() => {
+                const smartStatus = getSmartStatus()
+                return (
+                  <div className={`mb-6 p-4 rounded-lg border-2 ${
+                    smartStatus.color === 'green' ? 'bg-green-50 border-green-200' :
+                    smartStatus.color === 'orange' ? 'bg-orange-50 border-orange-200' :
+                    'bg-blue-50 border-blue-200'
+                  }`}>
+                    <div className="flex items-center justify-center gap-3">
+                      <div className={`w-4 h-4 rounded-full ${
+                        smartStatus.color === 'green' ? 'bg-green-500' :
+                        smartStatus.color === 'orange' ? 'bg-orange-500' :
+                        'bg-blue-500'
+                      }`}></div>
+                      <span className="text-sm font-medium text-gray-700">
+                        {smartStatus.icon} {smartStatus.message}
+                      </span>
+                    </div>
+                    {smartStatus.type !== 'completed' && (
+                      <div className="mt-2 text-center">
+                        <p className="text-xs text-gray-600">
+                          🧠 Smart system will handle location + selfie automatically
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )
+              })()}
 
               <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
                 <div className="flex items-center gap-2 mb-2">
@@ -658,8 +699,8 @@ const Dashboard: React.FC = () => {
                       {attendanceStatus?.status?.isCompleted 
                         ? 'Great job! See you tomorrow.'
                         : attendanceStatus?.status?.canCheckOut
-                        ? '🌆 Check-out Requirements: Location + Selfie required'
-                        : '🌅 Check-in Requirements: Location + Selfie required'
+                        ? '🌆 One-click smart checkout with selfie & location'
+                        : '🌅 One-click smart check-in with selfie & location'
                       }
                     </p>
                   </div>
@@ -667,12 +708,12 @@ const Dashboard: React.FC = () => {
                     type="button"
                     onClick={handleTakeSelfieAndLocation}
                     disabled={isAutoCapturing || attendanceStatus?.status?.isCompleted}
-                    className={`w-full flex items-center justify-center gap-3 px-8 py-4 text-white text-xl font-bold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed shadow-xl transform transition hover:scale-105 ${
+                    className={`w-full flex items-center justify-center gap-3 px-8 py-4 text-white text-xl font-bold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed shadow-xl transform transition-all duration-300 hover:scale-105 hover:shadow-2xl ${
                       attendanceStatus?.status?.isCompleted
                         ? 'bg-gray-500 cursor-not-allowed'
                         : attendanceStatus?.status?.canCheckOut
-                        ? 'bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800'
-                        : 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800'
+                        ? 'bg-gradient-to-r from-orange-500 via-orange-600 to-orange-700 hover:from-orange-600 hover:via-orange-700 hover:to-orange-800'
+                        : 'bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700 hover:from-blue-600 hover:via-blue-700 hover:to-blue-800'
                     }`}
                   >
                     {isAutoCapturing ? (
@@ -688,14 +729,14 @@ const Dashboard: React.FC = () => {
                     ) : (
                       <>
                         <Camera className="w-6 h-6" />
-                        📸 {attendanceStatus?.status?.canCheckOut ? 'Start Check-Out Process' : 'Start Check-In Process'}
+                        📸 {attendanceStatus?.status?.canCheckOut ? 'Smart Check-Out' : 'Smart Check-In'}
                       </>
                     )}
                   </button>
                   <p className="text-xs text-gray-600 mt-4 text-center bg-white/50 p-3 rounded-lg">
                     ℹ️ {attendanceStatus?.status?.canCheckOut 
-                      ? 'Check-out: Location captured automatically, then take your selfie with live camera'
-                      : 'Check-in: Location captured automatically, then take your selfie with live camera'
+                      ? 'Smart Check-Out: Automatic location + live camera selfie'
+                      : 'Smart Check-In: Automatic location + live camera selfie'
                     }
                   </p>
                 </div>
@@ -725,6 +766,39 @@ const Dashboard: React.FC = () => {
                           Retake
                         </button>
                       </div>
+                      
+                      {/* Smart Manual Submit Button */}
+                      {selfie && location && (
+                        <div className="mt-4 p-4 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-lg shadow-lg">
+                          <div className="text-center">
+                            <div className="flex items-center justify-center gap-2 mb-3">
+                              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                              <p className="text-green-800 font-medium">
+                                🧠 Smart system ready! Both selfie and location captured
+                              </p>
+                              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={handleAutoSubmitAttendance}
+                              disabled={selfCheckInMutation.isLoading || selfCheckOutMutation.isLoading}
+                              className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white px-6 py-3 rounded-lg font-bold text-lg hover:from-green-600 hover:to-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 shadow-lg transform transition-all duration-300 hover:scale-105"
+                            >
+                              {selfCheckInMutation.isLoading || selfCheckOutMutation.isLoading ? (
+                                <>
+                                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+                                  {attendanceStatus?.status?.canCheckOut ? 'Checking Out...' : 'Checking In...'}
+                                </>
+                              ) : (
+                                <>
+                                  <Clock className="w-6 h-6" />
+                                  {attendanceStatus?.status?.canCheckOut ? 'Complete Check-Out' : 'Complete Check-In'}
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -821,40 +895,9 @@ const Dashboard: React.FC = () => {
         title={attendanceStatus?.status?.canCheckOut ? 'Check-Out Selfie' : 'Check-In Selfie'}
       />
 
-      {/* Check-Out Confirmation Modal */}
-      {showCheckOutConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full">
-            <div className="text-center">
-              <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Clock className="w-8 h-8 text-orange-600" />
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">
-                Confirm Check-Out
-              </h3>
-              <p className="text-gray-600 mb-6">
-                Are you sure you want to check out? This will end your work day and stop location tracking.
-              </p>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowCheckOutConfirm(false)}
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleConfirmCheckOut}
-                  className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
-                >
-                  Yes, Check Out
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
 
 export default Dashboard
+
