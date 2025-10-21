@@ -34,6 +34,7 @@ model User {
   notificationPreferences NotificationPreference?
   auditLogs     AuditLog[]
   createdBackups Backup[]
+  updatedPayrollSettings PayrollSettings[]
 
   @@map("users")
 }
@@ -67,6 +68,8 @@ model Employee {
   mobileNumber    String?   // Mobile number for login
   workLocation    String?
   salary          Decimal?
+  hourlyRate      Decimal?   // Hourly rate for hourly employees
+  payrollMethod   PayrollCalculationMethod @default(FIXED_SALARY)
   status          EmployeeStatus @default(ACTIVE)
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
@@ -320,6 +323,25 @@ model Backup {
   @@map("backups")
 }
 
+// Payroll Settings for system-wide configuration
+model PayrollSettings {
+  id                    String   @id @default(cuid())
+  defaultMethod         PayrollCalculationMethod @default(FIXED_SALARY)
+  overtimeMultiplier    Decimal  @default(1.5) // 1.5x for overtime
+  regularHoursPerMonth  Int      @default(160) // 40 hours/week * 4 weeks
+  regularHoursPerDay   Int        @default(8) // 8 hours per day
+  overtimeThreshold     Int       @default(8) // Overtime after 8 hours
+  isActive              Boolean   @default(true)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  updatedBy             String
+
+  // Relations
+  updatedByUser         User      @relation(fields: [updatedBy], references: [id], onDelete: Cascade)
+
+  @@map("payroll_settings")
+}
+
 // Enums
 enum UserRole {
   SUPER_ADMIN
@@ -480,4 +502,12 @@ enum BackupStatus {
   IN_PROGRESS
   COMPLETED
   FAILED
+}
+
+enum PayrollCalculationMethod {
+  FIXED_SALARY
+  HOURLY_RATE
+  COMMISSION_BASED
+  PROJECT_BASED
+  MIXED
 }

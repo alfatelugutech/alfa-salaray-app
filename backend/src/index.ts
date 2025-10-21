@@ -23,6 +23,7 @@ import exportRoutes from './routes/export';
 import notificationRoutes from './routes/notifications';
 import auditRoutes from './routes/audit';
 import backupRoutes from './routes/backup';
+import payrollSettingsRoutes from './routes/payrollSettings';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler';
@@ -240,6 +241,7 @@ app.use('/api/export', exportRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/audit', auditRoutes);
 app.use('/api/backup', backupRoutes);
+app.use('/api/payroll-settings', payrollSettingsRoutes);
 
 // Error handling middleware
 app.use(notFound);
