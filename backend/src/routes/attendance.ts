@@ -15,6 +15,190 @@ router.get("/test", (req: Request, res: Response) => {
   });
 });
 
+// Self check-in endpoint (for employees to mark their own attendance)
+router.post("/self/check-in", async (req: Request, res: Response) => {
+  console.log('📝 Self check-in request received:', {
+    body: req.body,
+    headers: req.headers,
+    user: (req as any).user
+  });
+  
+  try {
+    const { isRemote, notes, checkInSelfie, checkInLocation, deviceInfo, shiftId } = req.body;
+    
+    // Get user from request (should be set by auth middleware)
+    const user = (req as any).user;
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        error: "Authentication required",
+        code: "AUTH_REQUIRED"
+      });
+    }
+
+    // Find employee record for this user
+    const employee = await prisma.employee.findUnique({
+      where: { userId: user.id }
+    });
+
+    if (!employee) {
+      return res.status(404).json({
+        success: false,
+        error: "Employee record not found",
+        code: "EMPLOYEE_NOT_FOUND"
+      });
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    // Check if attendance already exists for today
+    const existingAttendance = await prisma.attendance.findFirst({
+      where: {
+        employeeId: employee.id,
+        date: {
+          gte: today,
+          lt: tomorrow
+        }
+      }
+    });
+
+    if (existingAttendance) {
+      return res.status(400).json({
+        success: false,
+        error: "Attendance already marked for today",
+        code: "ATTENDANCE_EXISTS"
+      });
+    }
+
+    // Create attendance record
+    const attendance = await prisma.attendance.create({
+      data: {
+        employeeId: employee.id,
+        date: today,
+        checkIn: new Date(),
+        status: 'PRESENT',
+        isRemote: isRemote || false,
+        notes: notes || null,
+        checkInSelfie: checkInSelfie || null,
+        checkInLocation: checkInLocation || null,
+        deviceInfo: deviceInfo || null,
+        shiftId: shiftId || null,
+        location: checkInLocation || null
+      }
+    });
+
+    res.json({
+      success: true,
+      message: "Check-in successful",
+      data: { attendance }
+    });
+
+  } catch (error: any) {
+    console.error('❌ Self check-in error:', error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to mark attendance",
+      code: "ATTENDANCE_ERROR"
+    });
+  }
+});
+
+// Self check-out endpoint (for employees to mark their own check-out)
+router.post("/self/check-out", async (req: Request, res: Response) => {
+  console.log('📝 Self check-out request received:', {
+    body: req.body,
+    headers: req.headers,
+    user: (req as any).user
+  });
+  
+  try {
+    const { notes, checkOutSelfie, checkOutLocation } = req.body;
+    
+    // Get user from request
+    const user = (req as any).user;
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        error: "Authentication required",
+        code: "AUTH_REQUIRED"
+      });
+    }
+
+    // Find employee record
+    const employee = await prisma.employee.findUnique({
+      where: { userId: user.id }
+    });
+
+    if (!employee) {
+      return res.status(404).json({
+        success: false,
+        error: "Employee record not found",
+        code: "EMPLOYEE_NOT_FOUND"
+      });
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    // Find today's attendance record
+    const attendance = await prisma.attendance.findFirst({
+      where: {
+        employeeId: employee.id,
+        date: {
+          gte: today,
+          lt: tomorrow
+        }
+      }
+    });
+
+    if (!attendance) {
+      return res.status(404).json({
+        success: false,
+        error: "No check-in found for today",
+        code: "NO_CHECK_IN"
+      });
+    }
+
+    if (attendance.checkOut) {
+      return res.status(400).json({
+        success: false,
+        error: "Already checked out for today",
+        code: "ALREADY_CHECKED_OUT"
+      });
+    }
+
+    // Update attendance with check-out
+    const updatedAttendance = await prisma.attendance.update({
+      where: { id: attendance.id },
+      data: {
+        checkOut: new Date(),
+        checkOutSelfie: checkOutSelfie || null,
+        checkOutLocation: checkOutLocation || null,
+        notes: notes || attendance.notes
+      }
+    });
+
+    res.json({
+      success: true,
+      message: "Check-out successful",
+      data: { attendance: updatedAttendance }
+    });
+
+  } catch (error: any) {
+    console.error('❌ Self check-out error:', error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to mark check-out",
+      code: "CHECKOUT_ERROR"
+    });
+  }
+});
+
 // Apply authentication to all other routes
 router.use(authenticateToken);
 
