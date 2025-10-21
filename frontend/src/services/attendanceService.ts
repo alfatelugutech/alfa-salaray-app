@@ -136,7 +136,17 @@ export const attendanceService = {
     }
     attendance: Attendance | null
   }> {
-    const response = await api.get<{ success: boolean; data: any }>('/attendance/self/status')
+    // Get user ID from localStorage
+    const userData = localStorage.getItem('user');
+    const userId = userData ? JSON.parse(userData).id : null;
+    
+    if (!userId) {
+      throw new Error('User ID not found. Please login again.');
+    }
+
+    const response = await api.get<{ success: boolean; data: any }>('/attendance/self/status', {
+      params: { userId }
+    })
     return response.data.data
   }
 }

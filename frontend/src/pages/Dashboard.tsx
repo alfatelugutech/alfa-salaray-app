@@ -12,6 +12,7 @@ import { getCompleteLocation, getDeviceInfo } from '../utils/geolocation'
 import { captureSelfie, compressImage, checkCameraPermissions } from '../utils/camera'
 import { locationTracker } from '../utils/locationTracker'
 import ConnectionTest from '../components/ConnectionTest'
+import LiveCamera from '../components/LiveCamera'
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth()
@@ -25,6 +26,7 @@ const Dashboard: React.FC = () => {
   const [location, setLocation] = useState<any>(null)
   const [selfie, setSelfie] = useState<string | null>(null)
   const [isAutoCapturing, setIsAutoCapturing] = useState(false)
+  const [showLiveCamera, setShowLiveCamera] = useState(false)
   const queryClient = useQueryClient()
   
   // Fetch data based on user role with better error handling
@@ -172,75 +174,42 @@ const Dashboard: React.FC = () => {
     {
       enabled: !!user?.employeeId,
       refetchInterval: 30000, // Refetch every 30 seconds
-      refetchOnWindowFocus: true
+      refetchOnWindowFocus: true,
+      onSuccess: (data) => {
+        console.log('📊 Frontend attendance status:', data);
+      }
     }
   )
 
-  // Manual selfie and GPS capture
+  // Open live camera for selfie capture
   const handleTakeSelfieAndLocation = async () => {
-    setIsAutoCapturing(true)
-    
-    // Check camera permissions first
-    try {
-      const permissionCheck = await checkCameraPermissions()
-      if (!permissionCheck.hasPermission) {
-        toast.error(permissionCheck.message)
-        setIsAutoCapturing(false)
-        return
-      }
-    } catch (error: any) {
-      console.error('❌ Camera permission check failed:', error)
-      toast.error('Failed to check camera permissions. Please try again.')
-      setIsAutoCapturing(false)
-      return
-    }
-
-    // Capture selfie
-    try {
-      const photo = await captureSelfie()
-      const compressed = await compressImage(photo)
-      setSelfie(compressed)
-      console.log('📸 Selfie captured and set:', {
-        hasSelfie: !!compressed,
-        selfieLength: compressed?.length || 0
-      })
-      toast.success('📸 Selfie captured successfully!')
-    } catch (error: any) {
-      console.error('❌ Selfie capture failed:', error)
-      toast.error(error.message || 'Failed to capture selfie')
-      setIsAutoCapturing(false)
-      return
-    }
-
-    // Capture GPS location
+    // First capture location automatically
     try {
       const loc = await getCompleteLocation()
       setLocation(loc)
-      console.log('📍 Location captured and set:', {
+      console.log('📍 Location captured automatically:', {
         hasLocation: !!loc,
         locationData: loc
       })
-      toast.success('📍 Location captured successfully!')
+      toast.success('📍 Location captured automatically!')
     } catch (error: any) {
       console.log('❌ Location capture failed:', error)
       toast.error(error.message || 'Failed to get location')
-      setIsAutoCapturing(false)
       return
     }
 
-    setIsAutoCapturing(false)
-    
-    // Verify both selfie and location are captured before proceeding
-    if (!selfie || !location) {
-      console.error('❌ Missing data for submission:', { hasSelfie: !!selfie, hasLocation: !!location })
-      toast.error('Failed to capture required data. Please try again.')
-      return
-    }
-    
-    // Automatically submit attendance after capturing selfie and location
-    setTimeout(() => {
-      handleAutoSubmitAttendance()
-    }, 1000) // Small delay to ensure all data is captured
+    // Then open live camera for selfie
+    setShowLiveCamera(true)
+  }
+
+  // Handle selfie capture from live camera
+  const handleSelfieCapture = (imageData: string) => {
+    setSelfie(imageData)
+    console.log('📸 Selfie captured from live camera:', {
+      hasSelfie: !!imageData,
+      selfieLength: imageData?.length || 0
+    })
+    toast.success('📸 Selfie captured successfully!')
   }
 
   const handleAutoSubmitAttendance = () => {
@@ -574,6 +543,27 @@ const Dashboard: React.FC = () => {
 
             <div className="p-6 space-y-4">
               {/* Automatic Data Capture Notice */}
+              {/* Attendance Status Indicator */}
+              <div className="mb-6 p-4 bg-white rounded-lg border-2 border-gray-200">
+                <div className="flex items-center justify-center gap-3">
+                  <div className={`w-3 h-3 rounded-full ${
+                    attendanceStatus?.status?.isCompleted 
+                      ? 'bg-green-500' 
+                      : attendanceStatus?.status?.canCheckOut 
+                      ? 'bg-orange-500' 
+                      : 'bg-blue-500'
+                  }`}></div>
+                  <span className="text-sm font-medium text-gray-700">
+                    {attendanceStatus?.status?.isCompleted 
+                      ? '✅ Attendance Completed Today'
+                      : attendanceStatus?.status?.canCheckOut 
+                      ? '🟠 Ready for Check-Out'
+                      : '🔵 Ready for Check-In'
+                    }
+                  </span>
+                </div>
+              </div>
+
               <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
                 <div className="flex items-center gap-2 mb-2">
                   <Clock className="h-5 w-5 text-blue-600" />
@@ -588,39 +578,69 @@ const Dashboard: React.FC = () => {
               {!selfie && !location ? (
                 <div className="p-8 bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 border-2 border-blue-400 rounded-xl shadow-md">
                   <div className="text-center mb-6">
-                    <div className="bg-blue-600 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+                    <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg ${
+                      attendanceStatus?.status?.canCheckOut 
+                        ? 'bg-orange-600' 
+                        : attendanceStatus?.status?.isCompleted
+                        ? 'bg-green-600'
+                        : 'bg-blue-600'
+                    }`}>
                       <Camera className="w-10 h-10 text-white" />
                     </div>
                     <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                      📸 {attendanceStatus?.status?.canCheckOut ? 'Check-Out Selfie' : 'Check-In Selfie'}
+                      {attendanceStatus?.status?.isCompleted 
+                        ? '✅ Attendance Completed' 
+                        : attendanceStatus?.status?.canCheckOut 
+                        ? '📸 Check-Out Selfie' 
+                        : '📸 Check-In Selfie'
+                      }
                     </h3>
                     <p className="text-base text-gray-700">
-                      {attendanceStatus?.status?.canCheckOut ? '🌆 Take your check-out selfie' : '🌅 Take your check-in selfie'}
+                      {attendanceStatus?.status?.isCompleted 
+                        ? '🎉 You have completed your attendance for today'
+                        : attendanceStatus?.status?.canCheckOut 
+                        ? '🌆 Take your check-out selfie' 
+                        : '🌅 Take your check-in selfie'
+                      }
                     </p>
                     <p className="text-sm text-gray-600 mt-2">
-                      Selfie + location will be automatically captured and {attendanceStatus?.status?.canCheckOut ? 'check-out' : 'check-in'} will be marked
+                      {attendanceStatus?.status?.isCompleted 
+                        ? 'Great job! See you tomorrow.'
+                        : `Location will be captured automatically, then you can take your selfie with live camera`
+                      }
                     </p>
                   </div>
                   <button
                     type="button"
                     onClick={handleTakeSelfieAndLocation}
-                    disabled={isAutoCapturing}
-                    className="w-full flex items-center justify-center gap-3 px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white text-xl font-bold rounded-xl hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 disabled:cursor-not-allowed shadow-xl transform transition hover:scale-105"
+                    disabled={isAutoCapturing || attendanceStatus?.status?.isCompleted}
+                    className={`w-full flex items-center justify-center gap-3 px-8 py-4 text-white text-xl font-bold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed shadow-xl transform transition hover:scale-105 ${
+                      attendanceStatus?.status?.isCompleted
+                        ? 'bg-gray-500 cursor-not-allowed'
+                        : attendanceStatus?.status?.canCheckOut
+                        ? 'bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800'
+                        : 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800'
+                    }`}
                   >
                     {isAutoCapturing ? (
                       <>
                         <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
                         Opening Camera...
                       </>
+                    ) : attendanceStatus?.status?.isCompleted ? (
+                      <>
+                        <div className="w-6 h-6">✅</div>
+                        Attendance Completed
+                      </>
                     ) : (
                       <>
                         <Camera className="w-6 h-6" />
-                        📸 {attendanceStatus?.status?.canCheckOut ? 'Take Check-Out Selfie' : 'Take Check-In Selfie'}
+                        📸 {attendanceStatus?.status?.canCheckOut ? 'Open Live Camera for Check-Out' : 'Open Live Camera for Check-In'}
                       </>
                     )}
                   </button>
                   <p className="text-xs text-gray-600 mt-4 text-center bg-white/50 p-3 rounded-lg">
-                    ℹ️ Camera and location permissions will be requested
+                    ℹ️ Location will be captured automatically, then you can take your selfie with live camera
                   </p>
                 </div>
               ) : (
@@ -736,6 +756,14 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Live Camera Component */}
+      <LiveCamera
+        isOpen={showLiveCamera}
+        onClose={() => setShowLiveCamera(false)}
+        onCapture={handleSelfieCapture}
+        title={attendanceStatus?.status?.canCheckOut ? 'Check-Out Selfie' : 'Check-In Selfie'}
+      />
     </div>
   )
 }

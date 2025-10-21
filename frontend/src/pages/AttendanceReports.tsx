@@ -26,6 +26,16 @@ const AttendanceReports: React.FC = () => {
         endDate: endDate.toISOString().split('T')[0],
         employeeId: selectedEmployee !== 'all' ? selectedEmployee : undefined
       })
+    },
+    {
+      onSuccess: (data) => {
+        console.log('📊 Attendance Reports Data:', {
+          selectedMonth,
+          selectedEmployee,
+          data: data,
+          attendances: data?.data?.attendances
+        })
+      }
     }
   )
 
@@ -49,8 +59,19 @@ const AttendanceReports: React.FC = () => {
     while (currentDate <= endDate) {
       const dateStr = currentDate.toISOString().split('T')[0]
       const attendance = attendanceData?.data?.attendances?.find(
-        (att: any) => att.date === dateStr
+        (att: any) => {
+          // Handle different date formats
+          const attDate = new Date(att.date).toISOString().split('T')[0]
+          return attDate === dateStr
+        }
       )
+      
+      console.log('📅 Calendar day:', {
+        date: dateStr,
+        hasAttendance: !!attendance,
+        attendance: attendance,
+        allAttendances: attendanceData?.data?.attendances
+      })
       
       calendar.push({
         date: new Date(currentDate),
@@ -246,6 +267,14 @@ const AttendanceReports: React.FC = () => {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
               <p className="text-gray-600 mt-2">Loading attendance data...</p>
             </div>
+          ) : !attendanceData?.data?.attendances?.length ? (
+            <div className="text-center py-8">
+              <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-600">No attendance data found for this month</p>
+              <p className="text-sm text-gray-500 mt-2">
+                Try selecting a different month or employee
+              </p>
+            </div>
           ) : (
             <div className="grid grid-cols-7 gap-2">
               {/* Day headers */}
@@ -259,7 +288,7 @@ const AttendanceReports: React.FC = () => {
               {calendarData.map((day, index) => (
                 <div
                   key={index}
-                  className={`p-2 min-h-[60px] border rounded-lg flex flex-col items-center justify-center ${
+                  className={`p-2 min-h-[60px] border rounded-lg flex flex-col items-center justify-center relative ${
                     day.date ? 'bg-white hover:bg-gray-50 cursor-pointer' : 'bg-gray-50'
                   }`}
                 >
@@ -268,9 +297,16 @@ const AttendanceReports: React.FC = () => {
                       <div className="text-sm font-medium text-gray-900">
                         {day.date.getDate()}
                       </div>
-                      {day.attendance && (
-                        <div className={`w-6 h-6 rounded-full flex items-center justify-center ${getStatusColor(day.attendance.status)}`}>
-                          {getStatusIcon(day.attendance.status)}
+                      {day.attendance ? (
+                        <div className="mt-1 flex flex-col items-center">
+                          <div className={`w-4 h-4 rounded-full ${getStatusColor(day.attendance.status)} shadow-sm`}></div>
+                          <div className="text-xs text-gray-600 mt-1">
+                            {day.attendance.status}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="mt-1">
+                          <div className="w-4 h-4 rounded-full bg-gray-200"></div>
                         </div>
                       )}
                     </>
