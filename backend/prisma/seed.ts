@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client'
-import bcrypt from 'bcryptjs'
+import * as bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
 
@@ -67,6 +67,40 @@ async function main() {
       }
     })
 
+    // Create Departments first
+    const adminDept = await prisma.department.upsert({
+      where: { name: 'Administration' },
+      update: {},
+      create: {
+        name: 'Administration',
+        description: 'Administrative department',
+        managerId: superAdmin.id,
+        isActive: true
+      }
+    })
+
+    const hrDept = await prisma.department.upsert({
+      where: { name: 'Human Resources' },
+      update: {},
+      create: {
+        name: 'Human Resources',
+        description: 'Human Resources department',
+        managerId: hrManager.id,
+        isActive: true
+      }
+    })
+
+    const itDept = await prisma.department.upsert({
+      where: { name: 'IT' },
+      update: {},
+      create: {
+        name: 'IT',
+        description: 'Information Technology department',
+        managerId: deptManager.id,
+        isActive: true
+      }
+    })
+
     // Create Employee records
     await prisma.employee.upsert({
       where: { userId: superAdmin.id },
@@ -74,7 +108,7 @@ async function main() {
       create: {
         userId: superAdmin.id,
         employeeId: 'EMP001',
-        department: 'Administration',
+        departmentId: adminDept.id,
         position: 'Super Administrator',
         hireDate: new Date('2024-01-01'),
         salary: 100000,
@@ -89,7 +123,7 @@ async function main() {
       create: {
         userId: hrManager.id,
         employeeId: 'EMP002',
-        department: 'Human Resources',
+        departmentId: hrDept.id,
         position: 'HR Manager',
         hireDate: new Date('2024-01-15'),
         salary: 75000,
@@ -104,7 +138,7 @@ async function main() {
       create: {
         userId: deptManager.id,
         employeeId: 'EMP003',
-        department: 'IT',
+        departmentId: itDept.id,
         position: 'IT Manager',
         hireDate: new Date('2024-02-01'),
         salary: 80000,
@@ -119,7 +153,7 @@ async function main() {
       create: {
         userId: employee.id,
         employeeId: 'EMP004',
-        department: 'IT',
+        departmentId: itDept.id,
         position: 'Software Developer',
         hireDate: new Date('2024-02-15'),
         salary: 60000,

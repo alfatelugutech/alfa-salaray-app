@@ -20,7 +20,7 @@ const registerSchema = joi_1.default.object({
     role: joi_1.default.string().valid("SUPER_ADMIN", "HR_MANAGER", "DEPARTMENT_MANAGER", "EMPLOYEE").default("EMPLOYEE")
 });
 const loginSchema = joi_1.default.object({
-    email: joi_1.default.string().email().required(),
+    login: joi_1.default.string().required(), // Can be email or mobile number
     password: joi_1.default.string().required()
 });
 // Register new user
@@ -109,10 +109,15 @@ router.post("/login", async (req, res) => {
             });
             return;
         }
-        const { email, password } = value;
-        // Find user
-        const user = await prisma.user.findUnique({
-            where: { email },
+        const { login, password } = value;
+        // Find user by email or mobile number
+        const user = await prisma.user.findFirst({
+            where: {
+                OR: [
+                    { email: login },
+                    { mobileNumber: login }
+                ]
+            },
             include: {
                 employee: true
             }
