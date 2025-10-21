@@ -539,6 +539,77 @@ async function generateSmartNotifications(): Promise<any[]> {
   return notifications;
 }
 
+// Real-time dashboard data endpoint
+router.get("/dashboard/live", authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const authUser = (req as any).user;
+    const { startDate, endDate } = req.query;
+    
+    const start = startDate ? new Date(startDate as string) : new Date();
+    const end = endDate ? new Date(endDate as string) : new Date();
+    
+    // Get today's attendance overview
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    const [todayAttendance, totalEmployees, presentToday, lateToday, absentToday] = await Promise.all([
+      prisma.attendance.count({
+        where: { date: { gte: today, lt: tomorrow } }
+      }),
+      prisma.employee.count(),
+      prisma.attendance.count({
+        where: { 
+          date: { gte: today, lt: tomorrow },
+          status: 'PRESENT'
+        }
+      }),
+      prisma.attendance.count({
+        where: { 
+          date: { gte: today, lt: tomorrow },
+          status: 'LATE'
+        }
+      }),
+      prisma.attendance.count({
+        where: { 
+          date: { gte: today, lt: tomorrow },
+          status: 'ABSENT'
+        }
+      })
+    ]);
+    
+    const attendanceRate = totalEmployees > 0 ? Math.round((presentToday / totalEmployees) * 100) : 0;
+    
+    res.json({
+      success: true,
+      data: {
+        timestamp: new Date().toISOString(),
+        today: {
+          totalRecords: todayAttendance,
+          present: presentToday,
+          late: lateToday,
+          absent: absentToday,
+          attendanceRate
+        },
+        system: {
+          totalEmployees,
+          activeToday: presentToday + lateToday,
+          systemHealth: 'EXCELLENT'
+        }
+      }
+    });
+    
+  } catch (error) {
+    console.error('Live dashboard error:', error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to fetch live dashboard data",
+      code: "DASHBOARD_ERROR"
+    });
+  }
+});
+
 // Get current attendance status for user
 router.get("/self/status", async (req: Request, res: Response) => {
   console.log('📊 Getting attendance status for user');
@@ -1532,5 +1603,119 @@ router.get("/employee/:employeeId", async (req: Request, res: Response) => {
     });
   }
 });
+
+// Enhanced working hours analytics endpoint
+router.get("/analytics/working-hours", authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const { employeeId, startDate, endDate } = req.query;
+    
+    const start = startDate ? new Date(startDate as string) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const end = endDate ? new Date(endDate as string) : new Date();
+    
+    const whereClause: any = {
+      date: { gte: start, lte: end },
+      checkIn: { not: null },
+      checkOut: { not: null }
+    };
+    
+    if (employeeId) {
+      whereClause.employeeId = employeeId;
+    }
+    
+    const attendances = await prisma.attendance.findMany({
+      where: whereClause,
+      include: {
+        employee: {
+          include: {
+            user: {
+              select: {
+                firstName: true,
+                lastName: true,
+                email: true
+              }
+            }
+          }
+        }
+      },
+      orderBy: { date: 'desc' }
+    });
+    
+    // Calculate comprehensive working hours analytics
+    const totalWorkingHours = attendances.reduce((sum, att) => sum + Number(att.totalHours || 0), 0);
+    const totalRegularHours = attendances.reduce((sum, att) => sum + Number(att.regularHours || 0), 0);
+    const totalOvertimeHours = attendances.reduce((sum, att) => sum + Number(att.overtimeHours || 0), 0);
+    const totalBreakHours = attendances.reduce((sum, att) => sum + Number(att.breakHours || 0), 0);
+    
+    const averageWorkingHours = attendances.length > 0 ? totalWorkingHours / attendances.length : 0;
+    const averageOvertimeHours = attendances.length > 0 ? totalOvertimeHours / attendances.length : 0;
+    
+    // Calculate efficiency metrics
+    const efficiencyScore = calculateEfficiencyScore(attendances);
+    const punctualityScore = calculatePunctualityScore(attendances);
+    const workLifeBalance = calculateWorkLifeBalance(attendances);
+    
+    // Generate insights
+    const insights = {
+      totalDays: attendances.length,
+      totalWorkingHours: Math.round(totalWorkingHours * 100) / 100,
+      totalRegularHours: Math.round(totalRegularHours * 100) / 100,
+      totalOvertimeHours: Math.round(totalOvertimeHours * 100) / 100,
+      totalBreakHours: Math.round(totalBreakHours * 100) / 100,
+      averageWorkingHours: Math.round(averageWorkingHours * 100) / 100,
+      averageOvertimeHours: Math.round(averageOvertimeHours * 100) / 100,
+      efficiencyScore,
+      punctualityScore,
+      workLifeBalance,
+      productivity: {
+        level: efficiencyScore >= 90 ? 'EXCELLENT' : 
+               efficiencyScore >= 75 ? 'GOOD' : 
+               efficiencyScore >= 60 ? 'FAIR' : 'NEEDS_IMPROVEMENT',
+        message: getProductivityMessage(efficiencyScore)
+      }
+    };
+    
+    res.json({
+      success: true,
+      data: {
+        insights,
+        attendances: attendances.map(att => ({
+          id: att.id,
+          date: att.date,
+          employee: {
+            name: `${att.employee.user.firstName} ${att.employee.user.lastName}`,
+            email: att.employee.user.email
+          },
+          workingHours: {
+            total: Number(att.totalHours || 0),
+            regular: Number(att.regularHours || 0),
+            overtime: Number(att.overtimeHours || 0),
+            break: Number(att.breakHours || 0)
+          },
+          times: {
+            checkIn: att.checkIn,
+            checkOut: att.checkOut
+          },
+          status: att.status
+        }))
+      }
+    });
+    
+  } catch (error) {
+    console.error('Working hours analytics error:', error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to fetch working hours analytics",
+      code: "WORKING_HOURS_ERROR"
+    });
+  }
+});
+
+// Helper function for productivity message
+function getProductivityMessage(score: number): string {
+  if (score >= 90) return '🌟 Outstanding productivity! Keep up the excellent work.';
+  if (score >= 75) return '👍 Good productivity level. Continue the great work.';
+  if (score >= 60) return '📈 Productivity is improving. Keep focusing on efficiency.';
+  return '💪 Focus on improving productivity and time management.';
+}
 
 export default router;
