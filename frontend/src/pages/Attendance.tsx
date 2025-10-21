@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Clock, Plus, Search, Filter, CheckCircle, XCircle, Edit, Trash2, Eye, MapPin, Smartphone, Home, X, Camera, Upload, TrendingUp } from 'lucide-react'
-import { useQuery, useMutation, useQueryClient } from 'react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { attendanceService } from '../services/attendanceService'
 import { employeeService } from '../services/employeeService'
 import { shiftService } from '../services/shiftService'

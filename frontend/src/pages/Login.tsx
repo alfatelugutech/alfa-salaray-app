@@ -1,6 +1,7 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useAuth } from '../hooks/useAuth'
-import { Clock, Users, Calendar } from 'lucide-react'
+import { Clock, Users, Calendar, Wifi, WifiOff } from 'lucide-react'
+import { checkBackendHealth } from '../services/api'
 
 const Login: React.FC = () => {
   const { login, isLoggingIn } = useAuth()
@@ -8,6 +9,22 @@ const Login: React.FC = () => {
     login: '', // Can be email or mobile number
     password: ''
   })
+  const [connectionStatus, setConnectionStatus] = useState<'checking' | 'connected' | 'disconnected'>('checking')
+
+  // Check backend connection on component mount
+  useEffect(() => {
+    const checkConnection = async () => {
+      try {
+        const result = await checkBackendHealth()
+        setConnectionStatus(result.isHealthy ? 'connected' : 'disconnected')
+      } catch (error) {
+        console.error('Connection check failed:', error)
+        setConnectionStatus('disconnected')
+      }
+    }
+    
+    checkConnection()
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -39,6 +56,42 @@ const Login: React.FC = () => {
           <p className="mt-2 text-sm text-gray-600">
             Phase 1 - Core Foundation
           </p>
+          
+          {/* Connection Status */}
+          <div className="mt-4 flex items-center justify-center space-x-2">
+            {connectionStatus === 'checking' && (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-600 border-t-transparent"></div>
+                <span className="text-sm text-gray-600">Checking connection...</span>
+              </>
+            )}
+            {connectionStatus === 'connected' && (
+              <>
+                <Wifi className="h-4 w-4 text-green-600" />
+                <span className="text-sm text-green-600">Backend connected</span>
+              </>
+            )}
+            {connectionStatus === 'disconnected' && (
+              <div className="flex items-center space-x-2">
+                <WifiOff className="h-4 w-4 text-red-600" />
+                <span className="text-sm text-red-600">Backend disconnected</span>
+                <button
+                  onClick={async () => {
+                    setConnectionStatus('checking')
+                    try {
+                      const result = await checkBackendHealth()
+                      setConnectionStatus(result.isHealthy ? 'connected' : 'disconnected')
+                    } catch (error) {
+                      setConnectionStatus('disconnected')
+                    }
+                  }}
+                  className="text-xs text-blue-600 hover:text-blue-800 underline"
+                >
+                  Retry
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Features */}
@@ -100,14 +153,20 @@ const Login: React.FC = () => {
             <div>
               <button
                 type="submit"
-                disabled={isLoggingIn}
-                className="w-full btn btn-primary btn-md"
+                disabled={isLoggingIn || connectionStatus === 'disconnected'}
+                className={`w-full btn btn-md ${
+                  connectionStatus === 'disconnected' 
+                    ? 'btn-disabled bg-gray-400 cursor-not-allowed' 
+                    : 'btn-primary'
+                }`}
               >
                 {isLoggingIn ? (
                   <div className="flex items-center justify-center">
                     <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
                     Signing in...
                   </div>
+                ) : connectionStatus === 'disconnected' ? (
+                  'Backend disconnected - Cannot sign in'
                 ) : (
                   'Sign in'
                 )}

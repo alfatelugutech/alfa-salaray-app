@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from 'react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Calendar, Clock, User, CheckCircle, XCircle, AlertCircle, Home } from 'lucide-react'
 import { attendanceService } from '../services/attendanceService'
 import { employeeService } from '../services/employeeService'

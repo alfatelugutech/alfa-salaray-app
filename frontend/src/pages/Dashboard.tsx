@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { useNavigate } from 'react-router-dom'
-import { useQuery, useMutation, useQueryClient } from 'react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { attendanceService } from '../services/attendanceService'
 import { leaveService } from '../services/leaveService'
 import { employeeService } from '../services/employeeService'

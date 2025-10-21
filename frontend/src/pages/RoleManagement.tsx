@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from 'react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, Edit, Trash2, Users, Shield, Key, UserCheck } from 'lucide-react'
 import roleService from '../services/roleService'
 import permissionService from '../services/permissionService'
