@@ -9,7 +9,15 @@ const auth_1 = require("../middleware/auth");
 const joi_1 = __importDefault(require("joi"));
 const router = express_1.default.Router();
 const prisma = new client_1.PrismaClient();
-// Apply authentication to all routes
+// Test route without authentication
+router.get("/test", (req, res) => {
+    res.json({
+        success: true,
+        message: "Attendance service is working",
+        timestamp: new Date().toISOString()
+    });
+});
+// Apply authentication to all other routes
 router.use(auth_1.authenticateToken);
 // Validation schemas
 const markAttendanceSchema = joi_1.default.object({
@@ -88,6 +96,11 @@ const updateAttendanceSchema = joi_1.default.object({
 });
 // Mark attendance (for employees and admins)
 router.post("/mark", async (req, res) => {
+    console.log('📝 Attendance mark request received:', {
+        body: req.body,
+        headers: req.headers,
+        user: req.user
+    });
     try {
         const { error, value } = markAttendanceSchema.validate(req.body);
         if (error) {

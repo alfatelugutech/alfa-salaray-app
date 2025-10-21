@@ -70,7 +70,7 @@ async function migrateDepartments() {
 
     console.log('✅ Department migration completed successfully!')
     
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ Migration failed:', error)
     // Don't throw error if it's just that the column doesn't exist
     if (error.message && error.message.includes('column "department" does not exist')) {

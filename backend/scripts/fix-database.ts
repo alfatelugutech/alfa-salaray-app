@@ -65,7 +65,7 @@ async function fixDatabase() {
 
     console.log('🎉 Database schema fixes completed successfully!')
     
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ Database fix failed:', error)
     throw error
   } finally {

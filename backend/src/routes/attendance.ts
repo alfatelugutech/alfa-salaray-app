@@ -6,7 +6,16 @@ import Joi from "joi";
 const router = express.Router();
 const prisma = new PrismaClient();
 
-// Apply authentication to all routes
+// Test route without authentication
+router.get("/test", (req: Request, res: Response) => {
+  res.json({
+    success: true,
+    message: "Attendance service is working",
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Apply authentication to all other routes
 router.use(authenticateToken);
 
 // Validation schemas
@@ -88,6 +97,11 @@ const updateAttendanceSchema = Joi.object({
 
 // Mark attendance (for employees and admins)
 router.post("/mark", async (req: Request, res: Response) => {
+  console.log('📝 Attendance mark request received:', {
+    body: req.body,
+    headers: req.headers,
+    user: (req as any).user
+  });
   try {
     const { error, value } = markAttendanceSchema.validate(req.body);
     if (error) {
