@@ -113,6 +113,56 @@ app.get('/health', (req, res) => {
         }
     });
 });
+// Smart system health endpoint
+app.get('/smart-health', async (req, res) => {
+    try {
+        // Check database connection
+        await prisma.$queryRaw `SELECT 1`;
+        // Get system statistics
+        const [userCount, employeeCount, attendanceCount] = await Promise.all([
+            prisma.user.count(),
+            prisma.employee.count(),
+            prisma.attendance.count()
+        ]);
+        // Calculate system health score
+        const healthScore = Math.min(100, Math.max(0, (userCount > 0 ? 25 : 0) +
+            (employeeCount > 0 ? 25 : 0) +
+            (attendanceCount > 0 ? 25 : 0) +
+            (process.env.JWT_SECRET ? 25 : 0)));
+        const healthStatus = healthScore >= 90 ? 'EXCELLENT' :
+            healthScore >= 75 ? 'GOOD' :
+                healthScore >= 50 ? 'FAIR' : 'POOR';
+        res.json({
+            success: true,
+            message: 'Smart system health check',
+            timestamp: new Date().toISOString(),
+            health: {
+                score: healthScore,
+                status: healthStatus,
+                database: 'Connected',
+                environment: process.env.NODE_ENV || 'development'
+            },
+            statistics: {
+                users: userCount,
+                employees: employeeCount,
+                attendances: attendanceCount
+            },
+            smartFeatures: {
+                analytics: 'Available',
+                insights: 'Active',
+                recommendations: 'Enabled'
+            }
+        });
+    }
+    catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'System health check failed',
+            error: error instanceof Error ? error.message : 'Unknown error',
+            timestamp: new Date().toISOString()
+        });
+    }
+});
 // Debug endpoint for CORS testing
 app.get('/api/debug', (req, res) => {
     res.status(200).json({

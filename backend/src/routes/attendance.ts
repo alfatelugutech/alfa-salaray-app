@@ -15,6 +15,148 @@ router.get("/test", (req: Request, res: Response) => {
   });
 });
 
+// Smart analytics endpoint
+router.get('/analytics/smart-insights', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const { employeeId, startDate, endDate } = req.query;
+    
+    if (!employeeId) {
+      return res.status(400).json({
+        success: false,
+        error: "Employee ID required",
+        code: "EMPLOYEE_ID_REQUIRED"
+      });
+    }
+
+    const start = startDate ? new Date(startDate as string) : new Date();
+    start.setDate(start.getDate() - 30); // Default to last 30 days
+    const end = endDate ? new Date(endDate as string) : new Date();
+
+    // Get attendance data
+    const attendances = await prisma.attendance.findMany({
+      where: {
+        employeeId: employeeId as string,
+        date: {
+          gte: start,
+          lte: end
+        }
+      },
+      orderBy: { date: 'desc' }
+    });
+
+    // Calculate smart insights
+    const totalDays = attendances.length;
+    const presentDays = attendances.filter(att => att.status === 'PRESENT').length;
+    const lateDays = attendances.filter(att => att.status === 'LATE').length;
+    const absentDays = attendances.filter(att => att.status === 'ABSENT').length;
+    const attendanceRate = totalDays > 0 ? (presentDays / totalDays) * 100 : 0;
+
+    // Smart pattern analysis
+    const patterns = {
+      lateArrivals: lateDays,
+      perfectAttendance: absentDays === 0 && lateDays === 0,
+      consistency: calculateConsistency(attendances),
+      trends: analyzeTrends(attendances)
+    };
+
+    // Generate smart recommendations
+    const recommendations = generateSmartRecommendations(attendanceRate, patterns);
+
+    res.json({
+      success: true,
+      data: {
+        insights: {
+          totalDays,
+          presentDays,
+          lateDays,
+          absentDays,
+          attendanceRate: Math.round(attendanceRate * 100) / 100
+        },
+        patterns,
+        recommendations,
+        performance: {
+          level: attendanceRate >= 95 ? 'EXCELLENT' : 
+                 attendanceRate >= 85 ? 'GOOD' : 
+                 attendanceRate >= 70 ? 'NEEDS_IMPROVEMENT' : 'POOR',
+          message: getPerformanceMessage(attendanceRate)
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Smart analytics error:', error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to generate smart insights",
+      code: "ANALYTICS_ERROR"
+    });
+  }
+});
+
+// Helper functions for smart analytics
+function calculateConsistency(attendances: any[]): number {
+  if (attendances.length < 2) return 100;
+  
+  const checkInTimes = attendances
+    .filter(att => att.checkIn)
+    .map(att => new Date(att.checkIn).getHours() * 60 + new Date(att.checkIn).getMinutes());
+  
+  if (checkInTimes.length < 2) return 100;
+  
+  const avgTime = checkInTimes.reduce((a, b) => a + b, 0) / checkInTimes.length;
+  const variance = checkInTimes.reduce((sum, time) => sum + Math.pow(time - avgTime, 2), 0) / checkInTimes.length;
+  const consistency = Math.max(0, 100 - (Math.sqrt(variance) / 60) * 10); // Convert to percentage
+  
+  return Math.round(consistency);
+}
+
+function analyzeTrends(attendances: any[]): any {
+  if (attendances.length < 7) return { trend: 'INSUFFICIENT_DATA' };
+  
+  const recentWeek = attendances.slice(0, 7);
+  const previousWeek = attendances.slice(7, 14);
+  
+  const recentPresent = recentWeek.filter(att => att.status === 'PRESENT').length;
+  const previousPresent = previousWeek.filter(att => att.status === 'PRESENT').length;
+  
+  if (recentPresent > previousPresent) return { trend: 'IMPROVING', change: recentPresent - previousPresent };
+  if (recentPresent < previousPresent) return { trend: 'DECLINING', change: previousPresent - recentPresent };
+  return { trend: 'STABLE', change: 0 };
+}
+
+function generateSmartRecommendations(attendanceRate: number, patterns: any): string[] {
+  const recommendations: string[] = [];
+  
+  if (attendanceRate < 70) {
+    recommendations.push('🚨 Consider discussing attendance concerns with your manager');
+  } else if (attendanceRate < 85) {
+    recommendations.push('⚠️ Focus on consistent daily attendance');
+  } else if (attendanceRate >= 95) {
+    recommendations.push('🌟 Excellent attendance! Keep up the great work');
+  }
+  
+  if (patterns.lateArrivals > 0) {
+    recommendations.push('⏰ Consider adjusting your morning routine to avoid late arrivals');
+  }
+  
+  if (patterns.consistency < 70) {
+    recommendations.push('📅 Try to maintain more consistent check-in times');
+  }
+  
+  if (patterns.trends.trend === 'DECLINING') {
+    recommendations.push('📉 Your attendance has been declining recently - consider addressing any issues');
+  }
+  
+  return recommendations;
+}
+
+function getPerformanceMessage(attendanceRate: number): string {
+  if (attendanceRate >= 95) return '🌟 Excellent attendance record!';
+  if (attendanceRate >= 85) return '👍 Good attendance performance';
+  if (attendanceRate >= 70) return '⚠️ Attendance needs improvement';
+  return '🚨 Poor attendance record';
+}
+
 // Get current attendance status for user
 router.get("/self/status", async (req: Request, res: Response) => {
   console.log('📊 Getting attendance status for user');
@@ -115,7 +257,8 @@ router.post("/self/check-in", async (req: Request, res: Response) => {
   console.log('📝 Self check-in request received:', {
     body: req.body,
     headers: req.headers,
-    authorization: req.headers.authorization
+    authorization: req.headers.authorization,
+    timestamp: new Date().toISOString()
   });
   
   try {
@@ -181,6 +324,11 @@ router.post("/self/check-in", async (req: Request, res: Response) => {
     });
 
     if (existingAttendance) {
+      console.log('⚠️ Attendance already exists for today:', {
+        attendanceId: existingAttendance.id,
+        checkInTime: existingAttendance.checkIn,
+        checkOutTime: existingAttendance.checkOut
+      });
       return res.status(400).json({
         success: false,
         error: "Attendance already marked for today",
@@ -258,7 +406,8 @@ router.post("/self/check-out", async (req: Request, res: Response) => {
   console.log('📝 Self check-out request received:', {
     body: req.body,
     headers: req.headers,
-    authorization: req.headers.authorization
+    authorization: req.headers.authorization,
+    timestamp: new Date().toISOString()
   });
   
   try {
@@ -332,6 +481,10 @@ router.post("/self/check-out", async (req: Request, res: Response) => {
     }
 
     if (attendance.checkOut) {
+      console.log('⚠️ Check-out already exists for today:', {
+        attendanceId: attendance.id,
+        checkOutTime: attendance.checkOut
+      });
       return res.status(400).json({
         success: false,
         error: "Already checked out for today",

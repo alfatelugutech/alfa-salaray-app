@@ -11,6 +11,124 @@ const router = express_1.default.Router();
 const prisma = new client_1.PrismaClient();
 // Apply authentication to all routes
 router.use(auth_1.authenticateToken);
+// Smart employee analytics endpoint
+router.get('/analytics/smart-insights', auth_1.requireHR, async (req, res) => {
+    try {
+        const { department, startDate, endDate } = req.query;
+        const start = startDate ? new Date(startDate) : new Date();
+        start.setDate(start.getDate() - 30); // Default to last 30 days
+        const end = endDate ? new Date(endDate) : new Date();
+        // Get all employees with attendance data
+        const employees = await prisma.employee.findMany({
+            where: department ? { departmentId: department } : {},
+            include: {
+                user: true,
+                department: true,
+                attendances: {
+                    where: {
+                        date: {
+                            gte: start,
+                            lte: end
+                        }
+                    }
+                }
+            }
+        });
+        // Calculate smart insights for each employee
+        const employeeInsights = employees.map(employee => {
+            const attendances = employee.attendances;
+            const totalDays = attendances.length;
+            const presentDays = attendances.filter(att => att.status === 'PRESENT').length;
+            const lateDays = attendances.filter(att => att.status === 'LATE').length;
+            const absentDays = attendances.filter(att => att.status === 'ABSENT').length;
+            const attendanceRate = totalDays > 0 ? (presentDays / totalDays) * 100 : 0;
+            return {
+                employeeId: employee.id,
+                name: `${employee.user.firstName} ${employee.user.lastName}`,
+                department: employee.department?.name || 'N/A',
+                attendanceRate: Math.round(attendanceRate * 100) / 100,
+                totalDays,
+                presentDays,
+                lateDays,
+                absentDays,
+                performance: attendanceRate >= 95 ? 'EXCELLENT' :
+                    attendanceRate >= 85 ? 'GOOD' :
+                        attendanceRate >= 70 ? 'NEEDS_IMPROVEMENT' : 'POOR'
+            };
+        });
+        // Calculate department insights
+        const departmentStats = employees.reduce((acc, employee) => {
+            const dept = employee.department?.name || 'N/A';
+            if (!acc[dept]) {
+                acc[dept] = { total: 0, excellent: 0, good: 0, needsImprovement: 0, poor: 0 };
+            }
+            acc[dept].total++;
+            const insight = employeeInsights.find(insight => insight.employeeId === employee.id);
+            if (insight) {
+                if (insight.performance === 'EXCELLENT')
+                    acc[dept].excellent++;
+                else if (insight.performance === 'GOOD')
+                    acc[dept].good++;
+                else if (insight.performance === 'NEEDS_IMPROVEMENT')
+                    acc[dept].needsImprovement++;
+                else
+                    acc[dept].poor++;
+            }
+            return acc;
+        }, {});
+        // Generate smart recommendations
+        const recommendations = generateEmployeeRecommendations(employeeInsights, departmentStats);
+        res.json({
+            success: true,
+            data: {
+                employeeInsights,
+                departmentStats,
+                recommendations,
+                summary: {
+                    totalEmployees: employees.length,
+                    excellentPerformance: employeeInsights.filter(insight => insight.performance === 'EXCELLENT').length,
+                    needsAttention: employeeInsights.filter(insight => insight.performance === 'POOR').length,
+                    averageAttendanceRate: employeeInsights.length > 0 ?
+                        Math.round(employeeInsights.reduce((sum, insight) => sum + insight.attendanceRate, 0) / employeeInsights.length * 100) / 100 : 0
+                }
+            }
+        });
+    }
+    catch (error) {
+        console.error('Smart employee analytics error:', error);
+        res.status(500).json({
+            success: false,
+            error: "Failed to generate smart employee insights",
+            code: "EMPLOYEE_ANALYTICS_ERROR"
+        });
+    }
+});
+// Helper function for employee recommendations
+function generateEmployeeRecommendations(employeeInsights, departmentStats) {
+    const recommendations = [];
+    const poorPerformers = employeeInsights.filter(insight => insight.performance === 'POOR');
+    if (poorPerformers.length > 0) {
+        recommendations.push(`🚨 ${poorPerformers.length} employee(s) need immediate attention for poor attendance`);
+    }
+    const needsImprovement = employeeInsights.filter(insight => insight.performance === 'NEEDS_IMPROVEMENT');
+    if (needsImprovement.length > 0) {
+        recommendations.push(`⚠️ ${needsImprovement.length} employee(s) could benefit from attendance improvement discussions`);
+    }
+    const excellentPerformers = employeeInsights.filter(insight => insight.performance === 'EXCELLENT');
+    if (excellentPerformers.length > 0) {
+        recommendations.push(`🌟 ${excellentPerformers.length} employee(s) have excellent attendance - consider recognition`);
+    }
+    // Department-specific recommendations
+    Object.entries(departmentStats).forEach(([dept, stats]) => {
+        if (stats.poor > stats.total * 0.3) {
+            recommendations.push(`📊 ${dept} department has high absenteeism - consider department-wide initiatives`);
+        }
+        if (stats.excellent > stats.total * 0.7) {
+            recommendations.push(`🎉 ${dept} department has excellent attendance culture - share best practices`);
+        }
+    });
+    return recommendations;
+}
 // Validation schemas
 const createEmployeeSchema = joi_1.default.object({
     userId: joi_1.default.string().required(),

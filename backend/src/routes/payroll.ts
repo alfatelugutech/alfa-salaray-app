@@ -9,6 +9,137 @@ const prisma = new PrismaClient();
 // Apply authentication to all routes
 router.use(authenticateToken);
 
+// Smart payroll analytics endpoint
+router.get('/analytics/smart-insights', requireHR, async (req: Request, res: Response) => {
+  try {
+    const { year, month, department } = req.query;
+    
+    const where: any = {};
+    if (year) where.year = parseInt(year as string);
+    if (month) where.month = parseInt(month as string);
+    
+    // Get payroll data with employee information
+    const payrolls = await prisma.payroll.findMany({
+      where,
+      include: {
+        employee: {
+          include: {
+            user: true,
+            department: true
+          }
+        }
+      }
+    });
+
+    // Filter by department if specified
+    const filteredPayrolls = department ? 
+      payrolls.filter(p => p.employee.department?.id === department) : 
+      payrolls;
+
+    // Calculate smart insights
+    const totalPayroll = filteredPayrolls.reduce((sum, p) => sum + Number(p.netSalary), 0);
+    const averageSalary = filteredPayrolls.length > 0 ? totalPayroll / filteredPayrolls.length : 0;
+    
+    const salaryDistribution = {
+      high: filteredPayrolls.filter(p => Number(p.netSalary) > averageSalary * 1.5).length,
+      medium: filteredPayrolls.filter(p => Number(p.netSalary) >= averageSalary * 0.8 && Number(p.netSalary) <= averageSalary * 1.5).length,
+      low: filteredPayrolls.filter(p => Number(p.netSalary) < averageSalary * 0.8).length
+    };
+
+    // Department analysis
+    const departmentAnalysis = filteredPayrolls.reduce((acc, payroll) => {
+      const dept = payroll.employee.department?.name || 'N/A';
+      if (!acc[dept]) {
+        acc[dept] = { total: 0, sum: 0, count: 0 };
+      }
+      acc[dept].total++;
+      acc[dept].sum += Number(payroll.netSalary);
+      acc[dept].count++;
+      return acc;
+    }, {} as any);
+
+    // Calculate department averages
+    Object.keys(departmentAnalysis).forEach(dept => {
+      departmentAnalysis[dept].average = departmentAnalysis[dept].sum / departmentAnalysis[dept].count;
+    });
+
+    // Generate smart recommendations
+    const recommendations = generatePayrollRecommendations(filteredPayrolls, departmentAnalysis, averageSalary);
+
+    res.json({
+      success: true,
+      data: {
+        summary: {
+          totalPayrolls: filteredPayrolls.length,
+          totalAmount: totalPayroll,
+          averageSalary: Math.round(averageSalary * 100) / 100,
+          salaryDistribution
+        },
+        departmentAnalysis,
+        recommendations,
+        insights: {
+          highestPaid: filteredPayrolls.length > 0 ? 
+            filteredPayrolls.reduce((max, p) => Number(p.netSalary) > Number(max.netSalary) ? p : max) : null,
+          lowestPaid: filteredPayrolls.length > 0 ? 
+            filteredPayrolls.reduce((min, p) => Number(p.netSalary) < Number(min.netSalary) ? p : min) : null,
+          salaryRange: {
+            min: filteredPayrolls.length > 0 ? Math.min(...filteredPayrolls.map(p => Number(p.netSalary))) : 0,
+            max: filteredPayrolls.length > 0 ? Math.max(...filteredPayrolls.map(p => Number(p.netSalary))) : 0
+          }
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Smart payroll analytics error:', error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to generate smart payroll insights",
+      code: "PAYROLL_ANALYTICS_ERROR"
+    });
+  }
+});
+
+// Helper function for payroll recommendations
+function generatePayrollRecommendations(payrolls: any[], departmentAnalysis: any, averageSalary: number): string[] {
+  const recommendations: string[] = [];
+  
+  // Salary equity analysis
+  const highSalaries = payrolls.filter(p => Number(p.netSalary) > averageSalary * 1.5);
+  const lowSalaries = payrolls.filter(p => Number(p.netSalary) < averageSalary * 0.8);
+  
+  if (highSalaries.length > payrolls.length * 0.2) {
+    recommendations.push('💰 High number of high-salary employees - review compensation structure');
+  }
+  
+  if (lowSalaries.length > payrolls.length * 0.3) {
+    recommendations.push('📊 Many employees below average salary - consider salary reviews');
+  }
+  
+  // Department equity analysis
+  const departmentAverages = Object.values(departmentAnalysis).map((dept: any) => dept.average);
+  const maxDeptAvg = Math.max(...departmentAverages);
+  const minDeptAvg = Math.min(...departmentAverages);
+  
+  if (maxDeptAvg > minDeptAvg * 2) {
+    recommendations.push('⚖️ Significant salary disparity between departments - review equity');
+  }
+  
+  // Overtime analysis
+  const highOvertime = payrolls.filter(p => Number(p.overtimePay) > Number(p.basicSalary) * 0.2);
+  if (highOvertime.length > 0) {
+    recommendations.push('⏰ Some employees have high overtime - consider workload distribution');
+  }
+  
+  // Deductions analysis
+  const highDeductions = payrolls.filter(p => Number(p.deductions) > Number(p.basicSalary) * 0.1);
+  if (highDeductions.length > 0) {
+    recommendations.push('📋 Some employees have high deductions - review policies');
+  }
+  
+  return recommendations;
+}
+
 // Validation schemas
 const createPayrollSchema = Joi.object({
   employeeId: Joi.string().required(),
