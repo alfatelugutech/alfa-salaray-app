@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from 'react-query'
-import { Plus, Edit, Trash2, Users, Shield, Key, UserCheck, Settings } from 'lucide-react'
+import { Plus, Edit, Trash2, Users, Shield, Key, UserCheck } from 'lucide-react'
 import roleService from '../services/roleService'
 import permissionService from '../services/permissionService'
 import { employeeService } from '../services/employeeService'
