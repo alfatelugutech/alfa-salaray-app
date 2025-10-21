@@ -15,6 +15,101 @@ router.get("/test", (req: Request, res: Response) => {
   });
 });
 
+// Get current attendance status for user
+router.get("/self/status", async (req: Request, res: Response) => {
+  console.log('📊 Getting attendance status for user');
+  
+  try {
+    const { userId } = req.query;
+    
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        error: "User ID required",
+        code: "USER_ID_REQUIRED"
+      });
+    }
+
+    // Find user
+    const user = await prisma.user.findUnique({
+      where: { id: userId as string }
+    });
+
+    if (!user || !user.isActive) {
+      return res.status(401).json({
+        success: false,
+        error: "Invalid user or user not active",
+        code: "INVALID_USER"
+      });
+    }
+
+    // Find employee record
+    const employee = await prisma.employee.findUnique({
+      where: { userId: user.id }
+    });
+
+    if (!employee) {
+      return res.status(404).json({
+        success: false,
+        error: "Employee record not found",
+        code: "EMPLOYEE_NOT_FOUND"
+      });
+    }
+
+    // Get today's attendance
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const attendance = await prisma.attendance.findFirst({
+      where: {
+        employeeId: employee.id,
+        date: {
+          gte: today,
+          lt: tomorrow
+        }
+      }
+    });
+
+    // Determine status
+    const canCheckIn = !attendance || (!attendance.checkIn && !attendance.checkOut);
+    const canCheckOut = attendance && attendance.checkIn && !attendance.checkOut;
+    const isCompleted = attendance && attendance.checkIn && attendance.checkOut;
+
+    console.log('📊 Attendance status debug:', {
+      hasAttendance: !!attendance,
+      checkIn: attendance?.checkIn,
+      checkOut: attendance?.checkOut,
+      canCheckIn,
+      canCheckOut,
+      isCompleted
+    });
+
+    res.json({
+      success: true,
+      data: {
+        status: {
+          canCheckIn,
+          canCheckOut,
+          isCompleted,
+          currentTime: new Date().toISOString(),
+          today: today.toISOString().split('T')[0]
+        },
+        attendance: attendance || null
+      }
+    });
+
+  } catch (error: any) {
+    console.error('❌ Get attendance status error:', error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to get attendance status",
+      code: "STATUS_ERROR"
+    });
+  }
+});
+
 // Self check-in endpoint (for employees to mark their own attendance)
 router.post("/self/check-in", async (req: Request, res: Response) => {
   console.log('📝 Self check-in request received:', {
@@ -469,6 +564,10 @@ router.get("/", async (req: Request, res: Response) => {
       status = "" 
     } = req.query;
 
+    console.log('📊 Attendance GET request:', {
+      page, limit, employeeId, startDate, endDate, status
+    });
+
     const skip = (Number(page) - 1) * Number(limit);
     
     const where: any = {};
@@ -487,6 +586,8 @@ router.get("/", async (req: Request, res: Response) => {
     if (status) {
       where.status = status;
     }
+
+    console.log('📊 Attendance query where clause:', where);
 
     const [attendances, total] = await Promise.all([
       prisma.attendance.findMany({
@@ -510,6 +611,17 @@ router.get("/", async (req: Request, res: Response) => {
       }),
       prisma.attendance.count({ where })
     ]);
+
+    console.log('📊 Attendance query results:', {
+      total,
+      attendancesCount: attendances.length,
+      attendances: attendances.map(att => ({
+        id: att.id,
+        date: att.date,
+        status: att.status,
+        employeeId: att.employeeId
+      }))
+    });
 
     res.json({
       success: true,
