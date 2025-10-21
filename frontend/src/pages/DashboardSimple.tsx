@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { useNavigate } from 'react-router-dom'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from 'react-query'
 import { attendanceService } from '../services/attendanceService'
 import { leaveService } from '../services/leaveService'
 import { employeeService } from '../services/employeeService'
@@ -29,50 +29,59 @@ const Dashboard: React.FC = () => {
   const [showLiveCamera, setShowLiveCamera] = useState(false)
 
   // Fetch attendance data
-  const { data: attendanceData, error: attendanceError } = useQuery({
-    queryKey: ['my-attendance'],
-    queryFn: () => attendanceService.getAttendance({ employeeId: user?.employeeId }),
-    enabled: !!user?.employeeId,
-    retry: 2,
-    retryDelay: 1000
-  })
+  const { data: attendanceData, error: attendanceError } = useQuery(
+    'my-attendance',
+    () => attendanceService.getAttendance({ employeeId: user?.employeeId }),
+    {
+      enabled: !!user?.employeeId,
+      retry: 2,
+      retryDelay: 1000
+    }
+  )
 
   // Fetch leave data
-  const { data: leaveData, error: leaveError } = useQuery({
-    queryKey: ['my-leave-requests'],
-    queryFn: () => leaveService.getLeaveRequests({ employeeId: user?.employeeId }),
-    enabled: !!user?.employeeId,
-    retry: 2,
-    retryDelay: 1000
-  })
+  const { data: leaveData, error: leaveError } = useQuery(
+    'my-leave-requests',
+    () => leaveService.getLeaveRequests({ employeeId: user?.employeeId }),
+    {
+      enabled: !!user?.employeeId,
+      retry: 2,
+      retryDelay: 1000
+    }
+  )
 
   // Fetch employee stats (for admin)
-  const { data: employeeStats, error: employeeStatsError } = useQuery({
-    queryKey: ['employee-stats'],
-    queryFn: () => employeeService.getEmployeeStats(),
-    enabled: user?.role === 'SUPER_ADMIN' || user?.role === 'HR_MANAGER'
-  })
+  const { data: employeeStats, error: employeeStatsError } = useQuery(
+    'employee-stats',
+    () => employeeService.getEmployeeStats(),
+    {
+      enabled: user?.role === 'SUPER_ADMIN' || user?.role === 'HR_MANAGER'
+    }
+  )
 
   // Fetch attendance stats (for admin)
-  const { data: attendanceStats, error: attendanceStatsError } = useQuery({
-    queryKey: ['attendance-stats'],
-    queryFn: () => attendanceService.getAttendanceStats(),
-    enabled: user?.role === 'SUPER_ADMIN' || user?.role === 'HR_MANAGER'
-  })
+  const { data: attendanceStats, error: attendanceStatsError } = useQuery(
+    'attendance-stats',
+    () => attendanceService.getAttendanceStats(),
+    {
+      enabled: user?.role === 'SUPER_ADMIN' || user?.role === 'HR_MANAGER'
+    }
+  )
 
   // Fetch leave stats (for admin)
-  const { data: leaveStats, error: leaveStatsError } = useQuery({
-    queryKey: ['leave-stats'],
-    queryFn: () => leaveService.getLeaveStats(),
-    enabled: user?.role === 'SUPER_ADMIN' || user?.role === 'HR_MANAGER'
-  })
+  const { data: leaveStats, error: leaveStatsError } = useQuery(
+    'leave-stats',
+    () => leaveService.getLeaveStats(),
+    {
+      enabled: user?.role === 'SUPER_ADMIN' || user?.role === 'HR_MANAGER'
+    }
+  )
 
   // Check-in mutation
-  const checkInMutation = useMutation({
-    mutationFn: attendanceService.checkIn,
+  const checkInMutation = useMutation(attendanceService.markAttendance, {
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['my-attendance'] })
-      queryClient.invalidateQueries({ queryKey: ['attendance-status'] })
+      queryClient.invalidateQueries('my-attendance')
+      queryClient.invalidateQueries('attendance-status')
       toast.success('Check-in successful!')
       setShowSelfAttendanceModal(false)
     },
@@ -82,11 +91,10 @@ const Dashboard: React.FC = () => {
   })
 
   // Check-out mutation
-  const checkOutMutation = useMutation({
-    mutationFn: attendanceService.checkOut,
+  const checkOutMutation = useMutation(attendanceService.markAttendance, {
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['my-attendance'] })
-      queryClient.invalidateQueries({ queryKey: ['attendance-status'] })
+      queryClient.invalidateQueries('my-attendance')
+      queryClient.invalidateQueries('attendance-status')
       toast.success('Check-out successful!')
       setShowSelfAttendanceModal(false)
     },
@@ -96,13 +104,15 @@ const Dashboard: React.FC = () => {
   })
 
   // Get attendance status
-  const { data: attendanceStatus } = useQuery({
-    queryKey: ['attendance-status'],
-    queryFn: () => attendanceService.getAttendanceStatus(),
-    enabled: !!user?.employeeId,
-    refetchInterval: 30000, // Refetch every 30 seconds
-    refetchOnWindowFocus: true
-  })
+  const { data: attendanceStatus } = useQuery(
+    'attendance-status',
+    () => attendanceService.getAttendanceStatus(),
+    {
+      enabled: !!user?.employeeId,
+      refetchInterval: 30000, // Refetch every 30 seconds
+      refetchOnWindowFocus: true
+    }
+  )
 
   const handleCheckIn = async () => {
     try {
@@ -115,10 +125,11 @@ const Dashboard: React.FC = () => {
       }
 
       await checkInMutation.mutateAsync({
-        isRemote: false,
-        checkInSelfie: selfie || '',
-        checkInLocation: location,
-        deviceInfo: deviceInfo
+        employeeId: user?.employeeId,
+        date: new Date().toISOString().split('T')[0],
+        checkIn: new Date().toISOString(),
+        status: 'PRESENT',
+        notes: 'Check-in via dashboard'
       })
     } catch (error) {
       console.error('Check-in error:', error)
@@ -135,8 +146,11 @@ const Dashboard: React.FC = () => {
       }
 
       await checkOutMutation.mutateAsync({
-        checkOutSelfie: selfie || '',
-        checkOutLocation: location
+        employeeId: user?.employeeId,
+        date: new Date().toISOString().split('T')[0],
+        checkOut: new Date().toISOString(),
+        status: 'PRESENT',
+        notes: 'Check-out via dashboard'
       })
     } catch (error) {
       console.error('Check-out error:', error)
@@ -187,7 +201,7 @@ const Dashboard: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <button
                 onClick={handleCheckIn}
-                disabled={checkInMutation.isPending || !attendanceStatus?.status?.canCheckIn}
+                disabled={checkInMutation.isLoading || !attendanceStatus?.status?.canCheckIn}
                 className="card p-4 flex items-center justify-center gap-3 hover:bg-green-50 disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 <Clock className="h-5 w-5 text-green-600" />
@@ -197,7 +211,7 @@ const Dashboard: React.FC = () => {
               </button>
               <button
                 onClick={handleCheckOut}
-                disabled={checkOutMutation.isPending || !attendanceStatus?.status?.canCheckOut}
+                disabled={checkOutMutation.isLoading || !attendanceStatus?.status?.canCheckOut}
                 className="card p-4 flex items-center justify-center gap-3 hover:bg-orange-50 disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 <Clock className="h-5 w-5 text-orange-600" />
@@ -216,19 +230,19 @@ const Dashboard: React.FC = () => {
                   <div className="text-center p-4 bg-blue-50 rounded-lg">
                     <p className="text-sm text-gray-600">Total Hours</p>
                     <p className="text-2xl font-bold text-blue-600">
-                      {attendanceData.totalHours || '0.00'}
+                      {'0.00'}
                     </p>
                   </div>
                   <div className="text-center p-4 bg-green-50 rounded-lg">
                     <p className="text-sm text-gray-600">Regular Hours</p>
                     <p className="text-2xl font-bold text-green-600">
-                      {attendanceData.regularHours || '0.00'}
+                      {'0.00'}
                     </p>
                   </div>
                   <div className="text-center p-4 bg-orange-50 rounded-lg">
                     <p className="text-sm text-gray-600">Overtime Hours</p>
                     <p className="text-2xl font-bold text-orange-600">
-                      {attendanceData.overtimeHours || '0.00'}
+                      {'0.00'}
                     </p>
                   </div>
                 </div>
