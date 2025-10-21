@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Clock, Search, Filter, CheckCircle, XCircle, MapPin, Home, Camera, LogIn, LogOut } from 'lucide-react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from 'react-query'
 import { attendanceService } from '../services/attendanceService'
 import { useAuth } from '../hooks/useAuth'
 import { isCameraAvailable, getImageThumbnail } from '../utils/camera'

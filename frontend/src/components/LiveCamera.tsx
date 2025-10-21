@@ -152,4 +152,3 @@ const LiveCamera: React.FC<LiveCameraProps> = ({ isOpen, onClose, onCapture, tit
 };
 
 export default LiveCamera;
-

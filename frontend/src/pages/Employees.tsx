@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Users, Plus, Search, Filter, Edit, Trash2, Eye } from 'lucide-react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from 'react-query'
 import { employeeService } from '../services/employeeService'
 import { authService } from '../services/authService'
 import { Employee } from '../types'

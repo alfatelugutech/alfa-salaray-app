@@ -57,4 +57,3 @@ const departmentService = {
 
 export default departmentService
 
-

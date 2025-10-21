@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Calendar, Plus, Search, Filter, Clock, CheckCircle, XCircle, Trash2, Eye } from 'lucide-react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from 'react-query'
 import { leaveService } from '../services/leaveService'
 import { employeeService } from '../services/employeeService'
 import { LeaveRequest } from '../types'

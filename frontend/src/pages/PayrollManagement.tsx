@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from 'react-query'
 import { Plus, Edit, Trash2, DollarSign, Calendar, User, CheckCircle, Clock, Calculator, CreditCard } from 'lucide-react'
 import { payrollService } from '../services/payrollService'
 import { employeeService } from '../services/employeeService'
