@@ -45,13 +45,17 @@ app.use(helmet({
   },
 }));
 
-// Rate limiting
+// Rate limiting - More lenient for free Render plan
 const limiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'), // 15 minutes
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100'),
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '60000'), // 1 minute
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '1000'), // Much higher limit
   message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => {
+    // Skip rate limiting for health checks and CORS preflight
+    return req.path === '/health' || req.path === '/api/test' || req.path === '/api/cors-test';
+  }
 });
 app.use(limiter);
 
@@ -59,6 +63,7 @@ app.use(limiter);
 const allowedOrigins = [
   process.env.FRONTEND_URL || "http://localhost:3000",
   "https://alfa-salaray-app.vercel.app",
+  "https://alfa-salaray-app.vercel.app/",
   "http://localhost:3000",
   "http://localhost:5173", // Vite dev server
   "http://127.0.0.1:3000",

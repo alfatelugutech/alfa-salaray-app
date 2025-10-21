@@ -17,3 +17,4 @@ npx ts-node prisma/seed.ts
 # Start the application
 echo "🎯 Starting the application..."
 node dist/index.js
+
