@@ -335,7 +335,7 @@ router.post("/initialize", requireHR, async (req: Request, res: Response) => {
     ];
 
     // Create permissions (skip if already exist)
-    const createdPermissions = [];
+    const createdPermissions: any[] = [];
     for (const permission of defaultPermissions) {
       const existing = await prisma.permission.findUnique({
         where: { name: permission.name }

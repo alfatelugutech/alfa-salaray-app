@@ -406,7 +406,7 @@ router.post("/assign", requireHR, async (req: Request, res: Response) => {
     }
 
     // Check if assignment already exists
-    const existingAssignment = await prisma.userRole.findUnique({
+    const existingAssignment = await prisma.userRoleAssignment.findUnique({
       where: {
         userId_roleId: {
           userId,
@@ -423,7 +423,7 @@ router.post("/assign", requireHR, async (req: Request, res: Response) => {
     }
 
     // Assign role
-    const userRole = await prisma.userRole.create({
+    const userRole = await prisma.userRoleAssignment.create({
       data: {
         userId,
         roleId,
@@ -468,7 +468,7 @@ router.delete("/unassign/:userId/:roleId", requireHR, async (req: Request, res: 
     const { userId, roleId } = req.params;
 
     // Check if assignment exists
-    const userRole = await prisma.userRole.findUnique({
+    const userRole = await prisma.userRoleAssignment.findUnique({
       where: {
         userId_roleId: {
           userId,
@@ -484,7 +484,7 @@ router.delete("/unassign/:userId/:roleId", requireHR, async (req: Request, res: 
       });
     }
 
-    await prisma.userRole.delete({
+    await prisma.userRoleAssignment.delete({
       where: {
         userId_roleId: {
           userId,
